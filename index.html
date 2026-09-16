@@ -325,8 +325,25 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
 .pyr-foot{font-size:11.5px; color:var(--text-muted); line-height:1.5; text-align:center; padding:2px 0 4px;}
 
 /* 단원 화면의 인증 절차 안내 */
-.procbox{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3); margin-bottom:14px; overflow:hidden;}
-.procbox>summary{cursor:pointer; list-style:none; padding:12px 14px; font-size:13px; font-weight:800; color:var(--primary); display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
+.procbox{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3); margin-bottom:14px;}
+.procbox>summary{cursor:pointer; list-style:none; padding:12px 14px; font-size:13px; font-weight:800; color:var(--primary); display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; position:relative;}
+
+/* 아직 한 번도 펼쳐보지 않았다면 빨간 동그라미로 눈에 띄게 */
+.procbox.call{border-color:#E0524A; background:#FFF7F6; margin:18px 0 20px;}
+.procbox.call>summary{color:#C6342B; padding:15px 16px;}
+.procbox.call>summary::after{color:#C6342B;}
+.procbox.call .must{font-size:10.5px; font-weight:800; color:#fff; background:#E0524A;
+  border-radius:999px; padding:2px 8px; align-self:center;}
+.procbox.call em{color:#C6342B; opacity:.85;}
+.scribble{position:absolute; left:-7px; top:-7px;
+  width:calc(100% + 14px); height:calc(100% + 14px); pointer-events:none; overflow:visible;}
+.scribble path{fill:none; stroke:#E0524A; stroke-linecap:round; stroke-linejoin:round;
+  stroke-width:2.6; stroke-dasharray:1400; animation:scribdraw 1s ease-out .35s both;}
+.scribble path.thin{stroke-width:1.5; opacity:.45; animation-delay:.75s;}
+@keyframes scribdraw{from{stroke-dashoffset:1400;} to{stroke-dashoffset:0;}}
+@media (prefers-reduced-motion: reduce){
+  .scribble path{animation:none; stroke-dasharray:none;}
+}
 .procbox>summary::-webkit-details-marker{display:none;}
 .procbox>summary em{font-style:normal; font-size:11.5px; font-weight:600; color:var(--text-muted);}
 .procbox>summary::after{content:'펼치기 ▾'; margin-left:auto; font-size:11px; font-weight:700; color:var(--text-faint); white-space:nowrap;}
@@ -384,7 +401,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 p';
+var APP_VERSION = '2026-09-16 q';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1153,11 +1170,37 @@ function renderStudent(){
   return screenMyStatus();
 }
 
+/* 손으로 그린 듯한 빨간 동그라미 */
+var SCRIBBLE =
+  '<svg class="scribble" viewBox="0 0 300 60" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="M8,30 C8,13 70,5 150,5 C232,5 293,12 293,29 C293,47 228,56 148,55 ' +
+             'C68,54 10,47 11,28 C12,17 45,9 85,6"/>' +
+    '<path class="thin" d="M13,34 C13,18 75,10 152,10 C233,10 288,17 288,31 ' +
+             'C288,49 223,59 146,58 C67,57 15,50 16,32"/>' +
+  '</svg>';
+
+// 한 번이라도 펼쳐봤는지 기억한다. 저장이 막혀 있으면 계속 강조한다.
+function procSeen(){
+  try{ return localStorage.getItem('kstar_proc_seen') === '1'; }catch(e){ return false; }
+}
+document.addEventListener('click', function(e){
+  var sm = e.target && e.target.closest ? e.target.closest('.procbox.call > summary') : null;
+  if(!sm) return;
+  try{ localStorage.setItem('kstar_proc_seen','1'); }catch(err){}
+  var box = sm.parentNode;
+  box.classList.remove('call');
+  var sc = sm.querySelector('.scribble'); if(sc) sc.remove();
+  var mb = sm.querySelector('.must');     if(mb) mb.remove();
+});
+
 /* 단원이 자기 화면에서 바로 읽는 인증 절차 안내 (개조식) */
 function procHtml(){
   return (
-    '<details class="procbox">' +
-      '<summary>인증은 내가 신청하나요? <em>R·T·A는 자동 · S는 2차만 직접</em></summary>' +
+    '<details class="procbox'+(procSeen()?'':' call')+'">' +
+      '<summary>' +
+        (procSeen() ? '' : SCRIBBLE + '<span class="must">꼭 읽기</span>') +
+        '인증은 내가 신청하나요? <em>R·T·A는 자동 · S는 2차만 직접</em>' +
+      '</summary>' +
       '<div class="procbody">' +
 
         '<div class="proc-h">한 줄 요약</div>' +
