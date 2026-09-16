@@ -626,7 +626,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:'', apiError:'', loading:false
+  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:'', apiError:'', loading:false, shotMsg:'', shotBusy:false
 };
 var cache = { roster:[], me:null };
 
@@ -882,6 +882,7 @@ function screenMyStatus(){
 
 function screenScoreForm(){
   var s = cache.me;
+  var shots = (s && s.shots) || [];
   return (
     '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 내 현황으로</button>' +
     '<h2 class="screen-title">내 점수 입력</h2>' +
@@ -911,7 +912,16 @@ function screenScoreForm(){
         }).join('') +
       '</div>' +
       '<button type="submit" class="btn btn-primary">저장하고 분석 보기</button>' +
-    '</form>'
+    '</form>' +
+    '<div style="height:10px;"></div>' +
+    '<label class="btn btn-ghost" for="shotInput" style="cursor:pointer;">📷 캡쳐 이미지 첨부하기</label>' +
+    '<input id="shotInput" type="file" accept="image/*" style="display:none;">' +
+    (state.shotMsg ? '<div class="okbox" style="margin-top:10px;font-weight:500;">'+esc(state.shotMsg)+'</div>' : '') +
+    '<div class="notice-box" style="margin-top:10px;margin-bottom:0;">' +
+      'STORY+ 역량 대시보드 화면을 캡쳐해서 올리면, 점수를 읽어 위 칸에 자동으로 채워 넣습니다. ' +
+      '채워진 숫자가 맞는지 확인한 뒤 <b>저장하고 분석 보기</b>를 눌러 주세요.' +
+      (shots.length ? '<br>지금까지 올린 캡쳐 <b>'+shots.length+'장</b>' : '') +
+    '</div>'
   );
 }
 
@@ -1120,6 +1130,15 @@ function screenDetail(){
       field('aNote','메모','text',{value:s.note||''}) +
       '<button type="submit" class="btn btn-primary">수정 저장</button>' +
     '</form>' +
+    ((s.shots && s.shots.length) ?
+      '<div style="height:14px;"></div>' +
+      '<label style="font-size:12.5px;font-weight:600;color:var(--text-muted);">학생이 올린 캡쳐 '+s.shots.length+'장</label>' +
+      '<div class="stack" style="margin-top:8px;">' +
+        s.shots.map(function(sh, i){
+          return '<button class="btn btn-ghost" data-action="view-shot" data-file="'+esc(sh.fileId)+'">' +
+                 '📷 '+(i+1)+'번째 캡쳐 보기 ('+String(sh.at||'').slice(0,10)+')</button>';
+        }).join('') +
+      '</div>' : '') +
     (s.claimedBy ?
       '<div style="height:10px;"></div>' +
       '<button class="btn btn-danger" data-action="reset-pw" data-id="'+esc(s.id)+'">이 단원 비밀번호 초기화</button>' +
@@ -1171,6 +1190,15 @@ function modalHtml(){
           '<li>화면 아래 가운데의 <b>공유 버튼</b>을 눌러 주세요.</li>' +
           '<li><b>홈 화면에 추가</b> → <b>추가</b>를 눌러 주세요.</li>' +
         '</ol>') +
+      '<div class="modal-actions"><button class="btn btn-ghost" data-action="close-modal">닫기</button></div>' +
+      '</div></div>';
+  }
+  if(m.type==='shot'){
+    return '<div class="overlay" data-action="overlay-bg"><div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">' +
+      '<h3>학생이 올린 캡쳐</h3>' +
+      (m.dataUrl
+        ? '<img src="'+m.dataUrl+'" alt="" style="width:100%;border-radius:var(--radius-s);border:1px solid var(--border);">'
+        : '<div class="empty-state">불러오는 중입니다…</div>') +
       '<div class="modal-actions"><button class="btn btn-ghost" data-action="close-modal">닫기</button></div>' +
       '</div></div>';
   }
@@ -1411,6 +1439,100 @@ async function exportCsv(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+
+/* ---- 캡쳐 첨부하기 ---- */
+// 사진이 너무 크면 전송이 느리니 가로 1400px 이하로 줄여서 보낸다.
+function shrinkImage(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onerror = function(){ reject(new Error('이미지를 읽지 못했습니다.')); };
+    reader.onload = function(){
+      var img = new Image();
+      img.onerror = function(){ reject(new Error('이미지를 열지 못했습니다.')); };
+      img.onload = function(){
+        var max = 1400;
+        var w = img.width, h = img.height;
+        if(w > max){ h = Math.round(h * max / w); w = max; }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function fillScoreForm(v){
+  var filled = [];
+  function setNum(id, val, label){
+    if(val === null || val === undefined || val === '') return;
+    var el = document.getElementById(id);
+    if(el){ el.value = num(val); filled.push(label); }
+  }
+  function setChk(id, val, label){
+    if(val !== true && val !== false) return;
+    var el = document.getElementById(id);
+    if(el){ el.checked = val; filled.push(label); }
+  }
+  setNum('sTotal', v.total, '총점');
+  AREAS.forEach(function(x){ setNum('s'+x, v[x], x); });
+  setChk('sr1', v.r1, '자기소개서'); setChk('sr2', v.r2, '학업계획서'); setChk('sr3', v.r3, '교수상담');
+  setChk('scA', v.certA, 'A인증'); setChk('scT', v.certT, 'T인증'); setChk('scS', v.certS, 'S인증');
+  return filled;
+}
+
+async function handleShot(file){
+  if(!file || state.shotBusy) return;
+  if(!apiMode){
+    state.shotMsg = '서버에 연결되어 있지 않아 캡쳐를 올릴 수 없습니다.';
+    render(); return;
+  }
+  state.shotBusy = true;
+  state.shotMsg = '캡쳐를 올리는 중입니다…';
+  render();
+  try{
+    var dataUrl = await shrinkImage(file);
+    state.shotMsg = '캡쳐를 읽는 중입니다… (10초쯤 걸릴 수 있어요)';
+    render();
+    var out = await apiCall('analyze', { dataUrl: dataUrl, name: (cache.me && cache.me.name) || 'capture' });
+
+    var shots = (cache.me && cache.me.shots) || [];
+    shots = shots.concat([{ fileId: out.fileId, at: nowIso() }]);
+    await storeUpdate('roster', state.studentSession.rosterId, { shots: shots, updatedAt: nowIso() });
+    await loadMe();
+
+    if(out.values){
+      var filled = fillScoreForm(out.values);
+      state.shotMsg = filled.length
+        ? '캡쳐에서 ' + filled.join(', ') + ' 을(를) 읽어 채웠습니다. 맞는지 확인하고 저장해 주세요.'
+        : '캡쳐는 올렸지만 숫자를 찾지 못했습니다. 직접 입력해 주세요.';
+      var keep = state.shotMsg;
+      render();
+      fillScoreForm(out.values);   // 다시 그린 뒤에도 값이 남도록
+      state.shotMsg = keep;
+    } else if(out.skipped){
+      state.shotMsg = '캡쳐를 올렸습니다. (자동 읽기는 꺼져 있어 점수는 직접 입력해 주세요)';
+      render();
+    } else {
+      state.shotMsg = '캡쳐는 올렸습니다. ' + (out.readError || '자동 읽기에 실패했습니다.') + ' 점수는 직접 입력해 주세요.';
+      render();
+    }
+  }catch(e){
+    state.shotMsg = errMsg(e);
+    render();
+  }finally{
+    state.shotBusy = false;
+  }
+}
+
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'shotInput'){
+    handleShot(e.target.files && e.target.files[0]);
+  }
+});
+
 /* ============ events ============ */
 document.addEventListener('submit', function(e){
   var f = e.target;
@@ -1533,6 +1655,15 @@ document.addEventListener('click', function(e){
   else if(act==='copy-url'){ copyInstallUrl(); }
   else if(act==='sib-prev'){ gotoSibling(-1); }
   else if(act==='sib-next'){ gotoSibling(1); }
+  else if(act==='view-shot'){
+    var fid = el.dataset.file;
+    navGo(function(){ state.modal = { type:'shot', dataUrl:null }; });
+    apiCall('shot', { fileId: fid }).then(function(out){
+      if(state.modal && state.modal.type==='shot'){ state.modal.dataUrl = out.dataUrl; render(); }
+    }, function(err){
+      if(state.modal && state.modal.type==='shot'){ state.modal = null; state.apiError = errMsg(err); render(); }
+    });
+  }
   else if(act==='reload'){
     state.apiError = ''; state.loading = true;
     render();
