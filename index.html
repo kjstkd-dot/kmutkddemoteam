@@ -1848,10 +1848,28 @@ document.addEventListener('keydown', function(e){
   }
   state.loading = true;
   render();
-  try{
+  async function loadAll(){
     if(state.adminSession) await loadRoster();
     if(state.studentSession) await loadMe();
-  }catch(e){ state.apiError = errMsg(e); }
+  }
+  try{
+    await loadAll();
+  }catch(e){
+    // 바깥 서버에 닿지 못하는 자리(예: Claude 아티팩트 안)에서는
+    // Claude 자체 저장소로 되돌아가 화면만이라도 볼 수 있게 한다.
+    var recovered = false;
+    if(apiMode && window.claude && window.claude.use){
+      try{
+        db = await window.claude.use('db');
+        if(db){
+          apiMode = false;
+          await loadAll();
+          recovered = true;
+        }
+      }catch(e2){}
+    }
+    if(!recovered) state.apiError = errMsg(e);
+  }
   state.loading = false;
   navReplace();
 })();
