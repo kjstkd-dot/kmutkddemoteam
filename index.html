@@ -89,7 +89,7 @@ button{font-family:inherit;}
 .brand-mark{width:38px; height:38px; border-radius:11px; background:var(--primary); color:var(--primary-contrast); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
 .brand svg{flex:none;}
 .brand-text strong{display:block; font-size:19px; font-weight:900; letter-spacing:-.01em; color:#fff;}
-.brand-text span{display:block; font-size:11.5px; color:rgba(255,255,255,.86); margin-top:2px; line-height:1.4;}
+.brand-text span{display:block; font-size:11.5px; color:rgba(255,255,255,.86); margin-top:2px; line-height:1.4; word-break:keep-all;}
 .guide-link{border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.16); color:#fff;
   font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;}
 .guide-link:hover{background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.65);}
@@ -101,7 +101,7 @@ button{font-family:inherit;}
 .phone{width:100%; max-width:460px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); box-shadow:var(--shadow-card); padding:24px 20px; position:relative; min-height:420px;}
 .page.wide .phone{max-width:1000px;}
 .eyebrow{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint);}
-.screen-title{font-size:22px; margin-top:6px; margin-bottom:4px;}
+.screen-title{font-size:22px; margin-top:6px; margin-bottom:4px; word-break:keep-all;}
 .screen-sub{font-size:13px; color:var(--text-muted); margin-bottom:18px;}
 
 .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
@@ -123,7 +123,7 @@ button{font-family:inherit;}
 .btn-line{background:transparent; color:var(--text-muted); border:1px dashed var(--border);}
 .btn-danger{background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border);}
 .btn-small{width:auto; padding:8px 12px; font-size:12.5px;}
-.linklike{background:none; border:none; color:var(--primary); font-weight:600; font-size:12.5px; cursor:pointer; padding:0;}
+.linklike{background:none; border:none; color:var(--primary); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; white-space:nowrap;}
 .row{display:flex; align-items:center; gap:10px;}
 .row-between{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;}
 .stack{display:flex; flex-direction:column; gap:10px;}
@@ -296,6 +296,15 @@ button{font-family:inherit;}
 .gtable th{color:var(--text-faint); font-weight:700; font-size:11px;}
 details.acc{border-left:4px solid var(--border); padding-left:11px; margin-bottom:8px;}
 details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6px 0;}
+/* K-STAR 인증 현황 피라미드 */
+.pyr{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3);
+  padding:13px 14px 8px; margin-bottom:14px;}
+.pyr-head{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
+.pyr-head b{font-size:13px; font-weight:800;}
+.pyr-head span{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-muted);}
+.pyr svg{display:block; width:100%; height:auto;}
+.pyr-foot{font-size:11.5px; color:var(--text-muted); line-height:1.5; text-align:center; padding:2px 0 4px;}
+
 /* 단원 화면의 인증 절차 안내 */
 .procbox{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3); margin-bottom:14px; overflow:hidden;}
 .procbox>summary{cursor:pointer; list-style:none; padding:12px 14px; font-size:13px; font-weight:800; color:var(--primary); display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
@@ -356,7 +365,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 j';
+var APP_VERSION = '2026-09-16 l';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -631,11 +640,13 @@ var STAGE_TITLE = {
 };
 var STAGE_FULL = {
   S:'다음 단계 — S단계 도전 가능', T:'다음 단계 — T단계 선발 대상',
-  A:'다음 단계 — A단계 선발 대상', R:'다음 단계 — R단계 요건부터'
+  A:'다음 단계 — A단계 선발 대상', R:'다음 단계 — R단계 요건부터',
+  S0:'다음 단계 — S단계 준비 중'
 };
 var STAGE_DESC = {
   S:'FACE 1개 영역 달성 · 1차 자동 선발', T:'3·4학년 · 영역별 최우수 선발 대기',
-  A:'1·2학년 · 총점 우수 선발 대기', R:'자소서 · 계획서 · 교수상담 미완료'
+  A:'1·2학년 · 총점 우수 선발 대기', R:'자소서 · 계획서 · 교수상담 미완료',
+  S0:'FACE 한 영역을 채우면 바로 도전 가능'
 };
 
 /* 지금까지 실제로 인증받은 단계 (칸 구분과는 다름) */
@@ -653,10 +664,11 @@ function curPill(s, a){
 }
 
 function stageBand(stage, cur){
+  var letter = stage.charAt(0);
   var curTxt = cur === undefined ? ''
     : ' · 현재 인증 ' + (cur ? cur + '단계' : '없음');
-  return '<div class="stage-band st-'+stage+'">' +
-    '<span class="sb-mark">'+stage+'</span>' +
+  return '<div class="stage-band st-'+letter+'">' +
+    '<span class="sb-mark">'+letter+'</span>' +
     '<div><span class="sb-name">'+STAGE_FULL[stage]+'</span>' +
     '<span class="sb-desc">'+STAGE_DESC[stage]+curTxt+'</span></div></div>';
 }
@@ -702,9 +714,15 @@ function actionLines(area, gap){
 }
 function stageOf(s, a){
   var stage = !a.rDone ? 'R' : (a.achievedCount>=1 ? 'S' : (num(s.year)<=2 ? 'A' : 'T'));
+  // 이미 인증받은 단계를 다시 "다음 목표"로 내밀지 않는다.
+  var certed = { R:a.rDone, A:!!s.certA, T:!!s.certT, S:!!s.certS };
+  var next = stage;
+  if(certed[stage]) next = 'S';
+  if(next==='S' && a.achievedCount===0) next = 'S0';   // S를 향하지만 아직 FACE 미달
+  if(s.certS) next = 'S';
   var label = stage==='R' ? 'R단계 준비중' : stage==='S' ? 'S단계 도전 가능'
             : stage==='A' ? '다음 목표: A단계' : '다음 목표: T단계';
-  return { stage:stage, label:label };
+  return { stage:stage, next:next, label:label };
 }
 function recommendation(s, a){
   if(!a.rDone){
@@ -760,15 +778,67 @@ function recommendation(s, a){
     '<span class="rfoot">(추정 — 정확한 인정 여부는 학생성공센터에 확인)</span>' };
 }
 
-function analysisHtml(s){
+/* 계명스튜던트포털의 K-STAR 인증 현황 그림을 그대로 옮긴 피라미드 */
+var PYR_TIERS = [
+  { k:'S', color:'#3E8FD9', pts:'138,35 202,15 202,54 138,73',    lx:170, ly:44,  rot:-17.4, sy:44,  lineTo:138 },
+  { k:'T', color:'#7B70D8', pts:'108,77 232,50 232,88 108,116',   lx:170, ly:83,  rot:-12.6, sy:83,  lineTo:108 },
+  { k:'A', color:'#16A9A5', pts:'78,120 262,96 262,135 78,158',   lx:170, ly:127, rot:-7.4,  sy:127, lineTo:78  },
+  { k:'R', color:'#E4635B', pts:'50,161 290,143 290,181 50,200',  lx:170, ly:171, rot:-4.45, sy:171, lineTo:50  }
+];
+var PYR_NEXT = {
+  R:'R단계 — 자기소개서 · 학업계획서 · 교수상담 3가지',
+  A:'A단계 — 학과별 COMpass K 총점 순위 선발',
+  T:'T단계 — 단과대학별 FACE 영역 순위 선발',
+  S:'S단계 도전 — MY포트폴리오 준비하기',
+  S0:'S단계 — FACE 한 영역 채우기'
+};
+
+function pyramidHtml(s, a){
+  var done = { R:a.rDone, A:!!s.certA, T:!!s.certT, S:!!s.certS };
+  var cur = currentStage(s, a);
+  var body = PYR_TIERS.map(function(t){
+    var on = done[t.k];
+    var fill = on ? t.color : '#DFE4EC';
+    var ink  = on ? '#FFFFFF' : '#9AA3AC';
+    return '<polygon points="'+t.pts+'" fill="'+fill+'"'+(on?'':' opacity=".9"')+'/>' +
+      '<text x="'+t.lx+'" y="'+t.ly+'" font-size="15" font-weight="800" fill="'+ink+'"' +
+        ' text-anchor="middle" dominant-baseline="central"' +
+        ' transform="rotate('+t.rot+' '+t.lx+' '+t.ly+')">'+t.k+'</text>' +
+      '<line x1="44" y1="'+t.sy+'" x2="'+t.lineTo+'" y2="'+t.sy+'" stroke="'+(on?t.color:'#DFE4EC')+'" stroke-width="1.4"/>' +
+      (on
+        ? '<g transform="rotate(-12 24 '+t.sy+')">' +
+            '<circle cx="24" cy="'+t.sy+'" r="17" fill="#E0524A"/>' +
+            '<circle cx="24" cy="'+t.sy+'" r="13.5" fill="none" stroke="#fff" stroke-width="1.2" stroke-opacity=".75"/>' +
+            '<text x="24" y="'+(t.sy+0.5)+'" font-size="10" font-weight="800" fill="#fff"' +
+              ' text-anchor="middle" dominant-baseline="central">인증</text>' +
+          '</g>'
+        : '<circle cx="24" cy="'+t.sy+'" r="17" fill="none" stroke="#DFE4EC" stroke-width="2.4"/>' +
+          '<circle cx="24" cy="'+t.sy+'" r="3.2" fill="#DFE4EC"/>');
+  }).join('');
+
+  var nxt = stageOf(s, a).next;
+  var foot = s.certS ? '<b style="color:var(--text);">S단계 인증 완료 — 최고 단계입니다</b>'
+    : cur ? '<b style="color:var(--text);">'+cur+'단계 인증 완료</b> · 다음은 ' + PYR_NEXT[nxt]
+    : '아직 인증받은 단계가 없습니다 · 먼저 ' + PYR_NEXT.R;
+
+  return '<div class="pyr">' +
+    '<div class="pyr-head"><b>K-STAR 인증 현황</b>' +
+      '<span>'+(cur ? '현재 '+cur+'단계' : '아직 인증 전')+'</span></div>' +
+    '<svg viewBox="0 0 300 215" role="img" aria-label="K-STAR 인증 현황 피라미드">'+body+'</svg>' +
+    '<div class="pyr-foot">'+foot+'</div>' +
+  '</div>';
+}
+
+function analysisHtml(s, o){
   var a = analyze(s), reco = recommendation(s,a);
   var certs = [['S',!!s.certS],['T',!!s.certT],['A',!!s.certA],['R',a.rDone]];
   var ranked = AREAS.filter(function(x){ return !a.achieved[x]; }).sort(function(x,y){ return a.gaps[x]-a.gaps[y]; });
   var r1 = ranked[0]||null, r2 = ranked[1]||null;
   return (
-    '<div class="certrow"><span class="clabel">현재 인증 단계</span><div class="certbadges">' +
+    ((o && o.noCerts) ? '' :
+      '<div class="certrow"><span class="clabel">현재 인증 단계</span><div class="certbadges">' +
       certs.map(function(c){ return '<span class="certbadge '+(c[1]?'on '+c[0]:'')+'">'+c[0]+'</span>'; }).join('') +
-    '</div></div>' +
+      '</div></div>') +
     '<div class="rrow">' +
       [['r1','자기소개서'],['r2','학업계획서'],['r3','교수상담']].map(function(p){
         var done = !!s[p[0]];
@@ -1136,9 +1206,10 @@ function screenMyStatus(){
       '<button class="linklike" data-action="logout">로그아웃</button>' +
     '</div>' +
     '<div style="height:14px;"></div>' +
+    pyramidHtml(s, analyze(s)) +
     deadlineBox(true) +
-    stageBand(st.stage, currentStage(s, analyze(s))) +
-    analysisHtml(s) +
+    stageBand(st.next, currentStage(s, analyze(s))) +
+    analysisHtml(s, {noCerts:true}) +
     '<div style="height:14px;"></div>' +
     procHtml() +
     '<button class="btn btn-primary" data-action="goto-scores">내 점수 입력·수정하기</button>' +
@@ -1481,13 +1552,14 @@ function screenDetail(){
     '</div>' +
     (swipeHintSeen() ? '' : '<div class="swipe-hint">좌우로 밀어서 다른 단원을 볼 수 있어요</div>') +
     '<div class="detail-wrap'+slide+'">' +
-    stageBand(st.stage, currentStage(s, analyze(s))) +
+    stageBand(st.next, currentStage(s, analyze(s))) +
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년' +
       (s.claimedBy ? ' · 학번 '+esc(s.claimedBy) : ' · 미가입')+'</div>' +
       '<h2 class="screen-title">'+esc(s.name)+curPill(s, analyze(s))+'</h2></div>' +
     '</div>' +
-    analysisHtml(s) +
+    pyramidHtml(s, analyze(s)) +
+    analysisHtml(s, {noCerts:true}) +
     '<div style="height:14px;"></div>' +
     '<form id="form-admin-edit" class="stack">' +
       '<label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">R단계 요건</label>' +
