@@ -40,6 +40,7 @@
   --border:#E6E9ED; --text:#22303F; --text-muted:#79828C; --text-faint:#9AA3AC;
   --primary:#2F62D9; --primary-dark:#1F4BB5; --primary-contrast:#FFFFFF;
   --banner:linear-gradient(90deg,#4159D0,#5FC5F2);
+  --grad-1:#4A63E0; --grad-2:#5FB6EE;
   --amber:#B57A08; --amber-bg:#FDF8EC; --amber-border:#F6E3B8;
   --danger:#D32027; --danger-bg:#FDF1F1; --danger-border:#F7CFD1;
   --success:#12805A; --success-bg:#E8F6F0;
@@ -70,7 +71,9 @@ button{font-family:inherit;}
 ::selection{background:var(--primary); color:var(--primary-contrast);}
 
 .page{max-width:1080px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:18px;}
-.topbar{width:100%; max-width:460px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.topbar{width:100%; max-width:460px; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; padding:20px 22px; border-radius:16px; color:#fff;
+  background:linear-gradient(100deg, var(--grad-1), var(--grad-2)); box-shadow:var(--shadow-card);}
 .topbar-actions{display:flex; gap:6px; margin-left:auto;}
 .install-steps{counter-reset:step; display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none;}
 .install-steps li{position:relative; padding-left:30px; font-size:13px; line-height:1.6;}
@@ -82,10 +85,12 @@ button{font-family:inherit;}
 .page.wide .topbar, .page.wide .roletabs{max-width:1000px;}
 .brand{display:flex; align-items:center; gap:10px;}
 .brand-mark{width:38px; height:38px; border-radius:11px; background:var(--primary); color:var(--primary-contrast); display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
-.brand-text strong{display:block; font-size:15px; font-weight:700;}
-.brand-text span{display:block; font-size:11.5px; color:var(--text-muted);}
-.guide-link{border:1px solid var(--border); background:var(--surface); color:var(--primary); font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:999px; cursor:pointer; white-space:nowrap;}
-.guide-link:hover{border-color:var(--primary);}
+.brand svg{flex:none;}
+.brand-text strong{display:block; font-size:19px; font-weight:900; letter-spacing:-.01em; color:#fff;}
+.brand-text span{display:block; font-size:11.5px; color:rgba(255,255,255,.86); margin-top:2px; line-height:1.4;}
+.guide-link{border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.16); color:#fff;
+  font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.guide-link:hover{background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.65);}
 
 .roletabs{width:100%; max-width:460px; display:flex; gap:8px; background:var(--surface-2); padding:5px; border-radius:999px;}
 .roletab{flex:1; border:none; background:transparent; padding:9px 0; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer;}
@@ -195,10 +200,16 @@ button{font-family:inherit;}
 .stagepill.T{background:var(--pill-t);} .stagepill.S{background:var(--pill-s);}
 
 /* admin board */
-.summary{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px;}
-.tile{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-m); padding:13px 14px;}
-.tile .num{font-size:24px; font-weight:800; font-family:var(--font-mono); color:var(--primary);}
-.tile .lbl{color:var(--text-muted); font-size:11.5px; margin-top:4px; line-height:1.4;}
+.summary{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px;}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:var(--shadow-card);}
+.tile .band{padding:8px 14px; color:#fff; font-size:11.5px; font-weight:700; letter-spacing:.01em;}
+.tile .body{padding:14px 16px 16px;}
+.tile .num{font-size:30px; font-weight:700; font-family:var(--font-mono); line-height:1;}
+.tile .lbl{color:var(--text-muted); font-size:11.5px; margin-top:6px; line-height:1.4;}
+.tile.t-purple .band{background:linear-gradient(100deg,#6A5FC4,#8B7FE0);} .tile.t-purple .num{color:#6A5FC4;}
+.tile.t-red .band{background:linear-gradient(100deg,#E0524A,#EF7A6E);}    .tile.t-red .num{color:#E0524A;}
+.tile.t-blue .band{background:linear-gradient(100deg,#4A90D9,#6FB3EE);}   .tile.t-blue .num{color:#4A90D9;}
+.tile.t-gold .band{background:linear-gradient(100deg,#D9A73D,#E8BE66);}   .tile.t-gold .num{color:#D9A73D;}
 .controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
 .controls input, .controls select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:9px 12px; font-size:13px; font-family:var(--font-body);}
 .controls input{flex:1; min-width:150px;}
@@ -207,6 +218,7 @@ button{font-family:inherit;}
 @media (max-width:560px){ .board{grid-template-columns:1fr;} }
 .col h3{display:flex; align-items:center; gap:10px; font-family:var(--font-body); margin-bottom:11px; border-radius:var(--radius-s); padding:10px 13px; color:#fff;}
 .col h3 .st-name{display:block; font-size:14px; font-weight:800; line-height:1.2;}
+.col h3 .st-name, .col h3 .st-desc{word-break:keep-all;}
 .col h3 .st-desc{display:block; font-size:10.5px; font-weight:500; opacity:.85; margin-top:2px;}
 .col h3 .cnt{font-size:11.5px; font-weight:800; color:#fff; background:rgba(255,255,255,.25); border-radius:999px; padding:3px 9px; margin-left:auto; white-space:nowrap;}
 .col.st-S h3{background:var(--pill-s);} .col.st-T h3{background:var(--pill-t);}
@@ -318,7 +330,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 f';
+var APP_VERSION = '2026-09-16 g';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -622,6 +634,14 @@ function stageBand(stage, cur){
     '<div><span class="sb-name">'+STAGE_FULL[stage]+'</span>' +
     '<span class="sb-desc">'+STAGE_DESC[stage]+curTxt+'</span></div></div>';
 }
+var BRAND_SVG =
+  '<svg width="42" height="42" viewBox="0 0 40 40" aria-hidden="true">' +
+    '<polygon points="20,3 35,34 5,34" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="2.2"/>' +
+    '<polygon points="20,12.5 29.5,34 10.5,34" fill="none" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="2.4"/>' +
+    '<polygon points="20,20.5 25.5,34 14.5,34" fill="none" stroke="#FFFFFF" stroke-opacity=".85" stroke-width="2.6"/>' +
+    '<polygon points="20,27 22.6,34 17.4,34" fill="#FFFFFF"/>' +
+  '</svg>';
+
 var FACE_COLOR = { F:'var(--face-f)', A:'var(--face-a)', C:'var(--face-c)', E:'var(--face-e)' };
 var ARTS_PE = ['태권도','체육','스포츠','무용','음악','미술','연극','영화','디자인','예술','골프','축구'];
 
@@ -896,8 +916,9 @@ function renderApp(){
   return (
     '<div class="page'+(wide?' wide':'')+'">' +
       '<div class="topbar">' +
-        '<div class="brand"><span class="brand-mark">🥋</span>' +
-        '<div class="brand-text"><strong>K-STAR 현황판</strong><span>계명대학교 태권도 시범단 역량관리</span></div></div>' +
+        '<div class="brand">' + BRAND_SVG +
+        '<div class="brand-text"><strong>K-STAR 현황판</strong>' +
+        '<span>계명대학교 태권도 시범단 · 역량관리(COMpass K / K-STAR) 추적</span></div></div>' +
         '<div class="topbar-actions">' +
           (isStandalone() ? '' : '<button class="guide-link" data-action="install">⬇️ 앱 설치</button>') +
           '<button class="guide-link" data-action="open-guide">📘 이용 안내</button>' +
@@ -1268,10 +1289,14 @@ function screenBoard(){
       '</div>' +
     '</div>' +
     '<div class="summary">' +
-      '<div class="tile"><div class="num mono">'+total+'</div><div class="lbl">등록 단원</div></div>' +
-      '<div class="tile"><div class="num mono">'+rCount+'</div><div class="lbl">R단계 이수</div></div>' +
-      '<div class="tile"><div class="num mono">'+sCount+'</div><div class="lbl">S단계 도전 가능</div></div>' +
-      '<div class="tile"><div class="num mono">'+joined+'</div><div class="lbl">앱 가입 완료</div></div>' +
+      '<div class="tile t-purple"><div class="band">등록 단원</div>' +
+        '<div class="body"><div class="num mono">'+total+'</div><div class="lbl">시범단원 수</div></div></div>' +
+      '<div class="tile t-red"><div class="band">R단계 이수</div>' +
+        '<div class="body"><div class="num mono">'+rCount+'</div><div class="lbl">자소서·계획서·상담 완료</div></div></div>' +
+      '<div class="tile t-blue"><div class="band">S단계 도전 가능</div>' +
+        '<div class="body"><div class="num mono">'+sCount+'</div><div class="lbl">FACE 1개 영역 이상 달성</div></div></div>' +
+      '<div class="tile t-gold"><div class="band">앱 가입 완료</div>' +
+        '<div class="body"><div class="num mono">'+joined+'</div><div class="lbl">앱에 등록한 단원 수</div></div></div>' +
     '</div>' +
     '<div class="notice-box" style="display:flex;align-items:center;gap:10px;">' +
       '<span>' + (state.loading ? '명단을 불러오는 중입니다…'
