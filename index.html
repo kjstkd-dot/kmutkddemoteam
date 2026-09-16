@@ -186,6 +186,11 @@ button{font-family:inherit;}
 .reco li::before{content:"·"; position:absolute; left:0; font-weight:900;}
 .reco .rfoot{display:block; margin-top:9px; opacity:.72; font-size:12px;}
 .stagepill{font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:999px; white-space:nowrap; color:#fff;}
+.curpill{display:inline-block; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;
+  margin-left:6px; color:#fff; vertical-align:middle; white-space:nowrap; letter-spacing:-.01em;}
+.curpill.R{background:var(--pill-r);} .curpill.A{background:var(--pill-a);}
+.curpill.T{background:var(--pill-t);} .curpill.S{background:var(--pill-s);}
+.curpill.none{background:var(--surface-3); color:var(--text-faint); border:1px solid var(--border);}
 .stagepill.R{background:var(--pill-r);} .stagepill.A{background:var(--pill-a);}
 .stagepill.T{background:var(--pill-t);} .stagepill.S{background:var(--pill-s);}
 
@@ -313,7 +318,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 d';
+var APP_VERSION = '2026-09-16 e';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -582,17 +587,39 @@ var SCHOLARSHIP = {
   S:{ amount:'영역당 2,500,000원', note:'S단계 인증 시 (최대 2개 영역까지, 전 단계 합산 최대 500만원)' }
 };
 var STAGE_COLOR = { R:'var(--pyr-r)', A:'var(--pyr-a)', T:'var(--pyr-t)', S:'var(--pyr-s)' };
-var STAGE_TITLE = { S:'S단계', T:'T단계', A:'A단계', R:'R단계' };
-var STAGE_FULL = { S:'S단계 · SIGNATURE', T:'T단계 · TOP', A:'A단계 · ADVANCE', R:'R단계 · RESERVE' };
-var STAGE_DESC = {
-  S:'FACE 1개 영역 달성 · 바로 도전 가능', T:'3·4학년 · 영역별 최우수 선발',
-  A:'1·2학년 · 총점 우수 선발', R:'요건 준비 중 · 자소서·계획서·상담'
+var STAGE_TITLE = {
+  S:'S단계 도전 가능', T:'T단계 선발 대상', A:'A단계 선발 대상', R:'R단계 요건 준비 중'
 };
-function stageBand(stage){
+var STAGE_FULL = {
+  S:'다음 단계 — S단계 도전 가능', T:'다음 단계 — T단계 선발 대상',
+  A:'다음 단계 — A단계 선발 대상', R:'다음 단계 — R단계 요건부터'
+};
+var STAGE_DESC = {
+  S:'FACE 1개 영역 달성 · 지금 바로 신청 가능', T:'3·4학년 · 영역별 최우수 선발 대기',
+  A:'1·2학년 · 총점 우수 선발 대기', R:'자소서 · 계획서 · 교수상담 미완료'
+};
+
+/* 지금까지 실제로 인증받은 단계 (칸 구분과는 다름) */
+var CUR_LABEL = { S:'현재 S단계', T:'현재 T단계', A:'현재 A단계', R:'현재 R단계' };
+function currentStage(s, a){
+  if(s.certS) return 'S';
+  if(s.certT) return 'T';
+  if(s.certA) return 'A';
+  if(a.rDone) return 'R';
+  return null;
+}
+function curPill(s, a){
+  var c = currentStage(s, a);
+  return '<span class="curpill '+(c||'none')+'">'+(c ? CUR_LABEL[c] : '인증 전')+'</span>';
+}
+
+function stageBand(stage, cur){
+  var curTxt = cur === undefined ? ''
+    : ' · 현재 인증 ' + (cur ? cur + '단계' : '없음');
   return '<div class="stage-band st-'+stage+'">' +
     '<span class="sb-mark">'+stage+'</span>' +
     '<div><span class="sb-name">'+STAGE_FULL[stage]+'</span>' +
-    '<span class="sb-desc">'+STAGE_DESC[stage]+'</span></div></div>';
+    '<span class="sb-desc">'+STAGE_DESC[stage]+curTxt+'</span></div></div>';
 }
 var FACE_COLOR = { F:'var(--face-f)', A:'var(--face-a)', C:'var(--face-c)', E:'var(--face-e)' };
 var ARTS_PE = ['태권도','체육','스포츠','무용','음악','미술','연극','영화','디자인','예술','골프','축구'];
@@ -980,12 +1007,12 @@ function screenMyStatus(){
     '<div class="dashbanner">역량 대시보드</div>' +
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년</div>' +
-      '<h2 class="screen-title"><span class="markline">'+esc(s.name)+' 님의 K-STAR</span></h2></div>' +
+      '<h2 class="screen-title"><span class="markline">'+esc(s.name)+' 님의 K-STAR</span>'+curPill(s, analyze(s))+'</h2></div>' +
       '<button class="linklike" data-action="logout">로그아웃</button>' +
     '</div>' +
     '<div style="height:14px;"></div>' +
     deadlineBox(true) +
-    stageBand(st.stage) +
+    stageBand(st.stage, currentStage(s, analyze(s))) +
     analysisHtml(s) +
     '<div style="height:14px;"></div>' +
     '<button class="btn btn-primary" data-action="goto-scores">내 점수 입력·수정하기</button>' +
@@ -1254,6 +1281,12 @@ function screenBoard(){
       '<button class="linklike" data-action="reload" style="white-space:nowrap;">다시 불러오기</button>' +
     '</div>' +
     deadlineBox(true) +
+    '<div class="notice-box" style="border-color:var(--primary);">' +
+      '<b>칸 구분은 “지금 도전할 수 있는 다음 단계”입니다.</b> 이미 인증받은 단계가 아닙니다.<br>' +
+      '실제로 인증받은 단계는 <span class="curpill S" style="margin-left:0;">현재 S단계</span> 처럼 ' +
+      '<b>이름 옆 배지</b>에 표시됩니다. 아직 아무 단계도 인증받지 못했으면 ' +
+      '<span class="curpill none" style="margin-left:0;">인증 전</span> 으로 나옵니다.' +
+    '</div>' +
     '<div class="controls">' +
       '<input id="adminSearch" placeholder="이름으로 검색" value="'+esc(state.search)+'">' +
       '<select id="adminYear">' +
@@ -1287,7 +1320,7 @@ function cardHtml(s){
   var a = analyze(s);
   return '<div class="scard" data-action="open-detail" data-id="'+esc(s.id)+'">' +
     '<div class="row" style="justify-content:space-between; align-items:flex-start;">' +
-      '<div><div class="nm">'+esc(s.name)+'</div>' +
+      '<div><div class="nm">'+esc(s.name)+curPill(s,a)+'</div>' +
       '<div class="mt">'+esc(num(s.year))+'학년 · '+esc(s.major||'학과 미입력')+'</div></div>' +
       (s.claimedBy ? '' : '<span class="pending">미가입</span>') +
     '</div>' +
@@ -1318,12 +1351,11 @@ function screenDetail(){
     '</div>' +
     (swipeHintSeen() ? '' : '<div class="swipe-hint">좌우로 밀어서 다른 단원을 볼 수 있어요</div>') +
     '<div class="detail-wrap'+slide+'">' +
-    stageBand(st.stage) +
+    stageBand(st.stage, currentStage(s, analyze(s))) +
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년' +
       (s.claimedBy ? ' · 학번 '+esc(s.claimedBy) : ' · 미가입')+'</div>' +
-      '<h2 class="screen-title">'+esc(s.name)+'</h2></div>' +
-      '<span class="stagepill '+st.stage+'">'+st.label+'</span>' +
+      '<h2 class="screen-title">'+esc(s.name)+curPill(s, analyze(s))+'</h2></div>' +
     '</div>' +
     analysisHtml(s) +
     '<div style="height:14px;"></div>' +
@@ -1490,6 +1522,9 @@ function guideAdmin(){
       '<h2>전체 현황 보기</h2>' +
       '<p>단원들이 <b>S · T · A · R</b> 네 칸으로 나뉘어 표시됩니다.</p>' +
       '<ul>' +
+        '<li><b>칸은 “지금 도전할 수 있는 다음 단계”</b>로 나눈 것입니다. 이미 인증받은 단계가 아닙니다. ' +
+          'S칸에 있어도 S단계 인증을 받은 것이 아니라, <b>R단계를 마치고 FACE 1개 영역을 채워 바로 신청할 수 있는 상태</b>라는 뜻입니다.</li>' +
+        '<li><b>실제로 인증받은 단계는 이름 옆 배지</b>에 “현재 S단계”처럼 표시됩니다. 아직 없으면 “인증 전”입니다.</li>' +
         '<li>각 칸 안에서는 <b>다음 단계에 가까운 순서</b>로 정렬됩니다.</li>' +
         '<li>카드 아래 4색 막대는 F·A·C·E 달성률입니다.</li>' +
         '<li><b>미가입</b> 표시는 아직 앱에 등록하지 않은 단원입니다.</li>' +
