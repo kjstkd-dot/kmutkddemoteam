@@ -365,7 +365,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 m';
+var APP_VERSION = '2026-09-16 n';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -673,12 +673,19 @@ function stageBand(stage, cur){
     '<span class="sb-desc">'+STAGE_DESC[stage]+curTxt+'</span></div></div>';
 }
 var BRAND_SVG =
-  '<svg width="46" height="46" viewBox="0 0 512 512" aria-hidden="true">' +
+  '<svg width="52" height="52" viewBox="0 0 512 512" aria-hidden="true">' +
     '<rect width="512" height="512" rx="116" fill="#FFFFFF"/>' +
     '<polygon fill="#E4635B" points="76,336 436,308 436,366 76,394"/>' +
     '<polygon fill="#16A9A5" points="118,274 394,238 394,296 118,332"/>' +
     '<polygon fill="#7B70D8" points="162,210 350,168 350,226 162,268"/>' +
     '<polygon fill="#3E8FD9" points="208,146 304,116 304,174 208,204"/>' +
+    '<g fill="#fff" font-family="Noto Sans KR, sans-serif" font-weight="900"' +
+      ' text-anchor="middle" dominant-baseline="central">' +
+      '<text x="256" y="351" font-size="42" transform="rotate(-4.45 256 351)">R</text>' +
+      '<text x="256" y="285" font-size="40" transform="rotate(-7.4 256 285)">A</text>' +
+      '<text x="256" y="218" font-size="38" transform="rotate(-12.6 256 218)">T</text>' +
+      '<text x="256" y="160" font-size="34" transform="rotate(-17.4 256 160)">S</text>' +
+    '</g>' +
   '</svg>';
 
 var FACE_COLOR = { F:'var(--face-f)', A:'var(--face-a)', C:'var(--face-c)', E:'var(--face-e)' };
