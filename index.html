@@ -55,8 +55,10 @@
   --face-c:#17B3E8; --face-c-soft:#F1FAFE; --face-c-chip:#D9F0FB;
   --face-e:#8E5FD3; --face-e-soft:#F8F5FD; --face-e-chip:#EAE0F8;
   --face-f-ink:#D3181F; --face-a-ink:#B57A08; --face-c-ink:#0E88B5; --face-e-ink:#7A4BC0;
-  --pyr-r:#B3B7BB; --pyr-a:#12A2B8; --pyr-t:#3C6E85; --pyr-s:#6E757C;
-  --pill-r:#70767C; --pill-a:#0A7E90; --pill-t:#35627A; --pill-s:#5A6167;
+  --pyr-r:#E0524A; --pyr-a:#0E9595; --pyr-t:#6A5FC4; --pyr-s:#2F7FD1;
+  --pill-r:#E0524A; --pill-a:#0E9595; --pill-t:#6A5FC4; --pill-s:#2F7FD1;
+  --g-r:linear-gradient(100deg,#E0524A,#F08277); --g-a:linear-gradient(100deg,#0E9595,#40CFCB);
+  --g-t:linear-gradient(100deg,#6A5FC4,#8B7FE0); --g-s:linear-gradient(100deg,#2F7FD1,#5FB6EE);
   --track:#EAEDF1;
   --gold:#B57A08; --gold-soft:#FDF8EC;
 }
@@ -216,13 +218,16 @@ button{font-family:inherit;}
 .board{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:start;}
 @media (max-width:900px){ .board{grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media (max-width:560px){ .board{grid-template-columns:1fr;} }
-.col h3{display:flex; align-items:center; gap:10px; font-family:var(--font-body); margin-bottom:11px; border-radius:var(--radius-s); padding:10px 13px; color:#fff;}
+.col h3{display:flex; align-items:center; gap:10px; font-family:var(--font-body); margin-bottom:11px;
+  border-radius:var(--radius-s); padding:10px 13px; color:#fff; min-height:66px;}
+.col h3 > div{flex:1; min-width:0;}
 .col h3 .st-name{display:block; font-size:14px; font-weight:800; line-height:1.2;}
 .col h3 .st-name, .col h3 .st-desc{word-break:keep-all;}
 .col h3 .st-desc{display:block; font-size:10.5px; font-weight:500; opacity:.85; margin-top:2px;}
 .col h3 .cnt{font-size:11.5px; font-weight:800; color:#fff; background:rgba(255,255,255,.25); border-radius:999px; padding:3px 9px; margin-left:auto; white-space:nowrap;}
-.col.st-S h3{background:var(--pill-s);} .col.st-T h3{background:var(--pill-t);}
-.col.st-A h3{background:var(--pill-a);} .col.st-R h3{background:var(--pill-r);}
+.col.st-S h3{background:var(--g-s);} .col.st-T h3{background:var(--g-t);}
+.col.st-A h3{background:var(--g-a);} .col.st-R h3{background:var(--g-r);}
+.col h3 .cnt{background:rgba(255,255,255,.3);}
 .dot{width:10px; height:10px; border-radius:50%; flex:none;}
 .scards{display:flex; flex-direction:column; gap:9px;}
 .scard{border:1px solid var(--border); border-left:4px solid var(--border); border-radius:var(--radius-m); padding:12px 13px; background:var(--surface); cursor:pointer;}
@@ -252,8 +257,8 @@ button{font-family:inherit;}
 .stage-band .sb-mark{width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:15px; flex:none;}
 .stage-band .sb-name{display:block; font-size:14.5px; font-weight:800; line-height:1.2;}
 .stage-band .sb-desc{display:block; font-size:11px; opacity:.88; margin-top:2px; line-height:1.4;}
-.stage-band.st-S{background:var(--pill-s);} .stage-band.st-T{background:var(--pill-t);}
-.stage-band.st-A{background:var(--pill-a);} .stage-band.st-R{background:var(--pill-r);}
+.stage-band.st-S{background:var(--g-s);} .stage-band.st-T{background:var(--g-t);}
+.stage-band.st-A{background:var(--g-a);} .stage-band.st-R{background:var(--g-r);}
 .detail-wrap{touch-action:pan-y;}
 .detail-wrap.slide-right{animation:slideR .18s ease;}
 .detail-wrap.slide-left{animation:slideL .18s ease;}
@@ -351,7 +356,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 h';
+var APP_VERSION = '2026-09-16 i';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -629,7 +634,7 @@ var STAGE_FULL = {
   A:'다음 단계 — A단계 선발 대상', R:'다음 단계 — R단계 요건부터'
 };
 var STAGE_DESC = {
-  S:'FACE 1개 영역 달성 · 1차 자동 통과 대상', T:'3·4학년 · 영역별 최우수 선발 대기',
+  S:'FACE 1개 영역 달성 · 1차 자동 선발', T:'3·4학년 · 영역별 최우수 선발 대기',
   A:'1·2학년 · 총점 우수 선발 대기', R:'자소서 · 계획서 · 교수상담 미완료'
 };
 
