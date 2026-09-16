@@ -188,7 +188,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 a';
+var APP_VERSION = '2026-09-16 b';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -254,34 +254,99 @@ async function storeAll(col){
   return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); });
 }
 
-/* ============ 융합전공 이수 조건 (예시 값입니다) ============
-   실제 이수 조건(트랙명, 총 이수학점, 구분별 필요학점)을 알려주시면
-   이 블록만 고쳐서 그대로 반영할 수 있습니다. */
-var TRACK_NAME = '(예시) 데이터사이언스 융합전공';
-var TOTAL_MIN = 39;
-var CATEGORIES = [
-  { code:'CORE', name:'융합전공 핵심(필수) 교과', min:15 },
-  { code:'ELEC', name:'융합전공 선택 교과', min:18 },
-  { code:'CAP',  name:'캡스톤/설계 교과', min:6 }
+/* ============ 융합전공 이수 조건 ============
+   계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준.
+   TRACK_NAME과 CORE_COURSES(핵심과목 목록·최대 3과목/9학점, 제4조②)는
+   융합전공마다 다르므로 실제 값으로 바꿔주세요. 나머지 숫자는 규정에 정해진 값입니다. */
+var TRACK_NAME = '(융합전공명을 입력하세요)';
+var CORE_COURSES = [
+  // 예시입니다. 실제 핵심과목 이름과 학점으로 바꿔주세요 (최대 3과목).
+  { name:'핵심과목1', credits:3 },
+  { name:'핵심과목2', credits:3 },
+  { name:'핵심과목3', credits:3 }
 ];
+var DOUBLE_MAJOR_MIN = 33;      // 제7조① 복수전공: 33학점(핵심과목 포함) 이상
+var MINOR_MIN = 15;             // 제7조② 부전공: 15학점(핵심과목 포함) 이상 (단일/2개 이상 동일)
+var MINOR_PRIMARY_SINGLE = 54;  // 제7조② 부전공 1개 이수 시 제1전공 54학점 이상
+var MINOR_PRIMARY_MULTI = 42;   // 제7조② 융합 부전공 2개 이상 이수 시 제1전공 각 42학점 이상
+var APPLY_MIN_SEMESTERS = 3;    // 제5조 이수신청 자격: 인정학기 3학기 이상
 
-function catName(code){
-  var c = CATEGORIES.filter(function(x){ return x.code===code; })[0];
-  return c ? c.name : code;
-}
+var TRACK_TYPES = {
+  double:      { label:'복수전공', convergenceMin: DOUBLE_MAJOR_MIN },
+  minor_single:{ label:'부전공(1개)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_SINGLE },
+  minor_multi: { label:'부전공(2개 이상 동시이수)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_MULTI }
+};
+function trackTypeOf(student){ return TRACK_TYPES[student && student.trackType] ? student.trackType : 'double'; }
+function trackInfo(student){ return TRACK_TYPES[trackTypeOf(student)]; }
 function courses(student){ return (student && student.courses) || []; }
-function catCredits(student, code){
-  return courses(student).filter(function(c){ return c.category===code; })
-    .reduce(function(s,c){ return s + num(c.credits); }, 0);
-}
+function normName(s){ return String(s==null?'':s).replace(/\s+/g,''); }
 function totalCredits(student){
   return courses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
 }
-function catMet(student, cat){ return catCredits(student, cat.code) >= cat.min; }
-function allMet(student){
-  return CATEGORIES.every(function(cat){ return catMet(student, cat); }) && totalCredits(student) >= TOTAL_MIN;
+function coreStatus(student){
+  var have = courses(student).map(function(c){ return normName(c.name); });
+  return CORE_COURSES.map(function(cc){
+    return { name:cc.name, credits:cc.credits, done: have.indexOf(normName(cc.name)) >= 0 };
+  });
 }
+function coreDoneCount(student){ return coreStatus(student).filter(function(x){ return x.done; }).length; }
+function coreMet(student){ return coreDoneCount(student) >= CORE_COURSES.length; }
+function convergenceMin(student){ return trackInfo(student).convergenceMin; }
+function convergenceMet(student){ return coreMet(student) && totalCredits(student) >= convergenceMin(student); }
+function primaryMin(student){ return trackInfo(student).primaryMin || null; }
+function primaryMet(student){
+  var min = primaryMin(student);
+  return min==null ? true : num(student.primaryMajorCredits) >= min;
+}
+function allMet(student){ return convergenceMet(student) && primaryMet(student); }
+function eligibleToApply(student){ return num(student.recognizedSemesters) >= APPLY_MIN_SEMESTERS; }
 function pct(cur, min){ return min>0 ? Math.min(100, Math.round(cur/min*100)) : 100; }
+
+/* ============ 마이크로디그리 (첨단분야 혁신융합대학사업 학사 운영 내규 제5조, 별표1·별표2) ============
+   컨소시엄 대학·과정이 바뀌면 이 목록을 고쳐주세요. min은 각 과정의 최소 이수학점입니다. */
+var MICRODEGREE_PROGRAMS = [
+  { key:'', group:'', name:'해당 없음', min:0 },
+  { key:'auto_basic', group:'미래자동차', name:'미래자동차공학전공 (초급)', min:9, note:'초·중·고급 지정 과목 중 초급 6학점 포함 9학점' },
+  { key:'auto_mid',   group:'미래자동차', name:'미래자동차공학전공 (중급)', min:9, note:'중급 이상 6학점 포함 9학점' },
+  { key:'auto_adv',   group:'미래자동차', name:'미래자동차공학전공 (고급)', min:9, note:'고급 과목 6학점 포함 9학점' },
+  { key:'eco_vehicle',group:'미래자동차', name:'친환경자동차 (중급)', min:9 },
+  { key:'uam',        group:'미래자동차', name:'UAM (초급)', min:9 },
+  { key:'mobility_vision', group:'미래자동차', name:'모빌리티비전 (중급)', min:9 },
+  { key:'xr_fundamental', group:'실감미디어', name:'실감미디어 펀더멘털 (초급)', min:12 },
+  { key:'metaverse_content_design', group:'실감미디어', name:'메타버스콘텐츠디자인 (중급)', min:9 },
+  { key:'xr_planning', group:'실감미디어', name:'실감미디어 기획 (중급)', min:9 },
+  { key:'xr_tech', group:'실감미디어', name:'실감미디어 기술 (중급)', min:9 },
+  { key:'game_graphic', group:'실감미디어', name:'게임그래픽디자인 (중급)', min:9 },
+  { key:'game_eng', group:'실감미디어', name:'게임공학 (중급)', min:9 },
+  { key:'game_planning', group:'실감미디어', name:'게임기획 (중급)', min:9 },
+  { key:'xr_design', group:'실감미디어', name:'실감미디어디자인 (중급)', min:9 },
+  { key:'xr_content_production', group:'실감미디어', name:'실감미디어 콘텐츠제작 (중급)', min:9 },
+  { key:'xr_business', group:'실감미디어', name:'실감미디어 비즈니스 (중급)', min:9 },
+  { key:'xr_business_practice', group:'실감미디어', name:'실감미디어 비즈니스실전 (중급)', min:9 },
+  { key:'xr_startup', group:'실감미디어', name:'XR창업실전 (중급)', min:9 },
+  { key:'global_game', group:'실감미디어', name:'글로벌실감게임 (중급)', min:9 },
+  { key:'xr_global_innovator', group:'실감미디어', name:'실감미디어글로벌이노베이터 (고급)', min:9 },
+  { key:'social_livinglab', group:'실감미디어', name:'소셜리빙랩 실감미디어 (중급)', min:9 },
+  { key:'local_culture_xr', group:'실감미디어', name:'로컬문화 실감미디어 (중급)', min:9 },
+  { key:'kculture_xr', group:'실감미디어', name:'K-Culture 실감콘텐츠 개발실습 (중급)', min:9 },
+  { key:'xr_content_design2', group:'실감미디어', name:'실감미디어 콘텐츠디자인 (중급)', min:9 },
+  { key:'xr_content_design3', group:'실감미디어', name:'XR콘텐츠디자인 (중급)', min:9 },
+  { key:'haptic_tech', group:'실감미디어', name:'체감기술 (고급)', min:12 },
+  { key:'xr_io_tech', group:'실감미디어', name:'XR입출력기술 (고급)', min:12 },
+  { key:'xr_content_design_tech', group:'실감미디어', name:'실감미디어콘텐츠 디자인테크 (고급)', min:9 },
+  { key:'strategic_comm_xr', group:'실감미디어', name:'전략커뮤니케이션 실감미디어 (고급)', min:9 },
+  { key:'xr_video_production', group:'실감미디어', name:'실감영상제작 (중급)', min:9 },
+  { key:'virtual_3d_character', group:'실감미디어', name:'버추얼3D캐릭터디자인 (중급)', min:9 },
+  { key:'virtual_graphic_design', group:'실감미디어', name:'버추얼그래픽디자인 (중급)', min:9 },
+  { key:'xr_industry_academy', group:'실감미디어', name:'실감미디어 지산학협력 (중급)', min:9 }
+];
+function microdegreeProgram(student){
+  return MICRODEGREE_PROGRAMS.filter(function(p){ return p.key === (student && student.microdegreeKey || ''); })[0] || MICRODEGREE_PROGRAMS[0];
+}
+function microdegreeMet(student){
+  var p = microdegreeProgram(student);
+  return p.key ? num(student.microdegreeCredits) >= p.min : false;
+}
 
 /* ============ state ============ */
 var root = document.getElementById('app');
@@ -443,7 +508,9 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   var existing = await storeGet('cvg_students', id);
   if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
   var hash = await sha256Hex(pw);
-  var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[], createdAt:nowIso() };
+  var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
+    trackType:'double', recognizedSemesters:'', primaryMajorCredits:0,
+    microdegreeKey:'', microdegreeCredits:0, createdAt:nowIso() };
   await storeSet('cvg_students', id, doc);
   setSession('student', { id:id, name:name });
   state.cache.me = Object.assign({id:id}, doc);
@@ -474,6 +541,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
 /* ============ 학생 화면 ============ */
 function renderStudent(){
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
   return screenStudentHome();
 }
@@ -482,28 +550,54 @@ async function loadMe(){
 }
 function progressBlock(student){
   var met = allMet(student);
+  var info = trackInfo(student);
+  var cvgCur = totalCredits(student), cvgMin = convergenceMin(student);
+  var cvgOk = cvgCur >= cvgMin;
+  var core = coreStatus(student);
+  var coreOkCount = core.filter(function(x){ return x.done; }).length;
   var html = '';
   html += '<div class="statusband '+(met?'met':'unmet')+'">' +
     '<div class="mark">'+(met?'✓':'!')+'</div>' +
-    '<div><b>'+(met?'졸업 이수 조건 충족':'아직 이수 조건 미충족')+'</b>' +
-    '<span>총 '+totalCredits(student)+' / '+TOTAL_MIN+'학점</span></div>' +
+    '<div><b>'+(met?'융합전공 이수 조건 충족':'아직 이수 조건 미충족')+'</b>' +
+    '<span>'+esc(info.label)+' · 인정학기 '+(eligibleToApply(student)?'신청 가능':'신청 자격 미충족(3학기 이상 필요)')+'</span></div>' +
   '</div>';
-  CATEGORIES.forEach(function(cat){
-    var cur = catCredits(student, cat.code);
-    var m = cur >= cat.min;
-    html += '<div class="catcard '+(m?'met':'')+'">' +
-      '<div class="cthead"><b>'+esc(cat.name)+'</b><span>'+cur+' / '+cat.min+'학점'+(m?' 충족':'')+'</span></div>' +
-      '<div class="pbar"><i style="width:'+pct(cur,cat.min)+'%"></i></div>' +
+  html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
+    '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
+    '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
+    '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
+      core.map(function(c){ return (c.done?'✓ ':'· ') + esc(c.name); }).join(' &nbsp; ') +
+    '</div>' +
+  '</div>' +
+  '<div class="catcard '+(cvgOk?'met':'')+'">' +
+    '<div class="cthead"><b>융합전공 이수학점</b><span>'+cvgCur+' / '+cvgMin+'학점'+(cvgOk?' 충족':'')+'</span></div>' +
+    '<div class="pbar"><i style="width:'+pct(cvgCur,cvgMin)+'%"></i></div>' +
+  '</div>';
+  if(info.primaryMin){
+    var pCur = num(student.primaryMajorCredits), pOk = pCur >= info.primaryMin;
+    html += '<div class="catcard '+(pOk?'met':'')+'">' +
+      '<div class="cthead"><b>제1전공 이수학점</b><span>'+pCur+' / '+info.primaryMin+'학점'+(pOk?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(pCur,info.primaryMin)+'%"></i></div>' +
     '</div>';
-  });
+  }
+  var mp = microdegreeProgram(student);
+  if(mp.key){
+    var mCur = num(student.microdegreeCredits), mOk = mCur >= mp.min;
+    html += '<div class="catcard '+(mOk?'met':'')+'" style="margin-top:16px;">' +
+      '<div class="cthead"><b>마이크로디그리 · '+esc(mp.name)+'</b><span>'+mCur+' / '+mp.min+'학점'+(mOk?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(mCur,mp.min)+'%"></i></div>' +
+      (mp.note ? '<div class="cm" style="margin-top:6px;">'+esc(mp.note)+'</div>' : '') +
+    '</div>';
+  }
   return html;
 }
 function courseListBlock(student, editable){
   var list = courses(student);
+  var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
   if(!list.length) return '<div class="empty-state">아직 등록된 과목이 없어요.</div>';
   return '<div class="courselist">' + list.map(function(c){
+    var isCore = coreNames.indexOf(normName(c.name)) >= 0;
     return '<div class="courserow">' +
-      '<div class="ci"><span class="catpill">'+esc(catName(c.category))+'</span><div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="ci">'+(isCore?'<span class="catpill">핵심과목</span>':'')+'<div class="cn">'+esc(c.name)+'</div>' +
       '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
       '<div class="cc">'+num(c.credits)+'학점</div>' +
       (editable ? '<div class="cact">' +
@@ -526,6 +620,11 @@ function screenStudentHome(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
+        '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
+      '<div class="notice-box">이수형태: '+esc(trackInfo(s).label)+' · 인정학기: '+esc(String(s.recognizedSemesters||'-'))+
+        (trackInfo(s).primaryMin ? ' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' : '') +
+      '</div>' +
       '<div class="row" style="margin-top:18px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
       '</div>' +
@@ -533,26 +632,65 @@ function screenStudentHome(){
   );
 }
 function screenCourseForm(){
-  var s = state.cache.me;
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
   var editing = state.editingCourseId ? courses(s).filter(function(c){ return c.id===state.editingCourseId; })[0] : null;
   return (
     '<div class="phone">' +
       '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
       '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
+      '<p class="screen-sub">핵심과목 목록에 있는 이름과 똑같이 입력하면 자동으로 핵심과목으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ')+'</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course" class="stack">' +
         '<div class="field"><label>과목명</label><input id="cName" required value="'+(editing?esc(editing.name):'')+'"></div>' +
-        '<div class="field"><label>구분</label><select id="cCategory">' +
-          CATEGORIES.map(function(cat){
-            return '<option value="'+esc(cat.code)+'" '+((editing&&editing.category===cat.code)?'selected':'')+'>'+esc(cat.name)+'</option>';
-          }).join('') +
-        '</select></div>' +
         '<div class="grid2">' +
           '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):3)+'"></div>' +
           '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
         '</div>' +
         '<div class="row" style="gap:8px;">' +
-          '<button class="btn btn-ghost" type="button" data-action="'+(state.role==='admin'?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenInfoForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">이수정보</div>' +
+      '<h2 class="screen-title">이수형태·학기 정보 수정</h2>' +
+      '<p class="screen-sub">이수형태에 따라 필요한 이수학점 기준이 달라져요. (제7조)</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-info" class="stack">' +
+        '<div class="field"><label>이수형태</label><select id="iType">' +
+          Object.keys(TRACK_TYPES).map(function(k){
+            return '<option value="'+esc(k)+'" '+(trackTypeOf(s)===k?'selected':'')+'>'+esc(TRACK_TYPES[k].label)+'</option>';
+          }).join('') +
+        '</select></div>' +
+        '<div class="field"><label>인정학기 (신청 자격: 3학기 이상)</label><input id="iSem" type="number" min="0" value="'+num(s.recognizedSemesters)+'"></div>' +
+        '<div class="field"><label>제1전공 이수학점 (부전공일 때만 필요)</label><input id="iPrimary" type="number" min="0" value="'+num(s.primaryMajorCredits)+'"></div> ' +
+        '<div class="field"><label>마이크로디그리 과정 (해당 시)</label><select id="iMicro">' +
+          (function(){
+            var groups = {}; var order = [];
+            MICRODEGREE_PROGRAMS.forEach(function(p){
+              var g = p.group || '';
+              if(order.indexOf(g)<0){ order.push(g); groups[g]=[]; }
+              groups[g].push(p);
+            });
+            return order.map(function(g){
+              var opts = groups[g].map(function(p){
+                return '<option value="'+esc(p.key)+'" '+((s.microdegreeKey||'')===p.key?'selected':'')+'>'+esc(p.name)+'</option>';
+              }).join('');
+              return g ? '<optgroup label="'+esc(g)+'">'+opts+'</optgroup>' : opts;
+            }).join('');
+          })() +
+        '</select></div>' +
+        '<div class="field"><label>마이크로디그리 이수학점</label><input id="iMicroCredits" type="number" min="0" value="'+num(s.microdegreeCredits)+'"></div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
           '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
         '</div>' +
       '</form>' +
@@ -581,7 +719,6 @@ function screenProfile(){
 
 async function saveCourse(form){
   var name = form.querySelector('#cName').value.trim();
-  var category = form.querySelector('#cCategory').value;
   var credits = form.querySelector('#cCredits').value;
   var semester = form.querySelector('#cSemester').value.trim();
   if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
@@ -594,10 +731,10 @@ async function saveCourse(form){
 
   if(state.editingCourseId){
     list = list.map(function(c){
-      return c.id===state.editingCourseId ? { id:c.id, name:name, category:category, credits:num(credits), semester:semester } : c;
+      return c.id===state.editingCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester } : c;
     });
   } else {
-    list.push({ id:uid(), name:name, category:category, credits:num(credits), semester:semester });
+    list.push({ id:uid(), name:name, credits:num(credits), semester:semester });
   }
   await storeUpdate(col, id, { courses:list });
   student.courses = list;
@@ -613,6 +750,25 @@ async function deleteCourse(courseId){
   var list = courses(student).filter(function(c){ return c.id!==courseId; });
   await storeUpdate(col, id, { courses:list });
   student.courses = list;
+  render();
+}
+async function saveInfo(form){
+  var trackType = form.querySelector('#iType').value;
+  var recognizedSemesters = num(form.querySelector('#iSem').value);
+  var primaryMajorCredits = num(form.querySelector('#iPrimary').value);
+  var microdegreeKey = form.querySelector('#iMicro').value;
+  var microdegreeCredits = num(form.querySelector('#iMicroCredits').value);
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var patch = { trackType:trackType, recognizedSemesters:recognizedSemesters, primaryMajorCredits:primaryMajorCredits,
+    microdegreeKey:microdegreeKey, microdegreeCredits:microdegreeCredits };
+  await storeUpdate(col, id, patch);
+  Object.assign(student, patch);
+  state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
   render();
 }
 async function changePassword(oldPw, newPw, newPw2){
@@ -638,6 +794,7 @@ async function loadRoster(){
 function renderAdmin(){
   if(state.view==='detail') return screenAdminDetail();
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
   if(state.view==='settings') return screenAdminSettings();
   return screenAdminList();
@@ -658,7 +815,7 @@ function screenAdminList(){
     '<div class="phone">' +
       '<div class="eyebrow">관리자</div>' +
       '<h2 class="screen-title">전체 학생 이수 현황</h2>' +
-      '<p class="screen-sub">'+esc(TRACK_NAME)+' · 총 '+TOTAL_MIN+'학점 이상</p>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
       '<div class="summary">' +
         '<div class="tile"><div class="num">'+total+'</div><div class="lbl">전체 학생</div></div>' +
         '<div class="tile"><div class="num">'+metCount+'</div><div class="lbl">요건 충족</div></div>' +
@@ -676,8 +833,8 @@ function screenAdminList(){
         var m = allMet(s);
         return '<button class="rcard '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
           '<div class="nm">'+esc(s.name)+'</div>' +
-          '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
-          '<div class="mini"><span class="mono">'+totalCredits(s)+' / '+TOTAL_MIN+'학점</span>' +
+          '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+' · '+esc(trackInfo(s).label)+'</div>' +
+          '<div class="mini"><span class="mono">'+totalCredits(s)+' / '+convergenceMin(s)+'학점</span>' +
             '<span class="badge '+(m?'met':'unmet')+'">'+(m?'충족':'미충족')+'</span></div>' +
         '</button>';
       }).join('') + '</div>' : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
@@ -703,6 +860,11 @@ function screenAdminDetail(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
+        '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
+      '<div class="notice-box">이수형태: '+esc(trackInfo(s).label)+' · 인정학기: '+esc(String(s.recognizedSemesters||'-'))+
+        (trackInfo(s).primaryMin ? ' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' : '') +
+      '</div>' +
       '<div class="row" style="margin-top:18px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="reset-password" style="width:auto; flex:1;">비밀번호 초기화</button>' +
         '<button class="btn btn-danger" data-action="delete-student" style="width:auto; flex:1;">학생 삭제</button>' +
@@ -723,7 +885,7 @@ function screenAdminSettings(){
         '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
-      '<div class="notice-box" style="margin-top:16px;">이수 조건(트랙명·총 이수학점·구분별 필요학점)은 index.html의 CATEGORIES/TOTAL_MIN 값을 고쳐서 바꿀 수 있어요.</div>' +
+      '<div class="notice-box" style="margin-top:16px;">융합전공명과 핵심과목 목록은 index.html의 TRACK_NAME / CORE_COURSES 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
     '</div>'
   );
 }
@@ -780,6 +942,10 @@ document.addEventListener('submit', function(e){
     e.preventDefault();
     saveCourse(f).catch(failWith);
   }
+  if(f.id==='form-info'){
+    e.preventDefault();
+    saveInfo(f).catch(failWith);
+  }
   if(f.id==='form-changepw'){
     e.preventDefault();
     changePassword(f.querySelector('#pwOld').value, f.querySelector('#pwNew').value, f.querySelector('#pwNew2').value).catch(failWith);
@@ -816,6 +982,7 @@ document.addEventListener('click', function(e){
   }
   else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; }
   else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
+  else if(act==='goto-info-form'){ state.view='info-form'; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
   else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
