@@ -313,16 +313,28 @@ var db = null, fallbackMode = false, fallbackData = {};
 var apiMode = false;
 
 async function apiCall(action, body){
-  var res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 미리요청(preflight) 없이 보내기 위함
-    body: JSON.stringify(Object.assign({ action: action }, body || {}))
-  });
-  if(!res.ok) throw new Error('서버 응답 오류 ' + res.status);
-  var out = await res.json();
+  var res;
+  try{
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 미리요청(preflight) 없이 보내기 위함
+      body: JSON.stringify(Object.assign({ action: action }, body || {}))
+    });
+  }catch(e){
+    throw new Error('자료 서버에 연결하지 못했습니다. 구글 Apps Script 배포에서 "액세스 권한이 있는 사용자"가 "모든 사용자"인지 확인해 주세요.');
+  }
+  if(!res.ok) throw new Error('자료 서버 응답 오류 (' + res.status + ')');
+  var text = await res.text();
+  var out;
+  try{ out = JSON.parse(text); }
+  catch(e){
+    throw new Error('자료 서버가 예상과 다른 답을 보냈습니다. 배포 설정이 "모든 사용자"인지 확인해 주세요.');
+  }
   if(out && out.error) throw new Error(out.error);
   return out;
 }
+function errMsg(e){ return e && e.message ? e.message : String(e); }
+function failWith(e){ state.formError = errMsg(e); render(); }
 function loadFallback(){
   try{ var raw = localStorage.getItem('kstar_store'); fallbackData = raw ? JSON.parse(raw) : {}; }
   catch(e){ fallbackData = {}; }
@@ -605,7 +617,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:''
+  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:'', apiError:''
 };
 var cache = { roster:[], me:null };
 
@@ -747,6 +759,7 @@ function renderApp(){
         '<button class="roletab '+(state.role==='admin'?'active':'')+'" data-action="set-role" data-role="admin">관리자</button>' +
       '</div>') +
       '<div class="phone">' + body + modalHtml() + '</div>' +
+      (state.apiError ? '<div class="notice-box" style="max-width:460px;border-color:var(--danger-border);background:var(--danger-bg);color:var(--danger);"><b>자료 서버에 연결하지 못했습니다.</b><br>' + esc(state.apiError) + '</div>' : '') +
       (fallbackMode ? '<div class="notice-box" style="max-width:460px;">지금은 서버에 연결되지 않아 <b>이 기기에만</b> 저장되는 임시 모드로 동작합니다. 실제 운영에서는 서버 연결이 필요합니다.</div>' : '') +
     '</div>'
   );
@@ -1387,7 +1400,7 @@ document.addEventListener('submit', function(e){
   var f = e.target;
   if(f.id==='form-login'){
     e.preventDefault();
-    doLogin(state.role, f.querySelector('#loginId').value.trim(), f.querySelector('#loginPw').value);
+    doLogin(state.role, f.querySelector('#loginId').value.trim(), f.querySelector('#loginPw').value).catch(failWith);
   }
   if(f.id==='form-register'){
     e.preventDefault();
@@ -1395,7 +1408,7 @@ document.addEventListener('submit', function(e){
       f.querySelector('#regId').value.trim(), f.querySelector('#regName').value.trim(),
       f.querySelector('#regDept').value.trim(), f.querySelector('#regYear').value,
       f.querySelector('#regPw').value, f.querySelector('#regPw2').value
-    );
+    ).catch(failWith);
   }
   if(f.id==='form-register-admin'){
     e.preventDefault();
@@ -1403,7 +1416,7 @@ document.addEventListener('submit', function(e){
       f.querySelector('#raId').value.trim(), f.querySelector('#raName').value.trim(),
       f.querySelector('#raPw').value, f.querySelector('#raPw2').value,
       f.querySelector('#raCode').value
-    );
+    ).catch(failWith);
   }
   if(f.id==='form-scores'){
     e.preventDefault();
@@ -1417,7 +1430,7 @@ document.addEventListener('submit', function(e){
       await storeUpdate('roster', state.studentSession.rosterId, patch);
       await loadMe();
       navBack(function(){ state.view='list'; state.formError=''; });
-    })();
+    })().catch(failWith);
   }
   if(f.id==='form-profile'){
     e.preventDefault();
@@ -1447,7 +1460,7 @@ document.addEventListener('submit', function(e){
         setSession('admin', { id:sess.id, name:name });
       }
       navBack(function(){ state.view='list'; state.formError=''; });
-    })();
+    })().catch(failWith);
   }
   if(f.id==='form-admin-code'){
     e.preventDefault();
@@ -1455,7 +1468,7 @@ document.addEventListener('submit', function(e){
       var code = f.querySelector('#acCode').value.trim();
       await storeSet('config','app',{ adminCode:code, updatedAt:nowIso() });
       navBack(function(){ state.view='list'; state.formError=''; });
-    })();
+    })().catch(failWith);
   }
   if(f.id==='form-admin-edit'){
     e.preventDefault();
@@ -1470,7 +1483,7 @@ document.addEventListener('submit', function(e){
       await storeUpdate('roster', state.detailId, patch);
       await loadRoster();
       render();
-    })();
+    })().catch(failWith);
   }
 });
 
@@ -1517,7 +1530,7 @@ document.addEventListener('click', function(e){
         await loadRoster();
       }
       navBack(function(){ state.modal=null; });
-    })();
+    })().catch(failWith);
   }
 });
 
@@ -1567,6 +1580,8 @@ document.addEventListener('keydown', function(e){
   render();
   if(API_URL){
     apiMode = true;
+    try{ await apiCall('ping', {}); }
+    catch(e){ state.apiError = errMsg(e); }
   } else {
     try{
       if(window.claude && window.claude.use){ db = await window.claude.use('db'); }
