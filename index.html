@@ -1824,8 +1824,23 @@ document.addEventListener('keydown', function(e){
 
 /* ============ boot ============ */
 (async function boot(){
+  // 새 버전이 올라오면 설치된 앱도 저절로 최신으로 바뀌도록 한다
   try{
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+    if('serviceWorker' in navigator){
+      var hadController = !!navigator.serviceWorker.controller;
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if(!hadController || reloaded) return;   // 처음 설치될 때는 새로고침하지 않는다
+        reloaded = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register('sw.js').then(function(reg){
+        reg.update();
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState === 'visible') reg.update();   // 앱을 다시 열 때마다 확인
+        });
+      }).catch(function(){});
+    }
   }catch(e){}
   restoreSessions();
   if(!state.studentSession && state.adminSession) state.role = 'admin';
