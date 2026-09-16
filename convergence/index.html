@@ -188,14 +188,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 e';
-
-/* ============ 미리보기 잠금 (배포 전 임시) ============
-   공개할 준비가 되면 아래 PREVIEW_LOCK 을 false 로 바꾸세요. 잠금 화면 없이 바로 뜹니다.
-   PREVIEW_CODE 는 원하는 값으로 바꿔서 사용하세요. 브라우저에 저장된 값이라 완전한
-   보안은 아니고, 배포 전에 아무나 로그인·가입 화면을 보지 못하게 막는 용도입니다. */
-var PREVIEW_LOCK = true;
-var PREVIEW_CODE = 'kmu-preview-2026';
+var APP_VERSION = '2026-09-16 d';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -424,30 +417,8 @@ var state = {
   editingCourseId: null,
   detailId: null,
   q: '', filter: 'all',
-  cache: { me:null, roster:[] },
-  previewUnlocked: false, previewError: ''
+  cache: { me:null, roster:[] }
 };
-function previewUnlocked(){ return !PREVIEW_LOCK || state.previewUnlocked; }
-function loadPreviewUnlock(){
-  if(!PREVIEW_LOCK){ state.previewUnlocked = true; return; }
-  try{ state.previewUnlocked = localStorage.getItem('cvg_preview_ok') === '1'; }catch(e){ state.previewUnlocked = false; }
-}
-function screenPreviewLock(){
-  return (
-    '<div class="page">' +
-      '<div class="phone" style="max-width:380px;">' +
-        '<div class="eyebrow">미리보기</div>' +
-        '<h2 class="screen-title">아직 공개 전이에요</h2>' +
-        '<p class="screen-sub">배포 전 미리보기 코드를 입력해 주세요.</p>' +
-        (state.previewError? '<div class="errbox">'+esc(state.previewError)+'</div>' : '') +
-        '<form id="form-preview" class="stack">' +
-          '<div class="field"><label>미리보기 코드</label><input id="previewCode" type="password" autocomplete="off" required></div>' +
-          '<button class="btn btn-primary" type="submit">들어가기</button>' +
-        '</form>' +
-      '</div>' +
-    '</div>'
-  );
-}
 function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
 function setSession(role, val){
   try{
@@ -465,7 +436,7 @@ function loadSessions(){
   });
 }
 
-function render(){ root.innerHTML = previewUnlocked() ? renderApp() : screenPreviewLock(); }
+function render(){ root.innerHTML = renderApp(); }
 function errMsg(e){ return e && e.message ? e.message : String(e); }
 function failWith(e){ state.formError = errMsg(e); render(); }
 
@@ -1110,19 +1081,6 @@ document.addEventListener('submit', function(e){
     codes = codes.filter(function(v, i){ return codes.indexOf(v)===i; });
     saveCoreCourses(codes).catch(failWith);
   }
-  if(f.id==='form-preview'){
-    e.preventDefault();
-    var entered = f.querySelector('#previewCode').value;
-    if(entered === PREVIEW_CODE){
-      state.previewUnlocked = true; state.previewError = '';
-      try{ localStorage.setItem('cvg_preview_ok', '1'); }catch(err){}
-      render();
-      boot();
-    } else {
-      state.previewError = '코드가 올바르지 않아요.';
-      render();
-    }
-  }
 });
 
 document.addEventListener('input', function(e){
@@ -1184,21 +1142,18 @@ document.addEventListener('click', function(e){
 /* ============ 시작 ============ */
 loadFallback();
 loadSessions();
-loadPreviewUnlock();
 if(state.studentSession){ state.role='student'; state.view='home'; }
 else if(state.adminSession){ state.role='admin'; state.view='list'; }
 render();
 
-async function boot(){
-  if(!previewUnlocked()) return;
+(async function boot(){
   try{
     await loadCoreCourses();
     if(state.role==='student' && state.studentSession){ await loadMe(); }
     else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
   }catch(e){ state.formError = errMsg(e); }
   render();
-}
-boot();
+})();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
