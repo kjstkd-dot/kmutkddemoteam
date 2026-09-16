@@ -202,15 +202,23 @@ button{font-family:inherit;}
 .stagepill.T{background:var(--pill-t);} .stagepill.S{background:var(--pill-s);}
 
 /* admin board */
-.summary{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px;}
-.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:var(--shadow-card);}
+.summary{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px;}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  box-shadow:var(--shadow-card); cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit;
+  border-width:2px; transition:transform .08s ease;}
+.tile:hover{transform:translateY(-1px);}
+.tile.on{border-color:var(--text); box-shadow:0 0 0 3px rgba(34,48,63,.12), var(--shadow-card);}
+.tile .pick{display:block; font-size:10.5px; font-weight:700; color:var(--text-faint); margin-top:7px;}
+.tile.on .pick{color:var(--primary);}
 .tile .band{padding:8px 14px; color:#fff; font-size:11.5px; font-weight:700; letter-spacing:.01em;}
 .tile .body{padding:14px 16px 16px;}
 .tile .num{font-size:30px; font-weight:700; font-family:var(--font-mono); line-height:1;}
 .tile .lbl{color:var(--text-muted); font-size:11.5px; margin-top:6px; line-height:1.4;}
-.tile.t-purple .band{background:linear-gradient(100deg,#6A5FC4,#8B7FE0);} .tile.t-purple .num{color:#6A5FC4;}
-.tile.t-red .band{background:linear-gradient(100deg,#E0524A,#EF7A6E);}    .tile.t-red .num{color:#E0524A;}
-.tile.t-blue .band{background:linear-gradient(100deg,#4A90D9,#6FB3EE);}   .tile.t-blue .num{color:#4A90D9;}
+.tile.t-indigo .band{background:linear-gradient(100deg,#3E52CE,#6B80EE);} .tile.t-indigo .num{color:#3E52CE;}
+.tile.t-red .band{background:var(--g-r);}    .tile.t-red .num{color:#E0524A;}
+.tile.t-teal .band{background:var(--g-a);}   .tile.t-teal .num{color:#0E9595;}
+.tile.t-purple .band{background:var(--g-t);} .tile.t-purple .num{color:#6A5FC4;}
+.tile.t-blue .band{background:var(--g-s);}   .tile.t-blue .num{color:#2F7FD1;}
 .tile.t-gold .band{background:linear-gradient(100deg,#D9A73D,#E8BE66);}   .tile.t-gold .num{color:#D9A73D;}
 .controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
 .controls input, .controls select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:9px 12px; font-size:13px; font-family:var(--font-body);}
@@ -368,7 +376,10 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
   body{padding:18px 12px 48px;}
   .guide-hero{padding:22px 18px;}
   .step{padding:19px 16px;}
-  .summary{grid-template-columns:repeat(2,1fr);}
+  .summary{grid-template-columns:repeat(2,1fr); gap:10px;}
+  .tile .band{padding:7px 11px; font-size:11px;}
+  .tile .body{padding:11px 12px 13px;}
+  .tile .num{font-size:25px;}
   .grid2,.grid4{grid-template-columns:1fr 1fr;}
 }
 </style>
@@ -404,7 +415,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 u';
+var APP_VERSION = '2026-09-16 v';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -940,7 +951,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
 };
 var cache = { roster:[], me:null };
 
@@ -1392,11 +1403,23 @@ function renderAdmin(){
 }
 
 // 현황판에 보이는 순서(S→T→A→R, 각 단계 안에서는 다음 단계에 가까운 순)
+var TILE_PICK = {
+  R: function(s,a){ return a.rDone; },
+  A: function(s){ return !!s.certA; },
+  T: function(s){ return !!s.certT; },
+  S: function(s,a){ return a.achievedCount >= 1; },
+  joined: function(s){ return !!s.claimedBy; }
+};
+var TILE_LABEL = { R:'R단계 이수', A:'A단계 이수', T:'T단계 이수',
+                   S:'S단계 도전 가능', joined:'앱 가입 완료' };
+
 function boardGroups(){
   var q = (state.search||'').toLowerCase();
+  var pick = TILE_PICK[state.tileFilter];
   var filtered = cache.roster.filter(function(s){
     if(q && (s.name||'').toLowerCase().indexOf(q)===-1) return false;
     if(state.yearFilter && String(num(s.year))!==state.yearFilter) return false;
+    if(pick && !pick(s, analyze(s))) return false;
     return true;
   });
   var groups = { R:[], A:[], T:[], S:[] };
@@ -1541,13 +1564,16 @@ function screenBoard(){
   var total = list.length;
   var rCount = list.filter(function(s){ return analyze(s).rDone; }).length;
   var sCount = list.filter(function(s){ return analyze(s).achievedCount>=1; }).length;
+  var aCount = list.filter(function(s){ return !!s.certA; }).length;
+  var tCount = list.filter(function(s){ return !!s.certT; }).length;
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
 
 
   return (
-    '<div class="row-between">' +
-      '<div><div class="eyebrow">관리자 · '+esc(sess.name)+'</div><h2 class="screen-title">전체 단원 현황</h2></div>' +
-      '<div class="row" style="gap:12px;">' +
+    '<div class="row-between" style="flex-wrap:wrap; gap:8px 14px;">' +
+      '<div style="flex:0 0 auto;"><div class="eyebrow" style="white-space:nowrap;">관리자 · '+esc(sess.name)+'</div>' +
+      '<h2 class="screen-title" style="white-space:nowrap;">전체 단원 현황</h2></div>' +
+      '<div class="row" style="gap:12px; flex-wrap:wrap; margin-left:auto;">' +
         '<button class="linklike" data-action="goto-import">일괄 입력</button>' +
         '<button class="linklike" data-action="copy-roster">명단 복사</button>' +
         '<button class="linklike" data-action="export-csv">엑셀 저장</button>' +
@@ -1556,14 +1582,22 @@ function screenBoard(){
       '</div>' +
     '</div>' +
     '<div class="summary">' +
-      '<div class="tile t-purple"><div class="band">등록 단원</div>' +
-        '<div class="body"><div class="num mono">'+total+'</div><div class="lbl">시범단원 수</div></div></div>' +
-      '<div class="tile t-red"><div class="band">R단계 이수</div>' +
-        '<div class="body"><div class="num mono">'+rCount+'</div><div class="lbl">자소서·계획서·상담 완료</div></div></div>' +
-      '<div class="tile t-blue"><div class="band">S단계 도전 가능</div>' +
-        '<div class="body"><div class="num mono">'+sCount+'</div><div class="lbl">FACE 1개 영역 이상 달성</div></div></div>' +
-      '<div class="tile t-gold"><div class="band">앱 가입 완료</div>' +
-        '<div class="body"><div class="num mono">'+joined+'</div><div class="lbl">앱에 등록한 단원 수</div></div></div>' +
+      [ ['',      't-indigo', '등록 단원',      total,  '시범단원 수'],
+        ['R',     't-red',    'R단계 이수',     rCount, '자소서·계획서·상담 완료'],
+        ['A',     't-teal',   'A단계 이수',     aCount, 'A단계 인증 도장 확인'],
+        ['T',     't-purple', 'T단계 이수',     tCount, 'T단계 인증 도장 확인'],
+        ['S',     't-blue',   'S단계 도전 가능', sCount, 'FACE 1개 영역 이상 달성'],
+        ['joined','t-gold',   '앱 가입 완료',   joined, '앱에 등록한 단원 수']
+      ].map(function(t){
+        var on = (state.tileFilter||'') === t[0];
+        return '<button class="tile '+t[1]+(on?' on':'')+'" data-action="tile-filter" data-key="'+t[0]+'">' +
+          '<div class="band">'+t[2]+'</div>' +
+          '<div class="body"><div class="num mono">'+t[3]+'</div>' +
+          '<div class="lbl">'+t[4]+'</div>' +
+          '<span class="pick">'+(on ? (t[0] ? '✓ 이 단원들만 보는 중' : '✓ 전체를 보는 중')
+                                  : (t[0] ? '눌러서 이 단원만 보기' : '눌러서 전체 보기'))+'</span>' +
+          '</div></button>';
+      }).join('') +
     '</div>' +
     '<div class="notice-box" style="display:flex;align-items:center;gap:10px;">' +
       '<span>' + (state.loading ? '명단을 불러오는 중입니다…'
@@ -1580,6 +1614,11 @@ function screenBoard(){
       '<b>이름 옆 배지</b>에 표시됩니다. 아직 아무 단계도 인증받지 못했으면 ' +
       '<span class="curpill none" style="margin-left:0;">인증 전</span> 으로 나옵니다.' +
     '</div>' +
+    (state.tileFilter ?
+      '<div class="notice-box" style="display:flex;align-items:center;gap:10px;border-color:var(--primary);">' +
+        '<span><b>'+esc(TILE_LABEL[state.tileFilter])+'</b> 단원만 보는 중입니다.</span>' +
+        '<button class="linklike" data-action="clear-tile" style="margin-left:auto;">전체 보기</button>' +
+      '</div>' : '') +
     '<div class="controls">' +
       '<input id="adminSearch" placeholder="이름으로 검색" value="'+esc(state.search)+'">' +
       '<select id="adminYear">' +
@@ -2375,6 +2414,12 @@ document.addEventListener('click', function(e){
       window.prompt('아래 내용을 복사해 주세요', txt);
     }
   }
+  else if(act==='tile-filter'){
+    var tk = el.dataset.key || '';
+    state.tileFilter = (state.tileFilter === tk) ? '' : tk;
+    render(); window.scrollTo(0,0);
+  }
+  else if(act==='clear-tile'){ state.tileFilter=''; render(); }
   else if(act==='goto-import'){ navGo(function(){ state.view='import'; state.importResult=''; }); }
   else if(act==='do-import'){ doImport(); }
   else if(act==='view-shot'){
