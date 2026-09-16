@@ -309,7 +309,19 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
 .pyr-head{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
 .pyr-head b{font-size:13px; font-weight:800;}
 .pyr-head span{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--text-muted);}
+.pyr-row{display:flex; gap:10px; align-items:stretch;}
+.pyr-left{flex:2 1 0; min-width:0; display:flex; align-items:center;}
+.pyr-right{flex:1 1 0; min-width:88px; max-width:38%; display:flex;}
 .pyr svg{display:block; width:100%; height:auto;}
+.nx{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+  color:#fff; border-radius:var(--radius-s); padding:11px 10px 12px;}
+.nx.st-R{background:var(--g-r);} .nx.st-A{background:var(--g-a);}
+.nx.st-T{background:var(--g-t);} .nx.st-S{background:var(--g-s);}
+.nx-mark{width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; margin-bottom:3px;}
+.nx-lab{font-size:10px; font-weight:700; opacity:.85; letter-spacing:.04em;}
+.nx-name{font-size:13px; font-weight:800; line-height:1.3; word-break:keep-all;}
+.nx-desc{font-size:10.5px; font-weight:500; opacity:.92; line-height:1.45; word-break:keep-all; margin-top:2px;}
 .pyr-foot{font-size:11.5px; color:var(--text-muted); line-height:1.5; text-align:center; padding:2px 0 4px;}
 
 /* 단원 화면의 인증 절차 안내 */
@@ -372,7 +384,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 o';
+var APP_VERSION = '2026-09-16 p';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -643,7 +655,8 @@ var SCHOLARSHIP = {
 };
 var STAGE_COLOR = { R:'var(--pyr-r)', A:'var(--pyr-a)', T:'var(--pyr-t)', S:'var(--pyr-s)' };
 var STAGE_TITLE = {
-  S:'S단계 도전 가능', T:'T단계 선발 대상', A:'A단계 선발 대상', R:'R단계 요건 준비 중'
+  S:'S단계 도전 가능', T:'T단계 선발 대상', A:'A단계 선발 대상', R:'R단계 요건 준비 중',
+  S0:'S단계 준비 중'
 };
 var STAGE_FULL = {
   S:'다음 단계 — S단계 도전 가능', T:'다음 단계 — T단계 선발 대상',
@@ -670,15 +683,6 @@ function curPill(s, a){
   return '<span class="curpill '+(c||'none')+'">'+(c ? CUR_LABEL[c] : '인증 전')+'</span>';
 }
 
-function stageBand(stage, cur){
-  var letter = stage.charAt(0);
-  var curTxt = cur === undefined ? ''
-    : ' · 현재 인증 ' + (cur ? cur + '단계' : '없음');
-  return '<div class="stage-band st-'+letter+'">' +
-    '<span class="sb-mark">'+letter+'</span>' +
-    '<div><span class="sb-name">'+STAGE_FULL[stage]+'</span>' +
-    '<span class="sb-desc">'+STAGE_DESC[stage]+curTxt+'</span></div></div>';
-}
 function brandIcon(px, radius){
   return '<svg width="'+px+'" height="'+px+'" viewBox="0 0 512 512" aria-hidden="true">' +
     '<rect width="512" height="512" rx="'+(radius==null?116:radius)+'" fill="#FFFFFF"/>' +
@@ -838,10 +842,26 @@ function pyramidHtml(s, a){
     : cur ? '<b style="color:var(--text);">'+cur+'단계 인증 완료</b> · 다음은 ' + PYR_NEXT[nxt]
     : '아직 인증받은 단계가 없습니다 · 먼저 ' + PYR_NEXT.R;
 
+  var letter = nxt.charAt(0);
+  var nextPanel = s.certS
+    ? '<div class="nx st-S"><span class="nx-mark">S</span>' +
+        '<span class="nx-lab">최고 단계</span>' +
+        '<span class="nx-name">S단계 인증 완료</span>' +
+        '<span class="nx-desc">더 오를 단계가 없습니다</span></div>'
+    : '<div class="nx st-'+letter+'"><span class="nx-mark">'+letter+'</span>' +
+        '<span class="nx-lab">다음 단계</span>' +
+        '<span class="nx-name">'+STAGE_TITLE[nxt]+'</span>' +
+        '<span class="nx-desc">'+STAGE_DESC[nxt]+'</span></div>';
+
   return '<div class="pyr">' +
     '<div class="pyr-head"><b>K-STAR 인증 현황</b>' +
       '<span>'+(cur ? '현재 '+cur+'단계' : '아직 인증 전')+'</span></div>' +
-    '<svg viewBox="0 0 300 215" role="img" aria-label="K-STAR 인증 현황 피라미드">'+body+'</svg>' +
+    '<div class="pyr-row">' +
+      '<div class="pyr-left">' +
+        '<svg viewBox="4 6 292 200" role="img" aria-label="K-STAR 인증 현황 피라미드">'+body+'</svg>' +
+      '</div>' +
+      '<div class="pyr-right">'+nextPanel+'</div>' +
+    '</div>' +
     '<div class="pyr-foot">'+foot+'</div>' +
   '</div>';
 }
@@ -1225,7 +1245,6 @@ function screenMyStatus(){
     '<div style="height:14px;"></div>' +
     pyramidHtml(s, analyze(s)) +
     deadlineBox(true) +
-    stageBand(st.next, currentStage(s, analyze(s))) +
     analysisHtml(s, {noCerts:true}) +
     '<div style="height:14px;"></div>' +
     procHtml() +
@@ -1569,7 +1588,6 @@ function screenDetail(){
     '</div>' +
     (swipeHintSeen() ? '' : '<div class="swipe-hint">좌우로 밀어서 다른 단원을 볼 수 있어요</div>') +
     '<div class="detail-wrap'+slide+'">' +
-    stageBand(st.next, currentStage(s, analyze(s))) +
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년' +
       (s.claimedBy ? ' · 학번 '+esc(s.claimedBy) : ' · 미가입')+'</div>' +
