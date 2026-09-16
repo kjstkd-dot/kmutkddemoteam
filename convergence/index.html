@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>융합전공 이수 현황판</title>
+<meta name="theme-color" content="#2F8F5B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="융합전공현황">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F4F6F9; --surface:#FFFFFF; --surface-2:#EEF7F0; --surface-3:#F8FAFC;
+  --border:#E6E9ED; --text:#22303F; --text-muted:#79828C; --text-faint:#9AA3AC;
+  --primary:#2F8F5B; --primary-dark:#1F7346; --primary-contrast:#FFFFFF;
+  --banner:linear-gradient(90deg,#1F7346,#4FBE85);
+  --grad-1:#2F8F5B; --grad-2:#63C793;
+  --amber:#B57A08; --amber-bg:#FDF8EC; --amber-border:#F6E3B8;
+  --danger:#D32027; --danger-bg:#FDF1F1; --danger-border:#F7CFD1;
+  --success:#12805A; --success-bg:#E8F6F0;
+  --overlay:rgba(20,28,38,.5);
+  --radius-s:8px; --radius-m:14px; --radius-l:18px;
+  --shadow-card:0 1px 2px rgba(34,48,63,.05), 0 8px 22px -14px rgba(34,48,63,.2);
+  --font-display:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-body:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-mono:'JetBrains Mono','SFMono-Regular',monospace;
+  --track:#EAEDF1;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body); padding:28px 16px 64px; min-height:100vh;}
+h1,h2,h3{font-family:var(--font-display); text-wrap:balance; margin:0; font-weight:800; letter-spacing:-.01em;}
+button{font-family:inherit;}
+.mono{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+::selection{background:var(--primary); color:var(--primary-contrast);}
+
+.page{max-width:1080px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:18px;}
+.topbar{width:100%; max-width:460px; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; padding:20px 22px; border-radius:16px; color:#fff;
+  background:linear-gradient(100deg, var(--grad-1), var(--grad-2)); box-shadow:var(--shadow-card);}
+.page.wide .topbar, .page.wide .roletabs, .page.wide .phone{max-width:1000px;}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-mark{width:38px; height:38px; border-radius:11px; background:rgba(255,255,255,.22); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
+.brand-text strong{display:block; font-size:18px; font-weight:900; letter-spacing:-.01em; color:#fff;}
+.brand-text span{display:block; font-size:11.5px; color:rgba(255,255,255,.86); margin-top:2px; line-height:1.4; word-break:keep-all;}
+.topbar-actions{display:flex; gap:6px; margin-left:auto;}
+.ghost-btn{border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.16); color:#fff;
+  font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.ghost-btn:hover{background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.65);}
+
+.roletabs{width:100%; max-width:460px; display:flex; gap:8px; background:var(--surface-2); padding:5px; border-radius:999px;}
+.roletab{flex:1; border:none; background:transparent; padding:9px 0; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer;}
+.roletab.active{background:var(--surface); color:var(--primary); box-shadow:var(--shadow-card);}
+
+.phone{width:100%; max-width:460px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); box-shadow:var(--shadow-card); padding:24px 20px; position:relative; min-height:300px;}
+.eyebrow{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint);}
+.screen-title{font-size:21px; margin-top:6px; margin-bottom:4px; word-break:keep-all;}
+.screen-sub{font-size:13px; color:var(--text-muted); margin-bottom:18px;}
+
+.field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+.field label{font-size:12.5px; font-weight:600; color:var(--text-muted);}
+.field input, .field select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:11px 13px; font-size:14px; font-family:var(--font-body); width:100%;}
+.field input:focus, .field select:focus{outline:2px solid var(--primary); outline-offset:1px; background:var(--surface);}
+.field .hint{font-size:11.5px; color:var(--text-faint); line-height:1.5;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:var(--radius-s); border:1px solid transparent; font-weight:700; font-size:14.5px; padding:12px 16px; cursor:pointer; width:100%;}
+.btn-primary{background:var(--primary); color:var(--primary-contrast);}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-ghost{background:var(--surface-2); color:var(--primary); border-color:var(--border);}
+.btn-ghost:hover{border-color:var(--primary);}
+.btn-line{background:transparent; color:var(--text-muted); border:1px dashed var(--border);}
+.btn-danger{background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border);}
+.btn-small{width:auto; padding:8px 12px; font-size:12.5px;}
+.linklike{background:none; border:none; color:var(--primary); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; white-space:nowrap;}
+.row{display:flex; align-items:center; gap:10px;}
+.row-between{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;}
+.stack{display:flex; flex-direction:column; gap:10px;}
+
+.notice-box{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-m); padding:13px 15px; font-size:12.5px; color:var(--text-muted); line-height:1.55; margin-bottom:16px;}
+.errbox{background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); border-radius:var(--radius-s); padding:10px 13px; font-size:12.5px; margin-bottom:14px; font-weight:600;}
+.okbox{background:var(--success-bg); border:1px solid var(--border); color:var(--success); border-radius:var(--radius-s); padding:10px 13px; font-size:12.5px; margin-bottom:14px; font-weight:600;}
+.empty-state{text-align:center; padding:36px 12px; color:var(--text-faint); font-size:13px;}
+
+/* 진행률 요약 */
+.statusband{display:flex; align-items:center; gap:12px; border-radius:var(--radius-m); padding:14px 16px; margin-bottom:16px; color:#fff;}
+.statusband.met{background:linear-gradient(100deg,#1F7346,#4FBE85);}
+.statusband.unmet{background:linear-gradient(100deg,#B5580E,#E0904A);}
+.statusband .mark{width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:17px; flex:none;}
+.statusband b{display:block; font-size:15px;}
+.statusband span{display:block; font-size:11.5px; opacity:.9; margin-top:2px;}
+.catcard{border:1px solid var(--border); border-radius:var(--radius-m); padding:12px 14px; margin-bottom:10px; background:var(--surface-3);}
+.catcard .cthead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; gap:8px;}
+.catcard .cthead b{font-size:13.5px;}
+.catcard .cthead span{font-size:12px; font-weight:700; color:var(--text-muted); font-family:var(--font-mono); white-space:nowrap;}
+.catcard.met .cthead span{color:var(--success);}
+.pbar{height:9px; border-radius:5px; background:var(--track); overflow:hidden; position:relative;}
+.pbar i{position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:var(--primary);}
+.catcard.met .pbar i{background:var(--success);}
+.totalline{font-size:13px; color:var(--text-muted); margin:14px 0 4px; display:flex; justify-content:space-between; align-items:baseline;}
+.totalline b{color:var(--text); font-size:15px;}
+
+/* 과목 목록 */
+.courselist{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.courserow{display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:var(--radius-s); padding:10px 12px; background:var(--surface);}
+.courserow .ci{flex:1; min-width:0;}
+.courserow .cn{font-weight:700; font-size:13.5px; word-break:break-all;}
+.courserow .cm{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+.courserow .cc{font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--primary); white-space:nowrap;}
+.courserow .cact{display:flex; gap:4px;}
+.icobtn{border:1px solid var(--border); background:var(--surface-3); color:var(--text-muted); font-size:12px; padding:6px 9px; border-radius:7px; cursor:pointer;}
+.icobtn:hover{border-color:var(--primary); color:var(--primary);}
+.icobtn.danger:hover{border-color:var(--danger); color:var(--danger);}
+.catpill{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--surface-2); color:var(--primary); margin-right:4px;}
+
+/* admin board */
+.summary{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px;}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow-card);}
+.tile .num{font-size:28px; font-weight:700; font-family:var(--font-mono); line-height:1; color:var(--primary);}
+.tile.t-danger .num{color:var(--danger);}
+.tile .lbl{color:var(--text-muted); font-size:11.5px; margin-top:6px; line-height:1.4;}
+.controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+.controls input, .controls select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:9px 12px; font-size:13px; font-family:var(--font-body);}
+.controls input{flex:1; min-width:150px;}
+.roster{display:flex; flex-direction:column; gap:9px;}
+.rcard{border:1px solid var(--border); border-left:4px solid var(--border); border-radius:var(--radius-m); padding:12px 13px; background:var(--surface); cursor:pointer;}
+.rcard:hover{border-color:var(--primary);}
+.rcard.met{border-left-color:var(--success);}
+.rcard.unmet{border-left-color:var(--amber);}
+.rcard .nm{font-weight:700; font-size:14px;}
+.rcard .mt{font-size:11px; color:var(--text-faint); margin-top:2px;}
+.rcard .mini{display:flex; justify-content:space-between; align-items:center; margin-top:8px;}
+.badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px;}
+.badge.met{background:var(--success-bg); color:var(--success);}
+.badge.unmet{background:var(--amber-bg); color:var(--amber);}
+
+.overlay{position:fixed; inset:0; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;}
+.modal{width:100%; max-width:420px; background:var(--surface); border-radius:var(--radius-l); padding:22px 20px; box-shadow:var(--shadow-card); max-height:86vh; overflow-y:auto;}
+.modal h3{font-size:17px; margin-bottom:4px;}
+.modal .modal-sub{font-size:12.5px; color:var(--text-muted); margin-bottom:16px;}
+.modal-actions{display:flex; gap:8px; margin-top:16px;}
+.modal-actions .btn{width:auto; flex:1;}
+.footer-note{font-size:11px; color:var(--text-faint); text-align:center; margin-top:8px;}
+
+@media (max-width:520px){
+  body{padding:18px 12px 48px;}
+  .summary{grid-template-columns:repeat(3,1fr); gap:8px;}
+  .tile{padding:11px 10px;}
+  .tile .num{font-size:22px;}
+  .grid2,.grid3{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ helpers ============ */
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function nowIso(){ return new Date().toISOString(); }
+async function sha256Hex(str){
+  var enc = new TextEncoder().encode(str);
+  var buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+/* ============ 저장소 설정 ============
+   구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
+   비워두면 이 기기 안에만 저장됩니다(시험용).
+   설치 방법은 apps-script.gs 맨 위 설명을 참고하세요.
+   예: var API_URL = 'https://script.google.com/macros/s/AKfy...../exec'; */
+var API_URL = '';
+
+// 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
+var APP_VERSION = '2026-09-16 a';
+
+/* ============ store: 서버 → 기기저장 순으로 사용 ============ */
+var apiMode = !!API_URL;
+var fallbackData = {};
+
+function loadFallback(){
+  try{ var raw = localStorage.getItem('cvg_store'); fallbackData = raw ? JSON.parse(raw) : {}; }
+  catch(e){ fallbackData = {}; }
+}
+function saveFallback(){
+  try{ localStorage.setItem('cvg_store', JSON.stringify(fallbackData)); }catch(e){}
+}
+async function apiCall(action, body){
+  var res;
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 40000) : null;
+  try{
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action: action }, body || {})),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+  }catch(e){
+    if(e && e.name === 'AbortError'){
+      throw new Error('자료 서버 응답이 너무 느립니다. 잠시 후 다시 시도해 주세요.');
+    }
+    throw new Error('자료 서버에 연결하지 못했습니다. 구글 Apps Script 배포에서 "액세스 권한이 있는 사용자"가 "모든 사용자"인지 확인해 주세요.');
+  }finally{
+    if(timer) clearTimeout(timer);
+  }
+  if(!res.ok) throw new Error('자료 서버 응답 오류 (' + res.status + ')');
+  var text = await res.text();
+  var out;
+  try{ out = JSON.parse(text); }
+  catch(e){ throw new Error('자료 서버가 예상과 다른 답을 보냈습니다.'); }
+  if(out && out.error) throw new Error(out.error);
+  return out;
+}
+async function storeGet(col, id){
+  if(apiMode){ var r = await apiCall('get', {collection:col, id:id}); return r.doc || null; }
+  var d = (fallbackData[col]||{})[id];
+  return d ? Object.assign({id:id}, d) : null;
+}
+async function storeSet(col, id, data){
+  if(apiMode){ await apiCall('set', {collection:col, id:id, data:data}); return; }
+  fallbackData[col] = fallbackData[col]||{}; fallbackData[col][id] = data; saveFallback();
+}
+async function storeUpdate(col, id, data){
+  if(apiMode){ await apiCall('update', {collection:col, id:id, data:data}); return; }
+  fallbackData[col] = fallbackData[col]||{};
+  fallbackData[col][id] = Object.assign({}, fallbackData[col][id]||{}, data);
+  saveFallback();
+}
+async function storeDelete(col, id){
+  if(apiMode){ await apiCall('delete', {collection:col, id:id}); return; }
+  if(fallbackData[col]) delete fallbackData[col][id];
+  saveFallback();
+}
+async function storeAll(col){
+  if(apiMode){ var r = await apiCall('all', {collection:col}); return r.docs || []; }
+  var all = fallbackData[col]||{};
+  return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); });
+}
+
+/* ============ 융합전공 이수 조건 (예시 값입니다) ============
+   실제 이수 조건(트랙명, 총 이수학점, 구분별 필요학점)을 알려주시면
+   이 블록만 고쳐서 그대로 반영할 수 있습니다. */
+var TRACK_NAME = '(예시) 데이터사이언스 융합전공';
+var TOTAL_MIN = 39;
+var CATEGORIES = [
+  { code:'CORE', name:'융합전공 핵심(필수) 교과', min:15 },
+  { code:'ELEC', name:'융합전공 선택 교과', min:18 },
+  { code:'CAP',  name:'캡스톤/설계 교과', min:6 }
+];
+
+function catName(code){
+  var c = CATEGORIES.filter(function(x){ return x.code===code; })[0];
+  return c ? c.name : code;
+}
+function courses(student){ return (student && student.courses) || []; }
+function catCredits(student, code){
+  return courses(student).filter(function(c){ return c.category===code; })
+    .reduce(function(s,c){ return s + num(c.credits); }, 0);
+}
+function totalCredits(student){
+  return courses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+}
+function catMet(student, cat){ return catCredits(student, cat.code) >= cat.min; }
+function allMet(student){
+  return CATEGORIES.every(function(cat){ return catMet(student, cat); }) && totalCredits(student) >= TOTAL_MIN;
+}
+function pct(cur, min){ return min>0 ? Math.min(100, Math.round(cur/min*100)) : 100; }
+
+/* ============ state ============ */
+var root = document.getElementById('app');
+var state = {
+  role: 'student',           // 'student' | 'admin'
+  view: 'login',             // login | register | register-admin | home | course-form | profile | list | detail | settings
+  studentSession: null, adminSession: null,
+  formError: '', formOk: '',
+  editingCourseId: null,
+  detailId: null,
+  q: '', filter: 'all',
+  cache: { me:null, roster:[] }
+};
+function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
+function setSession(role, val){
+  try{
+    if(val) localStorage.setItem('cvg_session_'+role, JSON.stringify(val));
+    else localStorage.removeItem('cvg_session_'+role);
+  }catch(e){}
+  if(role==='student') state.studentSession = val; else state.adminSession = val;
+}
+function loadSessions(){
+  ['student','admin'].forEach(function(role){
+    try{
+      var raw = localStorage.getItem('cvg_session_'+role);
+      if(raw){ if(role==='student') state.studentSession = JSON.parse(raw); else state.adminSession = JSON.parse(raw); }
+    }catch(e){}
+  });
+}
+
+function render(){ root.innerHTML = renderApp(); }
+function errMsg(e){ return e && e.message ? e.message : String(e); }
+function failWith(e){ state.formError = errMsg(e); render(); }
+
+/* ============ top-level layout ============ */
+function renderApp(){
+  var sess = session();
+  var wide = sess && state.role==='admin' && state.view!=='profile';
+  var body;
+  if(!sess){
+    if(state.view==='register') body = screenRegisterStudent();
+    else if(state.view==='register-admin') body = screenRegisterAdmin();
+    else body = screenLogin();
+  } else if(state.role==='student'){
+    body = renderStudent();
+  } else {
+    body = renderAdmin();
+  }
+  return (
+    '<div class="page'+(wide?' wide':'')+'">' +
+      '<div class="topbar">' +
+        '<div class="brand">' +
+          '<div class="brand-mark">🎓</div>' +
+          '<div class="brand-text"><strong>융합전공 이수 현황판</strong><span>'+esc(TRACK_NAME)+'</span></div>' +
+        '</div>' +
+        (sess ? '<div class="topbar-actions"><button class="ghost-btn" data-action="logout">로그아웃</button></div>' : '') +
+      '</div>' +
+      (!sess ? (
+        '<div class="roletabs">' +
+          '<button class="roletab '+(state.role==='student'?'active':'')+'" data-action="set-role" data-role="student">학생</button>' +
+          '<button class="roletab '+(state.role==='admin'?'active':'')+'" data-action="set-role" data-role="admin">관리자</button>' +
+        '</div>'
+      ) : '') +
+      body +
+      '<div class="footer-note">v'+esc(APP_VERSION)+(apiMode?'':' · 서버 미연결(기기 저장)')+'</div>' +
+    '</div>'
+  );
+}
+
+/* ============ 로그인 / 등록 ============ */
+function screenLogin(){
+  var isStudent = state.role==='student';
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(isStudent?'학생 로그인':'관리자 로그인')+'</div>' +
+      '<h2 class="screen-title">'+(isStudent?'내 이수 현황 확인':'전체 학생 관리')+'</h2>' +
+      '<p class="screen-sub">'+(isStudent?'학번과 비밀번호로 들어와 이수 현황을 확인하세요.':'관리자 번호와 비밀번호로 들어와 학생들을 관리하세요.')+'</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-login" class="stack">' +
+        '<div class="field"><label>'+(isStudent?'학번':'관리자 번호')+'</label><input id="loginId" required autocomplete="username"></div>' +
+        '<div class="field"><label>비밀번호</label><input id="loginPw" type="password" required autocomplete="current-password"></div>' +
+        '<button class="btn btn-primary" type="submit">로그인</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="'+(isStudent?'goto-register':'goto-register-admin')+'">처음이신가요? 비밀번호 설정하기</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenRegisterStudent(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">학생 등록</div>' +
+      '<h2 class="screen-title">비밀번호 설정하기</h2>' +
+      '<p class="screen-sub">학번으로 처음 접속하는 경우 비밀번호를 만들어 주세요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-register" class="stack">' +
+        '<div class="field"><label>학번</label><input id="regId" required></div>' +
+        '<div class="field"><label>이름</label><input id="regName" required></div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학과(선택)</label><input id="regDept"></div>' +
+          '<div class="field"><label>입학년도(선택)</label><input id="regYear" inputmode="numeric" placeholder="예: 2023"></div>' +
+        '</div>' +
+        '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password"></div>' +
+        '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="goto-login">이미 등록했어요, 로그인</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenRegisterAdmin(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">관리자 등록</div>' +
+      '<h2 class="screen-title">관리자 비밀번호 설정하기</h2>' +
+      '<p class="screen-sub">가장 처음 등록하는 관리자는 등록코드 없이 만들 수 있어요. 이후부터는 기존 관리자에게 등록코드를 받아야 해요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-register-admin" class="stack">' +
+        '<div class="field"><label>관리자 번호</label><input id="raId" required></div>' +
+        '<div class="field"><label>이름</label><input id="raName" required></div>' +
+        '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode"></div>' +
+        '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="goto-login">이미 등록했어요, 로그인</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+async function doLogin(role, id, pw){
+  var col = role==='student' ? 'cvg_students' : 'cvg_admins';
+  var doc = await storeGet(col, id);
+  var label = role==='student' ? '학번' : '관리자 번호';
+  if(!doc){ state.formError = '등록되지 않은 '+label+'이에요. 처음이시라면 비밀번호 설정하기를 눌러주세요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  if(hash !== doc.passwordHash){ state.formError = label+' 또는 비밀번호가 올바르지 않아요.'; render(); return; }
+  state.formError=''; state.formOk='';
+  if(role==='student'){
+    setSession('student', { id:id, name:doc.name });
+    state.cache.me = doc;
+    state.view='home';
+  } else {
+    setSession('admin', { id:id, name:doc.name });
+    state.view='list';
+    await loadRoster();
+  }
+  render();
+}
+async function doRegisterStudent(id, name, dept, year, pw, pw2){
+  if(!id || !name){ state.formError='학번과 이름을 입력해 주세요.'; render(); return; }
+  if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  var existing = await storeGet('cvg_students', id);
+  if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[], createdAt:nowIso() };
+  await storeSet('cvg_students', id, doc);
+  setSession('student', { id:id, name:name });
+  state.cache.me = Object.assign({id:id}, doc);
+  state.formError=''; state.view='home';
+  render();
+}
+async function doRegisterAdmin(id, name, pw, pw2, code){
+  if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
+  if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  var admins = await storeAll('cvg_admins');
+  if(admins.length>0){
+    var cfg = await storeGet('cvg_config','app');
+    var required = cfg && cfg.adminCode ? cfg.adminCode : '';
+    if(!required){ state.formError='관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.'; render(); return; }
+    if(code !== required){ state.formError='관리자 등록코드가 올바르지 않아요.'; render(); return; }
+  }
+  var existing = await storeGet('cvg_admins', id);
+  if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  await storeSet('cvg_admins', id, { name:name, passwordHash:hash, createdAt:nowIso() });
+  setSession('admin', { id:id, name:name });
+  state.formError=''; state.view='list';
+  await loadRoster();
+  render();
+}
+
+/* ============ 학생 화면 ============ */
+function renderStudent(){
+  if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='profile') return screenProfile();
+  return screenStudentHome();
+}
+async function loadMe(){
+  state.cache.me = await storeGet('cvg_students', state.studentSession.id);
+}
+function progressBlock(student){
+  var met = allMet(student);
+  var html = '';
+  html += '<div class="statusband '+(met?'met':'unmet')+'">' +
+    '<div class="mark">'+(met?'✓':'!')+'</div>' +
+    '<div><b>'+(met?'졸업 이수 조건 충족':'아직 이수 조건 미충족')+'</b>' +
+    '<span>총 '+totalCredits(student)+' / '+TOTAL_MIN+'학점</span></div>' +
+  '</div>';
+  CATEGORIES.forEach(function(cat){
+    var cur = catCredits(student, cat.code);
+    var m = cur >= cat.min;
+    html += '<div class="catcard '+(m?'met':'')+'">' +
+      '<div class="cthead"><b>'+esc(cat.name)+'</b><span>'+cur+' / '+cat.min+'학점'+(m?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(cur,cat.min)+'%"></i></div>' +
+    '</div>';
+  });
+  return html;
+}
+function courseListBlock(student, editable){
+  var list = courses(student);
+  if(!list.length) return '<div class="empty-state">아직 등록된 과목이 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(c){
+    return '<div class="courserow">' +
+      '<div class="ci"><span class="catpill">'+esc(catName(c.category))+'</span><div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
+      '<div class="cc">'+num(c.credits)+'학점</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-course" data-id="'+esc(c.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-course" data-id="'+esc(c.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
+function screenStudentHome(){
+  var s = state.cache.me;
+  if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">학생</div>' +
+      '<h2 class="screen-title">'+esc(s.name)+'님의 이수 현황</h2>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      progressBlock(s) +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+        '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
+      courseListBlock(s, true) +
+      '<div class="row" style="margin-top:18px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenCourseForm(){
+  var s = state.cache.me;
+  var editing = state.editingCourseId ? courses(s).filter(function(c){ return c.id===state.editingCourseId; })[0] : null;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-course" class="stack">' +
+        '<div class="field"><label>과목명</label><input id="cName" required value="'+(editing?esc(editing.name):'')+'"></div>' +
+        '<div class="field"><label>구분</label><select id="cCategory">' +
+          CATEGORIES.map(function(cat){
+            return '<option value="'+esc(cat.code)+'" '+((editing&&editing.category===cat.code)?'selected':'')+'>'+esc(cat.name)+'</option>';
+          }).join('') +
+        '</select></div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):3)+'"></div>' +
+          '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
+        '</div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(state.role==='admin'?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenProfile(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">계정</div>' +
+      '<h2 class="screen-title">비밀번호 변경</h2>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      '<form id="form-changepw" class="stack">' +
+        '<div class="field"><label>현재 비밀번호</label><input id="pwOld" type="password" required></div>' +
+        '<div class="field"><label>새 비밀번호</label><input id="pwNew" type="password" required></div>' +
+        '<div class="field"><label>새 비밀번호 확인</label><input id="pwNew2" type="password" required></div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(state.role==='admin'?'goto-list':'goto-home')+'" style="width:auto; flex:1;">뒤로</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">변경하기</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+
+async function saveCourse(form){
+  var name = form.querySelector('#cName').value.trim();
+  var category = form.querySelector('#cCategory').value;
+  var credits = form.querySelector('#cCredits').value;
+  var semester = form.querySelector('#cSemester').value.trim();
+  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = courses(student).slice();
+
+  if(state.editingCourseId){
+    list = list.map(function(c){
+      return c.id===state.editingCourseId ? { id:c.id, name:name, category:category, credits:num(credits), semester:semester } : c;
+    });
+  } else {
+    list.push({ id:uid(), name:name, category:category, credits:num(credits), semester:semester });
+  }
+  await storeUpdate(col, id, { courses:list });
+  student.courses = list;
+  state.editingCourseId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deleteCourse(courseId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = courses(student).filter(function(c){ return c.id!==courseId; });
+  await storeUpdate(col, id, { courses:list });
+  student.courses = list;
+  render();
+}
+async function changePassword(oldPw, newPw, newPw2){
+  if(newPw.length<6){ state.formError='새 비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(newPw!==newPw2){ state.formError='새 비밀번호가 서로 달라요.'; render(); return; }
+  var isAdmin = state.role==='admin';
+  var col = isAdmin ? 'cvg_admins' : 'cvg_students';
+  var id = isAdmin ? state.adminSession.id : state.studentSession.id;
+  var doc = await storeGet(col, id);
+  var oldHash = await sha256Hex(oldPw);
+  if(oldHash !== doc.passwordHash){ state.formError='현재 비밀번호가 올바르지 않아요.'; render(); return; }
+  var newHash = await sha256Hex(newPw);
+  await storeUpdate(col, id, { passwordHash:newHash });
+  state.formError=''; state.formOk='비밀번호를 바꿨어요.';
+  state.view = isAdmin ? 'list' : 'home';
+  render();
+}
+
+/* ============ 관리자 화면 ============ */
+async function loadRoster(){
+  state.cache.roster = await storeAll('cvg_students');
+}
+function renderAdmin(){
+  if(state.view==='detail') return screenAdminDetail();
+  if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='profile') return screenProfile();
+  if(state.view==='settings') return screenAdminSettings();
+  return screenAdminList();
+}
+function screenAdminList(){
+  var roster = state.cache.roster || [];
+  var total = roster.length;
+  var metCount = roster.filter(allMet).length;
+  var q = state.q.trim();
+  var rows = roster.filter(function(s){
+    if(q && !(String(s.name||'').indexOf(q)>=0 || String(s.id||'').indexOf(q)>=0)) return false;
+    var m = allMet(s);
+    if(state.filter==='met' && !m) return false;
+    if(state.filter==='unmet' && m) return false;
+    return true;
+  });
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">관리자</div>' +
+      '<h2 class="screen-title">전체 학생 이수 현황</h2>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+' · 총 '+TOTAL_MIN+'학점 이상</p>' +
+      '<div class="summary">' +
+        '<div class="tile"><div class="num">'+total+'</div><div class="lbl">전체 학생</div></div>' +
+        '<div class="tile"><div class="num">'+metCount+'</div><div class="lbl">요건 충족</div></div>' +
+        '<div class="tile t-danger"><div class="num">'+(total-metCount)+'</div><div class="lbl">미충족</div></div>' +
+      '</div>' +
+      '<div class="controls">' +
+        '<input placeholder="이름 또는 학번 검색" value="'+esc(state.q)+'" data-bind="q">' +
+        '<select data-bind="filter">' +
+          '<option value="all" '+(state.filter==='all'?'selected':'')+'>전체</option>' +
+          '<option value="met" '+(state.filter==='met'?'selected':'')+'>충족</option>' +
+          '<option value="unmet" '+(state.filter==='unmet'?'selected':'')+'>미충족</option>' +
+        '</select>' +
+      '</div>' +
+      (rows.length ? '<div class="roster">' + rows.map(function(s){
+        var m = allMet(s);
+        return '<button class="rcard '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
+          '<div class="nm">'+esc(s.name)+'</div>' +
+          '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
+          '<div class="mini"><span class="mono">'+totalCredits(s)+' / '+TOTAL_MIN+'학점</span>' +
+            '<span class="badge '+(m?'met':'unmet')+'">'+(m?'충족':'미충족')+'</span></div>' +
+        '</button>';
+      }).join('') + '</div>' : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
+      '<div class="row" style="margin-top:16px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
+        '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenAdminDetail(){
+  var s = state.cache.detail;
+  if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
+  var m = allMet(s);
+  return (
+    '<div class="phone">' +
+      '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
+      '<div class="eyebrow">학생 상세</div>' +
+      '<h2 class="screen-title">'+esc(s.name)+' <span class="badge '+(m?'met':'unmet')+'" style="margin-left:6px;">'+(m?'충족':'미충족')+'</span></h2>' +
+      '<p class="screen-sub">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      progressBlock(s) +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+        '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
+      courseListBlock(s, true) +
+      '<div class="row" style="margin-top:18px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="reset-password" style="width:auto; flex:1;">비밀번호 초기화</button>' +
+        '<button class="btn btn-danger" data-action="delete-student" style="width:auto; flex:1;">학생 삭제</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenAdminSettings(){
+  var code = state.cache.adminCode || '';
+  return (
+    '<div class="phone">' +
+      '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
+      '<div class="eyebrow">관리자 설정</div>' +
+      '<h2 class="screen-title">관리자 등록코드</h2>' +
+      '<p class="screen-sub">새 관리자가 등록할 때 필요한 코드예요. 비워두면 새 관리자 등록이 막혀요.</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      '<form id="form-admincode" class="stack">' +
+        '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+      '<div class="notice-box" style="margin-top:16px;">이수 조건(트랙명·총 이수학점·구분별 필요학점)은 index.html의 CATEGORIES/TOTAL_MIN 값을 고쳐서 바꿀 수 있어요.</div>' +
+    '</div>'
+  );
+}
+async function openDetail(id){
+  state.detailId = id;
+  state.cache.detail = await storeGet('cvg_students', id);
+  state.view='detail'; state.formOk=''; state.formError='';
+  render();
+}
+async function resetStudentPassword(){
+  var tempPw = '000000';
+  var hash = await sha256Hex(tempPw);
+  await storeUpdate('cvg_students', state.detailId, { passwordHash:hash });
+  state.formOk = '비밀번호를 '+tempPw+' 로 초기화했어요. 학생에게 알려주세요.';
+  render();
+}
+async function deleteStudent(){
+  if(!window.confirm('정말 이 학생을 삭제할까요? 되돌릴 수 없어요.')) return;
+  await storeDelete('cvg_students', state.detailId);
+  state.view='list'; state.detailId=null; state.cache.detail=null;
+  await loadRoster();
+  render();
+}
+async function saveAdminCode(code){
+  await storeSet('cvg_config', 'app', { adminCode: code.trim() });
+  state.cache.adminCode = code.trim();
+  state.formOk = '등록코드를 저장했어요.';
+  render();
+}
+
+/* ============ 이벤트 처리 ============ */
+document.addEventListener('submit', function(e){
+  var f = e.target;
+  if(f.id==='form-login'){
+    e.preventDefault();
+    doLogin(state.role, f.querySelector('#loginId').value.trim(), f.querySelector('#loginPw').value).catch(failWith);
+  }
+  if(f.id==='form-register'){
+    e.preventDefault();
+    doRegisterStudent(
+      f.querySelector('#regId').value.trim(), f.querySelector('#regName').value.trim(),
+      f.querySelector('#regDept').value.trim(), f.querySelector('#regYear').value.trim(),
+      f.querySelector('#regPw').value, f.querySelector('#regPw2').value
+    ).catch(failWith);
+  }
+  if(f.id==='form-register-admin'){
+    e.preventDefault();
+    doRegisterAdmin(
+      f.querySelector('#raId').value.trim(), f.querySelector('#raName').value.trim(),
+      f.querySelector('#raPw').value, f.querySelector('#raPw2').value, f.querySelector('#raCode').value.trim()
+    ).catch(failWith);
+  }
+  if(f.id==='form-course'){
+    e.preventDefault();
+    saveCourse(f).catch(failWith);
+  }
+  if(f.id==='form-changepw'){
+    e.preventDefault();
+    changePassword(f.querySelector('#pwOld').value, f.querySelector('#pwNew').value, f.querySelector('#pwNew2').value).catch(failWith);
+  }
+  if(f.id==='form-admincode'){
+    e.preventDefault();
+    saveAdminCode(f.querySelector('#adminCode').value).catch(failWith);
+  }
+});
+
+document.addEventListener('input', function(e){
+  var bind = e.target.dataset && e.target.dataset.bind;
+  if(!bind) return;
+  state[bind] = e.target.value;
+  render();
+  var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
+  if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+});
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-action]');
+  if(!el) return;
+  var act = el.dataset.action;
+  state.formError='';
+  if(act==='set-role'){ state.role = el.dataset.role; state.view='login'; state.formOk=''; }
+  else if(act==='goto-register'){ state.view='register'; }
+  else if(act==='goto-register-admin'){ state.view='register-admin'; }
+  else if(act==='goto-login'){ state.view='login'; state.formOk=''; }
+  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; }
+  else if(act==='goto-list'){
+    state.view='list'; state.formOk='';
+    loadRoster().then(render);
+    render(); return;
+  }
+  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; }
+  else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
+  else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
+  else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
+  else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
+  else if(act==='goto-settings'){
+    state.view='settings'; state.formOk='';
+    storeGet('cvg_config','app').then(function(cfg){ state.cache.adminCode = cfg?cfg.adminCode:''; render(); });
+    render(); return;
+  }
+  else if(act==='open-detail'){ openDetail(el.dataset.id).catch(failWith); return; }
+  else if(act==='reset-password'){ resetStudentPassword().catch(failWith); return; }
+  else if(act==='delete-student'){ deleteStudent().catch(failWith); return; }
+  else if(act==='logout'){ setSession(state.role, null); state.view='login'; state.formOk=''; }
+  render();
+});
+
+/* ============ 시작 ============ */
+loadFallback();
+loadSessions();
+if(state.studentSession){ state.role='student'; state.view='home'; }
+else if(state.adminSession){ state.role='admin'; state.view='list'; }
+render();
+
+(async function boot(){
+  try{
+    if(state.role==='student' && state.studentSession){ await loadMe(); }
+    else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
+  }catch(e){ state.formError = errMsg(e); }
+  render();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
