@@ -401,7 +401,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 r';
+var APP_VERSION = '2026-09-16 t';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1450,10 +1450,15 @@ function parseImport(text){
   text = (text||'').trim();
   if(!text) throw new Error('붙여넣은 내용이 없습니다.');
   var rows;
+  var looksJson = /^[\[{]/.test(text);
   try{
     var j = JSON.parse(text);
     rows = Array.isArray(j) ? j : [j];
   }catch(e){
+    if(looksJson){
+      throw new Error('붙여넣은 내용이 중간에서 잘렸거나 앞뒤에 다른 글자가 섞였습니다. ' +
+        '[ 로 시작해 ] 로 끝나도록 전체를 다시 복사해 붙여넣어 주세요.');
+    }
     rows = text.split('\n').map(function(line){
       var t = line.trim();
       if(!t || /^이름/.test(t)) return null;
@@ -1480,6 +1485,10 @@ async function doImport(){
     var r = rows[i] || {};
     var name = String(r.name||'').trim();
     if(!name) continue;
+    if(/["'{}\[\]:\\]/.test(name)){
+      skipped.push(name.slice(0,20) + ' (이름에 기호가 섞여 있어 건너뜀)');
+      continue;
+    }
     state.importProgress = (i+1)+' / '+rows.length+' 반영 중…';
     render();
 
@@ -1665,6 +1674,8 @@ function screenDetail(){
       field('aNote','메모','text',{value:s.note||''}) +
       '<button type="submit" class="btn btn-primary">수정 저장</button>' +
     '</form>' +
+    '<div style="height:10px;"></div>' +
+    '<button class="btn btn-danger" data-action="del-member" data-id="'+esc(s.id)+'">이 단원 명단에서 삭제</button>' +
     ((s.shots && s.shots.length) ?
       '<div style="height:14px;"></div>' +
       '<label style="font-size:12.5px;font-weight:600;color:var(--text-muted);">학생이 올린 캡쳐 '+s.shots.length+'장</label>' +
@@ -1689,7 +1700,7 @@ function modalHtml(){
   if(!m) return '';
   if(m.type==='install'){
     var ios = isIOS();
-    return '<div class="overlay" data-action="overlay-bg"><div class="modal" onclick="event.stopPropagation()">' +
+    return '<div class="overlay" data-action="overlay-bg"><div class="modal">' +
       '<h3>앱으로 설치하기</h3>' +
       '<div class="modal-sub">홈 화면에 추가하면 주소를 몰라도 아이콘만 눌러 바로 들어올 수 있고, 주소창 없이 앱처럼 열립니다.</div>' +
       '<div class="install-preview">' +
@@ -1734,7 +1745,7 @@ function modalHtml(){
       '</div></div>';
   }
   if(m.type==='shot'){
-    return '<div class="overlay" data-action="overlay-bg"><div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">' +
+    return '<div class="overlay" data-action="overlay-bg"><div class="modal" style="max-width:560px;">' +
       '<h3>학생이 올린 캡쳐</h3>' +
       (m.dataUrl
         ? '<img src="'+m.dataUrl+'" alt="" style="width:100%;border-radius:var(--radius-s);border:1px solid var(--border);">'
@@ -1742,8 +1753,19 @@ function modalHtml(){
       '<div class="modal-actions"><button class="btn btn-ghost" data-action="close-modal">닫기</button></div>' +
       '</div></div>';
   }
+  if(m.type==='confirmDelete'){
+    var d = cache.roster.find(function(x){ return x.id===m.id; }) || {};
+    return '<div class="overlay" data-action="overlay-bg"><div class="modal">' +
+      '<h3>이 단원을 명단에서 지울까요?</h3>' +
+      '<div class="modal-sub"><b>'+esc(d.name||'')+'</b> 님의 점수와 기록이 모두 사라집니다. 되돌릴 수 없습니다.</div>' +
+      (d.claimedBy ? '<div class="errbox">이 단원은 앱에 가입되어 있습니다. 지우면 로그인도 함께 사라집니다.</div>' : '') +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-ghost" data-action="close-modal">취소</button>' +
+        '<button class="btn btn-danger" data-action="confirm-delete" data-id="'+esc(m.id)+'">삭제</button>' +
+      '</div></div></div>';
+  }
   if(m.type==='confirmReset'){
-    return '<div class="overlay" data-action="overlay-bg"><div class="modal" onclick="event.stopPropagation()">' +
+    return '<div class="overlay" data-action="overlay-bg"><div class="modal">' +
       '<h3>비밀번호를 초기화할까요?</h3>' +
       '<div class="modal-sub">이 단원의 로그인 정보가 지워집니다. 점수 기록은 그대로 남습니다.</div>' +
       '<div class="modal-actions">' +
@@ -2347,7 +2369,25 @@ document.addEventListener('click', function(e){
   }
   else if(act==='export-csv'){ exportCsv(); }
   else if(act==='reset-pw'){ navGo(function(){ state.modal={type:'confirmReset', id:el.dataset.id}; }); }
-  else if(act==='close-modal' || act==='overlay-bg'){ navBack(function(){ state.modal=null; }); }
+  else if(act==='del-member'){ navGo(function(){ state.modal={type:'confirmDelete', id:el.dataset.id}; }); }
+  else if(act==='confirm-delete'){
+    (async function(){
+      var id = el.dataset.id;
+      var s = cache.roster.find(function(x){ return x.id===id; });
+      if(s && s.claimedBy) await storeDelete('students', s.claimedBy);
+      await storeDelete('roster', id);
+      await loadRoster();
+      state.modal = null;
+      navBack(function(){ state.view='list'; state.detailId=null; });
+    })().catch(failWith);
+  }
+  else if(act==='close-modal'){ navBack(function(){ state.modal=null; }); }
+  // 바탕을 직접 눌렀을 때만 닫는다. 창 안을 눌러 닫히면 안 되기 때문.
+  else if(act==='overlay-bg'){
+    if(e.target && e.target.classList && e.target.classList.contains('overlay')){
+      navBack(function(){ state.modal=null; });
+    }
+  }
   else if(act==='confirm-reset'){
     (async function(){
       var id = el.dataset.id;
