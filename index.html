@@ -291,6 +291,27 @@ button{font-family:inherit;}
 .gtable th{color:var(--text-faint); font-weight:700; font-size:11px;}
 details.acc{border-left:4px solid var(--border); padding-left:11px; margin-bottom:8px;}
 details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6px 0;}
+/* 단원 화면의 인증 절차 안내 */
+.procbox{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3); margin-bottom:14px; overflow:hidden;}
+.procbox>summary{cursor:pointer; list-style:none; padding:12px 14px; font-size:13px; font-weight:800; color:var(--primary); display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
+.procbox>summary::-webkit-details-marker{display:none;}
+.procbox>summary em{font-style:normal; font-size:11.5px; font-weight:600; color:var(--text-muted);}
+.procbox>summary::after{content:'펼치기 ▾'; margin-left:auto; font-size:11px; font-weight:700; color:var(--text-faint); white-space:nowrap;}
+.procbox[open]>summary::after{content:'접기 ▴';}
+.procbody{padding:0 14px 15px; font-size:12.5px; line-height:1.6; color:var(--text);}
+.proc-h{font-size:11.5px; font-weight:800; color:var(--text-faint); letter-spacing:.04em; margin:16px 0 7px;}
+.proclist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+.proclist li{padding-left:12px; position:relative;}
+.proclist li::before{content:'·'; position:absolute; left:2px; top:-1px; font-weight:900; color:var(--text-faint);}
+.proclist ul{list-style:none; margin:5px 0 0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text-muted);}
+.proclist ul li::before{content:'–'; font-weight:600;}
+.procstep{display:grid; grid-template-columns:24px 1fr; gap:10px; padding:10px 0; border-top:1px solid var(--border);}
+.procstep .mk{width:24px; height:24px; border-radius:50%; color:#fff; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center;}
+.procstep .mk.R{background:var(--pill-r);} .procstep .mk.A{background:var(--pill-a);}
+.procstep .mk.T{background:var(--pill-t);} .procstep .mk.S{background:var(--pill-s);}
+.procstep b.sh{display:block; font-size:12.5px; margin-bottom:4px;}
+.proc-key{background:var(--amber-bg); border:1px solid var(--amber-border); color:var(--amber); border-radius:var(--radius-s); padding:10px 12px; font-size:12px; line-height:1.6; margin-top:10px;}
+.proc-key b{font-weight:800;}
 .disclaimer{font-size:12.5px; color:var(--danger); background:var(--danger-bg); border-radius:var(--radius-s); padding:11px 13px; line-height:1.6; margin-top:10px;}
 
 @media (max-width:520px){
@@ -330,7 +351,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 g';
+var APP_VERSION = '2026-09-16 h';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1020,6 +1041,83 @@ function renderStudent(){
   return screenMyStatus();
 }
 
+/* 단원이 자기 화면에서 바로 읽는 인증 절차 안내 (개조식) */
+function procHtml(){
+  return (
+    '<details class="procbox">' +
+      '<summary>인증은 내가 신청하나요? <em>R·T·A는 자동 · S는 2차만 직접</em></summary>' +
+      '<div class="procbody">' +
+
+        '<div class="proc-h">한 줄 요약</div>' +
+        '<ul class="proclist">' +
+          '<li><b>R·T·A단계</b> — 신청 없음. 학교가 알아서 뽑음</li>' +
+          '<li><b>S단계</b> — 1차는 자동, <b>2차만 내가 신청</b></li>' +
+        '</ul>' +
+
+        '<div class="proc-h">단계별로 보면</div>' +
+
+        '<div class="procstep"><span class="mk R">R</span><div>' +
+          '<b class="sh">신청 없음 · 합격자 발표도 없음</b>' +
+          '<ul class="proclist">' +
+            '<li>자기소개서 · 학업계획서 · 교수상담 3개만 채우면 끝</li>' +
+            '<li>정해진 날짜에 <b>기준 충족자 전원 통과</b></li>' +
+          '</ul></div></div>' +
+
+        '<div class="procstep"><span class="mk A">A</span><div>' +
+          '<b class="sh">신청 없음 · 순위로 뽑힘</b>' +
+          '<ul class="proclist">' +
+            '<li>1·2학년 대상</li>' +
+            '<li>학과별 COMpass K 총점(성적 제외) 순위로 선발</li>' +
+            '<li>기준을 넘겨도 <b>순위에 들어야</b> 인증 — 확정 아님</li>' +
+          '</ul></div></div>' +
+
+        '<div class="procstep"><span class="mk T">T</span><div>' +
+          '<b class="sh">신청 없음 · 순위로 뽑힘</b>' +
+          '<ul class="proclist">' +
+            '<li>3·4학년 대상 (9학기 이상 제외)</li>' +
+            '<li>단과대학별 FACE 영역 순위로 선발</li>' +
+            '<li>기준을 넘겨도 <b>순위에 들어야</b> 인증 — 확정 아님</li>' +
+          '</ul></div></div>' +
+
+        '<div class="procstep"><span class="mk S">S</span><div>' +
+          '<b class="sh">1차 자동 · 2차부터 내가 신청</b>' +
+          '<ul class="proclist">' +
+            '<li>1차 — 매년 4월 · 10월, FACE 한 영역만 넘기면 학교가 자동 선발</li>' +
+            '<li>2차 — <b>STORY+에서 MY포트폴리오 심사를 기한 내 직접 신청</b>' +
+              '<ul class="proclist">' +
+                '<li>2026학년도 1학기부터 바뀐 부분</li>' +
+                '<li>놓치면 거기서 끝 — 자동으로 넘어가지 않음</li>' +
+              '</ul></li>' +
+            '<li>3차 — 심층면접</li>' +
+            '<li>4차 — 학생성공지원위원회 심의 → 최종 인증</li>' +
+          '</ul></div></div>' +
+
+        '<div class="proc-h">날짜 (2026학년도 1학기 기준 · 2학기는 10월에 같은 순서)</div>' +
+        '<table class="gtable">' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">4. 21.(화) 14시</td><td><b>최종 COMpass K 점수 확정</b><br>이 시각까지 승인된 점수만 심사</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">4. 22.(수)</td><td>R단계 통과자 선발 · S단계 1차 합격자 발표</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">4. 28.(화) 23시</td><td><b>MY포트폴리오 2차 신청 마감</b><br>내가 직접 해야 하는 유일한 신청</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">5. 7.(목)</td><td>S단계 2차 합격자 발표</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">5. 13.(수)</td><td>심층면접</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">5~6월</td><td>T·A단계 인증자 발표 · S단계 최종 합격자 발표</td></tr>' +
+          '<tr><td style="white-space:nowrap;font-weight:700;">6. 11.(목)</td><td>인증서 및 장학금 수여식</td></tr>' +
+        '</table>' +
+
+        '<div class="proc-h">정작 내가 꼭 해야 하는 일</div>' +
+        '<ul class="proclist">' +
+          '<li>인증 신청은 거의 자동 — 하지만 <b>점수 만들기는 100% 수동</b></li>' +
+          '<li>자격증 · 봉사 · 수상 → EDWARD에 직접 입력 + 증빙 제출 + <b>승인까지</b> 받아야 점수가 생김</li>' +
+          '<li>입력하지 않으면 아무리 활동해도 <b>점수 0</b></li>' +
+        '</ul>' +
+        '<div class="proc-key"><b>기억할 것 하나</b><br>' +
+          '“인증 신청”이 아니라 <b>“실적 입력하고 승인받기”</b>가 내 할 일입니다.<br>' +
+          '2026-2학기 마감 — <b>2026. 12. 28.(월) 16:00</b></div>' +
+
+      '</div>' +
+    '</details>'
+  );
+}
+
 function screenMyStatus(){
   var sess = state.studentSession;
   var s = cache.me;
@@ -1037,6 +1135,7 @@ function screenMyStatus(){
     stageBand(st.stage, currentStage(s, analyze(s))) +
     analysisHtml(s) +
     '<div style="height:14px;"></div>' +
+    procHtml() +
     '<button class="btn btn-primary" data-action="goto-scores">내 점수 입력·수정하기</button>' +
     '<div style="height:8px;"></div>' +
     '<button class="btn btn-ghost" data-action="goto-profile">내 정보·비밀번호 수정</button>' +
