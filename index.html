@@ -1109,8 +1109,6 @@ function screenBoard(){
   var sCount = list.filter(function(s){ return analyze(s).achievedCount>=1; }).length;
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
 
-  var groups = boardGroups();
-  var TITLE = STAGE_TITLE, DESC = STAGE_DESC;
 
   return (
     '<div class="row-between">' +
@@ -1142,19 +1140,26 @@ function screenBoard(){
         [1,2,3,4].map(function(y){ return '<option value="'+y+'"'+(state.yearFilter===String(y)?' selected':'')+'>'+y+'학년</option>'; }).join('') +
       '</select>' +
     '</div>' +
-    '<div class="board">' +
-      ['S','T','A','R'].map(function(k){
-        var arr = groups[k];
-        return '<div class="col st-'+k+'">' +
-          '<h3><div><span class="st-name">'+TITLE[k]+'</span>' +
-            '<span class="st-desc">'+DESC[k]+'</span></div>' +
-            '<span class="cnt">'+arr.length+'명</span></h3>' +
-          '<div class="scards">' +
-            (arr.length ? arr.map(cardHtml).join('') : '<div class="empty-state" style="padding:14px;">해당 없음</div>') +
-          '</div></div>';
-      }).join('') +
-    '</div>'
+    '<div id="boardWrap">' + boardHtml() + '</div>'
   );
+}
+
+// 검색어를 칠 때는 이 부분만 다시 그린다.
+// 화면 전체를 다시 그리면 입력칸이 새로 만들어져 한글 조합이 끊긴다.
+function boardHtml(){
+  var groups = boardGroups();
+  return '<div class="board">' +
+    ['S','T','A','R'].map(function(k){
+      var arr = groups[k];
+      return '<div class="col st-'+k+'">' +
+        '<h3><div><span class="st-name">'+STAGE_TITLE[k]+'</span>' +
+          '<span class="st-desc">'+STAGE_DESC[k]+'</span></div>' +
+          '<span class="cnt">'+arr.length+'명</span></h3>' +
+        '<div class="scards">' +
+          (arr.length ? arr.map(cardHtml).join('') : '<div class="empty-state" style="padding:14px;">해당 없음</div>') +
+        '</div></div>';
+    }).join('') +
+  '</div>';
 }
 
 function cardHtml(s){
@@ -1722,12 +1727,15 @@ document.addEventListener('submit', function(e){
   }
 });
 
+function refreshBoard(){
+  var wrap = document.getElementById('boardWrap');
+  if(wrap) wrap.innerHTML = boardHtml();
+}
 document.addEventListener('input', function(e){
-  if(e.target.id==='adminSearch'){ state.search = e.target.value; var p=document.activeElement; render();
-    var el=document.getElementById('adminSearch'); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+  if(e.target.id === 'adminSearch'){ state.search = e.target.value; refreshBoard(); }
 });
 document.addEventListener('change', function(e){
-  if(e.target.id==='adminYear'){ state.yearFilter = e.target.value; render(); }
+  if(e.target.id==='adminYear'){ state.yearFilter = e.target.value; refreshBoard(); }
 });
 
 document.addEventListener('click', function(e){
