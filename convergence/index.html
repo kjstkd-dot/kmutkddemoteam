@@ -188,7 +188,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 c';
+var APP_VERSION = '2026-09-16 d';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -255,17 +255,12 @@ async function storeAll(col){
 }
 
 /* ============ 융합전공 이수 조건 ============
-   계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준.
-   TRACK_NAME과 CORE_COURSES(핵심과목 목록·최대 3과목/9학점, 제4조②)는
-   융합전공마다 다르므로 실제 값으로 바꿔주세요. 나머지 숫자는 규정에 정해진 값입니다. */
+   계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준. */
 var TRACK_NAME = '글로벌K-공연콘텐츠전공';
 var PARTICIPATING_DEPTS = ['태권도학과', '연극뮤지컬과', '무용학과', '영어영문학과'];
-var CORE_COURSES = [
-  // 예시입니다. 2026년도 교육과정표에서 핵심과목으로 지정된 과목으로 바꿔주세요 (최대 3과목).
-  { name:'핵심과목1', credits:3 },
-  { name:'핵심과목2', credits:3 },
-  { name:'핵심과목3', credits:3 }
-];
+// 핵심과목(제4조②, 최대 3과목)은 코드에 미리 넣지 않고 관리자 설정 화면에서
+// 나중에 고를 수 있게 비워둔다. cvg_config/app 문서의 coreCourseCodes에 저장된다.
+var CORE_COURSES = [];
 // 2026년도 연계전공(융합전공) 교육과정표에 실린 개설 과목 목록. 편성표가 바뀌면 이 배열을 고쳐주세요.
 var COURSE_CATALOG = [
   { code:'7567', name:'체조', credits:1 },
@@ -318,6 +313,13 @@ var COURSE_CATALOG = [
   { code:'5706', name:'세계뮤지컬콘텐츠의이해와번역', credits:2 }
 ];
 function courseInCatalog(code){ return COURSE_CATALOG.filter(function(c){ return c.code===code; })[0] || null; }
+function applyCoreCourseCodes(codes){
+  CORE_COURSES = (codes||[]).map(courseInCatalog).filter(Boolean).map(function(c){ return { name:c.name, credits:c.credits }; });
+}
+async function loadCoreCourses(){
+  var cfg = await storeGet('cvg_config', 'app');
+  applyCoreCourseCodes(cfg && cfg.coreCourseCodes);
+}
 var DOUBLE_MAJOR_MIN = 33;      // 제7조① 복수전공: 33학점(핵심과목 포함) 이상
 var MINOR_MIN = 15;             // 제7조② 부전공: 15학점(핵심과목 포함) 이상 (단일/2개 이상 동일)
 var MINOR_PRIMARY_SINGLE = 54;  // 제7조② 부전공 1개 이수 시 제1전공 54학점 이상
@@ -622,13 +624,16 @@ function progressBlock(student){
     html += '<div class="notice-box">제1전공 졸업요건은 충족했지만 이 융합전공 요건을 아직 못 채웠다면, ' +
       '정해진 기간 내에 학사학위취득 유예를 신청할 수 있어요(최대 2회, 학칙 제69조의1). 신청하지 않으면 제1전공 학위만 수여돼요(학칙 제69조).</div>';
   }
-  html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
-    '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
-    '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
-    '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
-      core.map(function(c){ return (c.done?'✓ ':'· ') + esc(c.name); }).join(' &nbsp; ') +
-    '</div>' +
-  '</div>' +
+  if(core.length){
+    html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
+      '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
+      '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
+        core.map(function(c){ return (c.done?'✓ ':'· ') + esc(c.name); }).join(' &nbsp; ') +
+      '</div>' +
+    '</div>';
+  }
+  html +=
   '<div class="catcard '+(cvgOk?'met':'')+'">' +
     '<div class="cthead"><b>융합전공 이수학점</b><span>'+cvgCur+' / '+cvgMin+'학점'+(cvgOk?' 충족':'')+'</span></div>' +
     '<div class="pbar"><i style="width:'+pct(cvgCur,cvgMin)+'%"></i></div>' +
@@ -707,7 +712,9 @@ function screenCourseForm(){
     '<div class="phone">' +
       '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
       '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
-      '<p class="screen-sub">교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요. 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ')+'</p>' +
+      '<p class="screen-sub">교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' +
+        (CORE_COURSES.length ? ' 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '') +
+      '</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course" class="stack">' +
         '<div class="field"><label>과목</label><select id="cCourse">' +
@@ -962,8 +969,18 @@ function screenAdminDetail(){
     '</div>'
   );
 }
+function courseCodeByName(name){
+  var c = COURSE_CATALOG.filter(function(x){ return x.name===name; })[0];
+  return c ? c.code : '';
+}
 function screenAdminSettings(){
   var code = state.cache.adminCode || '';
+  var curCodes = CORE_COURSES.map(function(c){ return courseCodeByName(c.name); });
+  var slotOptions = function(picked){
+    return '<option value="">미지정</option>' + COURSE_CATALOG.map(function(c){
+      return '<option value="'+esc(c.code)+'" '+(picked===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+    }).join('');
+  };
   return (
     '<div class="phone">' +
       '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
@@ -975,7 +992,15 @@ function screenAdminSettings(){
         '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
-      '<div class="notice-box" style="margin-top:16px;">융합전공명과 핵심과목 목록은 index.html의 TRACK_NAME / CORE_COURSES 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
+      '<h2 class="screen-title" style="margin-top:24px;">핵심과목 지정</h2>' +
+      '<p class="screen-sub">제4조② · 편성된 교과목 중 최대 3과목까지 핵심과목으로 지정할 수 있어요. 아직 정하지 않았다면 "미지정"으로 두면 돼요.</p>' +
+      '<form id="form-corecourses" class="stack">' +
+        [0,1,2].map(function(i){
+          return '<div class="field"><label>핵심과목 '+(i+1)+'</label><select id="coreSlot'+i+'">'+slotOptions(curCodes[i]||'')+'</select></div>';
+        }).join('') +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
     '</div>'
   );
 }
@@ -1000,9 +1025,15 @@ async function deleteStudent(){
   render();
 }
 async function saveAdminCode(code){
-  await storeSet('cvg_config', 'app', { adminCode: code.trim() });
+  await storeUpdate('cvg_config', 'app', { adminCode: code.trim() });
   state.cache.adminCode = code.trim();
   state.formOk = '등록코드를 저장했어요.';
+  render();
+}
+async function saveCoreCourses(codes){
+  await storeUpdate('cvg_config', 'app', { coreCourseCodes: codes });
+  applyCoreCourseCodes(codes);
+  state.formOk = '핵심과목을 저장했어요.';
   render();
 }
 
@@ -1043,6 +1074,12 @@ document.addEventListener('submit', function(e){
   if(f.id==='form-admincode'){
     e.preventDefault();
     saveAdminCode(f.querySelector('#adminCode').value).catch(failWith);
+  }
+  if(f.id==='form-corecourses'){
+    e.preventDefault();
+    var codes = [0,1,2].map(function(i){ return f.querySelector('#coreSlot'+i).value; }).filter(function(v){ return v; });
+    codes = codes.filter(function(v, i){ return codes.indexOf(v)===i; });
+    saveCoreCourses(codes).catch(failWith);
   }
 });
 
@@ -1111,6 +1148,7 @@ render();
 
 (async function boot(){
   try{
+    await loadCoreCourses();
     if(state.role==='student' && state.studentSession){ await loadMe(); }
     else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
   }catch(e){ state.formError = errMsg(e); }
