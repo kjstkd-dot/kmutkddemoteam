@@ -318,7 +318,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 e';
+var APP_VERSION = '2026-09-16 f';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -448,6 +448,7 @@ var MAPPING_ROWS = [
 ];
 
 var NOTES = [
+  'R·T·A단계는 학생이 따로 신청하지 않습니다. 공지된 날짜의 COMpass K 점수를 학생성공센터가 일괄 수집해 선발합니다. S단계만 1차 통과 후 2차 MY포트폴리오 심사를 STORY+에서 직접 신청해야 합니다.',
   '1개의 실적은 1개 영역에서만 인정됩니다. 태권도 단증 하나로 F07과 E07 양쪽 점수를 받을 수는 없습니다.',
   'COMpass K 실적은 입학 이후의 것만 승인되지만, 자격증은 예외입니다. 신·편입학 전에 딴 자격증도 유효기간 안에 있으면(운전면허 같은 평생자격증 포함) 인정됩니다. 다만 어학성적은 취득일 기준 최근 2년 이내만 인정됩니다.',
   '영역별 한도 점수를 넘겨도 COMpass K 총점은 계속 쌓이지만, 교내 지표에는 한도까지만 반영됩니다.',
@@ -595,7 +596,7 @@ var STAGE_FULL = {
   A:'다음 단계 — A단계 선발 대상', R:'다음 단계 — R단계 요건부터'
 };
 var STAGE_DESC = {
-  S:'FACE 1개 영역 달성 · 지금 바로 신청 가능', T:'3·4학년 · 영역별 최우수 선발 대기',
+  S:'FACE 1개 영역 달성 · 1차 자동 통과 대상', T:'3·4학년 · 영역별 최우수 선발 대기',
   A:'1·2학년 · 총점 우수 선발 대기', R:'자소서 · 계획서 · 교수상담 미완료'
 };
 
@@ -1528,6 +1529,8 @@ function guideAdmin(){
         '<li>각 칸 안에서는 <b>다음 단계에 가까운 순서</b>로 정렬됩니다.</li>' +
         '<li>카드 아래 4색 막대는 F·A·C·E 달성률입니다.</li>' +
         '<li><b>미가입</b> 표시는 아직 앱에 등록하지 않은 단원입니다.</li>' +
+        '<li>S칸에 있어도 <b>단원이 따로 신청할 일은 없습니다.</b> 1차는 학교가 자동으로 뽑습니다. ' +
+          '다만 1차 합격 뒤 <b>2차 MY포트폴리오 심사는 본인이 기한 내에 신청</b>해야 하니, 4월·10월 발표를 챙겨 주세요.</li>' +
         '<li>이름 검색과 학년 필터로 좁혀 볼 수 있고, <b>엑셀 저장</b>으로 전체 명단을 내려받을 수 있습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
@@ -1629,6 +1632,32 @@ function guideReference(){
       MAPPING_ROWS.map(function(r){ return '<tr>'+r.map(function(c){ return '<td>'+esc(c)+'</td>'; }).join('')+'</tr>'; }).join('') +
       '</table>' +
       '<div class="disclaimer">위 매핑은 계명대학교의 공식 대응표가 아니라 시범단 활동과 COMpass K 평가요소의 유사성에 근거한 추정 자료입니다. 실제 인정 여부는 학생성공센터(바우어관 1213호, 053-580-6771)에 확인하세요.</div>' +
+      '<h2 style="margin-top:22px;">인증은 신청해야 하나요?</h2>' +
+      '<p style="font-size:13.5px;line-height:1.75;margin:0 0 12px;">' +
+        '단계마다 다릅니다. <b>R·T·A단계는 따로 신청하지 않습니다.</b> 학교가 미리 공지한 날짜의 COMpass K 점수를 ' +
+        '학생성공센터에서 일괄 수집해 선발합니다. <b>S단계만 1차 통과 후 2차 심사를 본인이 직접 신청</b>해야 합니다.' +
+      '</p>' +
+      '<table class="gtable"><tr><th>단계</th><th>신청</th><th>어떻게 정해지나</th></tr>' +
+      '<tr><td><b>R</b></td><td>필요 없음</td><td>별도 합격자 발표도 없이 <b>기준 충족 시 전원 통과</b></td></tr>' +
+      '<tr><td><b>A</b></td><td>필요 없음</td><td>학과별 COMpass K 총점 <b>순위로 선발</b> — 기준을 넘겨도 확정 아님</td></tr>' +
+      '<tr><td><b>T</b></td><td>필요 없음</td><td>단과대학별 FACE 영역 <b>순위로 선발</b> — 기준을 넘겨도 확정 아님</td></tr>' +
+      '<tr><td><b>S</b></td><td><b>2차만 직접</b></td><td>1차(FACE 최소인증점수)는 자동 선발 → 1차 합격 후 ' +
+        '<b>STORY+에서 MY포트폴리오 심사를 기한 내 직접 신청</b> → 심층면접 → 위원회 심의</td></tr>' +
+      '</table>' +
+      '<h3 style="font-size:14.5px;margin:18px 0 0;">2026학년도 1학기 실제 일정 (2학기도 같은 구조로 10월)</h3>' +
+      '<table class="gtable"><tr><th>날짜</th><th>내용</th></tr>' +
+      '<tr><td class="mono">4. 21.(화) 14시</td><td><b>최종 COMpass K 점수 확정</b> — 이 시각까지 승인된 점수만 심사</td></tr>' +
+      '<tr><td class="mono">4. 22.(수)</td><td>R단계 통과자 선발 · S단계 1차 합격자 발표</td></tr>' +
+      '<tr><td class="mono">4. 28.(화) 23시</td><td><b>MY포트폴리오 개발 및 2차 신청 마감</b> — 직접 해야 하는 유일한 신청</td></tr>' +
+      '<tr><td class="mono">5. 7.(목)</td><td>S단계 2차 합격자 발표</td></tr>' +
+      '<tr><td class="mono">5. 13.(수)</td><td>심층면접</td></tr>' +
+      '<tr><td class="mono">5~6월</td><td>T·A단계 인증자 발표 · S단계 최종 합격자 발표</td></tr>' +
+      '<tr><td class="mono">6. 11.(목)</td><td>인증서 및 장학금 수여식</td></tr>' +
+      '</table>' +
+      '<div class="notice-box" style="margin:12px 0 0;border-color:var(--primary);">' +
+        '<b>정작 직접 해야 하는 일은 실적 입력입니다.</b> 인증 신청은 거의 자동이지만, ' +
+        '자격증·봉사·수상 점수는 EDWARD에 직접 입력하고 증빙을 내서 승인받지 않으면 아예 생기지 않습니다. ' +
+        '2026-2학기 승인 마감은 <b>2026. 12. 28.(월) 16:00</b>입니다.</div>' +
       '<h2 style="margin-top:22px;">유의사항</h2>' +
       '<ul style="padding-left:20px;">' + NOTES.map(function(n){ return '<li style="font-size:13px; line-height:1.6; margin-bottom:6px;">'+esc(n)+'</li>'; }).join('') + '</ul>' +
     '</div>'
