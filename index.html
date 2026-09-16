@@ -309,9 +309,11 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 /* ============ 저장소 설정 ============
    구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
    비워두면 이 기기 안에만 저장됩니다(시험용).
-   예: var APP_VERSION = '2026-09-16 c';
-var API_URL = 'https://script.google.com/macros/s/AKfy...../exec'; */
+   예: var API_URL = 'https://script.google.com/macros/s/AKfy...../exec'; */
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
+
+// 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
+var APP_VERSION = '2026-09-16 c';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
