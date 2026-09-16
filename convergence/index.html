@@ -188,7 +188,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 b';
+var APP_VERSION = '2026-09-16 c';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -258,13 +258,66 @@ async function storeAll(col){
    계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준.
    TRACK_NAME과 CORE_COURSES(핵심과목 목록·최대 3과목/9학점, 제4조②)는
    융합전공마다 다르므로 실제 값으로 바꿔주세요. 나머지 숫자는 규정에 정해진 값입니다. */
-var TRACK_NAME = '(융합전공명을 입력하세요)';
+var TRACK_NAME = '글로벌K-공연콘텐츠전공';
+var PARTICIPATING_DEPTS = ['태권도학과', '연극뮤지컬과', '무용학과', '영어영문학과'];
 var CORE_COURSES = [
-  // 예시입니다. 실제 핵심과목 이름과 학점으로 바꿔주세요 (최대 3과목).
+  // 예시입니다. 2026년도 교육과정표에서 핵심과목으로 지정된 과목으로 바꿔주세요 (최대 3과목).
   { name:'핵심과목1', credits:3 },
   { name:'핵심과목2', credits:3 },
   { name:'핵심과목3', credits:3 }
 ];
+// 2026년도 연계전공(융합전공) 교육과정표에 실린 개설 과목 목록. 편성표가 바뀌면 이 배열을 고쳐주세요.
+var COURSE_CATALOG = [
+  { code:'7567', name:'체조', credits:1 },
+  { code:'8223', name:'몸짓과표현', credits:2 },
+  { code:'4463', name:'무대기술법', credits:2 },
+  { code:'4714', name:'공연예술의이해와감상', credits:2 },
+  { code:'4693', name:'기초무대기술', credits:2 },
+  { code:'4649', name:'극장실습(1)', credits:1 },
+  { code:'5588', name:'필라테스(1)', credits:1 },
+  { code:'0562', name:'심화영어회화(1)', credits:3 },
+  { code:'2544', name:'뮤지컬연기(1)', credits:2 },
+  { code:'4459', name:'퍼포먼스컴피티션', credits:2 },
+  { code:'2896', name:'무대론', credits:2 },
+  { code:'2034', name:'타악실기(국악)', credits:1 },
+  { code:'4650', name:'극장실습(2)', credits:1 },
+  { code:'5589', name:'필라테스(2)', credits:1 },
+  { code:'4421', name:'컨템포러리힙합', credits:1 },
+  { code:'2510', name:'영미소설과영화', credits:3 },
+  { code:'2545', name:'뮤지컬연기(2)', credits:2 },
+  { code:'4594', name:'K-POP과태권도', credits:1 },
+  { code:'4613', name:'태권도와미디어', credits:2 },
+  { code:'1513', name:'영미시개관(1)', credits:3 },
+  { code:'1957', name:'째즈(1)', credits:1 },
+  { code:'5197', name:'연극연출프로젝트(1)', credits:2 },
+  { code:'8224', name:'무대기술테크닉(1)', credits:2 },
+  { code:'2955', name:'무용예술론', credits:2 },
+  { code:'1958', name:'째즈(2)', credits:1 },
+  { code:'5198', name:'연극연출프로젝트(2)', credits:2 },
+  { code:'5493', name:'캐릭터댄스', credits:1 },
+  { code:'8225', name:'무대기술테크닉(2)', credits:2 },
+  { code:'1651', name:'무용캡스톤디자인', credits:2 },
+  { code:'2498', name:'기초통번역', credits:3 },
+  { code:'4604', name:'태권도문화의이해', credits:3 },
+  { code:'7827', name:'태권도시범론', credits:3 },
+  { code:'2700', name:'태권체조', credits:1 },
+  { code:'4595', name:'마샬아츠트리킹', credits:1 },
+  { code:'4608', name:'태권도와K-문화콘텐츠', credits:2 },
+  { code:'4615', name:'태권도캡스톤디자인', credits:3 },
+  { code:'4635', name:'태권도공연기획', credits:2 },
+  { code:'2540', name:'신체연기트레이닝(1)', credits:2 },
+  { code:'4317', name:'스테이지보컬(1)', credits:2 },
+  { code:'5707', name:'K-문화콘텐츠창작LAB(1)', credits:2 },
+  { code:'2542', name:'신체연기트레이닝(2)', credits:2 },
+  { code:'4318', name:'스테이지보컬(2)', credits:2 },
+  { code:'5708', name:'K-공연콘텐츠창작LAB(2)', credits:2 },
+  { code:'4592', name:'공연학개론', credits:2 },
+  { code:'5703', name:'K-문화콘텐츠스토리텔링', credits:2 },
+  { code:'5704', name:'한류와K-컬처', credits:2 },
+  { code:'5705', name:'공연및이벤트기획', credits:2 },
+  { code:'5706', name:'세계뮤지컬콘텐츠의이해와번역', credits:2 }
+];
+function courseInCatalog(code){ return COURSE_CATALOG.filter(function(c){ return c.code===code; })[0] || null; }
 var DOUBLE_MAJOR_MIN = 33;      // 제7조① 복수전공: 33학점(핵심과목 포함) 이상
 var MINOR_MIN = 15;             // 제7조② 부전공: 15학점(핵심과목 포함) 이상 (단일/2개 이상 동일)
 var MINOR_PRIMARY_SINGLE = 54;  // 제7조② 부전공 1개 이수 시 제1전공 54학점 이상
@@ -298,7 +351,11 @@ function primaryMet(student){
   var min = primaryMin(student);
   return min==null ? true : num(student.primaryMajorCredits) >= min;
 }
-function allMet(student){ return convergenceMet(student) && primaryMet(student); }
+// 학칙 제44조①: 복수전공(융합전공 포함)으로 이수하는 경우, 제1전공 학과의 졸업논문이
+// 필수과목이면 반드시 이수해야 한다. 부전공 이수자에게는 적용되지 않는다.
+function thesisApplies(student){ return trackTypeOf(student)==='double' && !!student.thesisRequired; }
+function thesisMet(student){ return !thesisApplies(student) || !!student.thesisDone; }
+function allMet(student){ return convergenceMet(student) && primaryMet(student) && thesisMet(student); }
 function eligibleToApply(student){ return num(student.recognizedSemesters) >= APPLY_MIN_SEMESTERS; }
 function pct(cur, min){ return min>0 ? Math.min(100, Math.round(cur/min*100)) : 100; }
 
@@ -510,7 +567,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   var hash = await sha256Hex(pw);
   var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
     trackType:'double', recognizedSemesters:'', primaryMajorCredits:0,
-    microdegreeKey:'', microdegreeCredits:0, createdAt:nowIso() };
+    microdegreeKey:'', microdegreeCredits:0, thesisRequired:false, thesisDone:false, createdAt:nowIso() };
   await storeSet('cvg_students', id, doc);
   setSession('student', { id:id, name:name });
   state.cache.me = Object.assign({id:id}, doc);
@@ -561,6 +618,10 @@ function progressBlock(student){
     '<div><b>'+(met?'융합전공 이수 조건 충족':'아직 이수 조건 미충족')+'</b>' +
     '<span>'+esc(info.label)+' · 인정학기 '+(eligibleToApply(student)?'신청 가능':'신청 자격 미충족(3학기 이상 필요)')+'</span></div>' +
   '</div>';
+  if(!met){
+    html += '<div class="notice-box">제1전공 졸업요건은 충족했지만 이 융합전공 요건을 아직 못 채웠다면, ' +
+      '정해진 기간 내에 학사학위취득 유예를 신청할 수 있어요(최대 2회, 학칙 제69조의1). 신청하지 않으면 제1전공 학위만 수여돼요(학칙 제69조).</div>';
+  }
   html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
     '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
     '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
@@ -577,6 +638,13 @@ function progressBlock(student){
     html += '<div class="catcard '+(pOk?'met':'')+'">' +
       '<div class="cthead"><b>제1전공 이수학점</b><span>'+pCur+' / '+info.primaryMin+'학점'+(pOk?' 충족':'')+'</span></div>' +
       '<div class="pbar"><i style="width:'+pct(pCur,info.primaryMin)+'%"></i></div>' +
+    '</div>';
+  }
+  if(thesisApplies(student)){
+    var tOk = !!student.thesisDone;
+    html += '<div class="catcard '+(tOk?'met':'')+'">' +
+      '<div class="cthead"><b>졸업논문(복수전공 필수과목)</b><span>'+(tOk?'이수 완료':'미이수')+'</span></div>' +
+      '<div class="cm">학칙 제44조① · 제1전공 학과 졸업논문이 필수과목이라 복수전공 이수자도 반드시 이수해야 해요.</div>' +
     '</div>';
   }
   var mp = microdegreeProgram(student);
@@ -614,7 +682,7 @@ function screenStudentHome(){
     '<div class="phone">' +
       '<div class="eyebrow">학생</div>' +
       '<h2 class="screen-title">'+esc(s.name)+'님의 이수 현황</h2>' +
-      '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+' · 참여학과: '+PARTICIPATING_DEPTS.map(esc).join(', ')+'</p>' +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
@@ -639,12 +707,20 @@ function screenCourseForm(){
     '<div class="phone">' +
       '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
       '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
-      '<p class="screen-sub">핵심과목 목록에 있는 이름과 똑같이 입력하면 자동으로 핵심과목으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ')+'</p>' +
+      '<p class="screen-sub">교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요. 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ')+'</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course" class="stack">' +
-        '<div class="field"><label>과목명</label><input id="cName" required value="'+(editing?esc(editing.name):'')+'"></div>' +
+        '<div class="field"><label>과목</label><select id="cCourse">' +
+          COURSE_CATALOG.map(function(c){
+            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+          }).join('') +
+          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
+        '</select></div>' +
+        '<div class="field" id="cCustomWrap" style="'+((!editing||editing.courseCode)?'display:none;':'')+'">' +
+          '<label>과목명 직접 입력</label><input id="cName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
+        '</div>' +
         '<div class="grid2">' +
-          '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):3)+'"></div>' +
+          '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(COURSE_CATALOG[0]?COURSE_CATALOG[0].credits:3))+'"></div>' +
           '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
         '</div>' +
         '<div class="row" style="gap:8px;">' +
@@ -689,6 +765,14 @@ function screenInfoForm(){
           })() +
         '</select></div>' +
         '<div class="field"><label>마이크로디그리 이수학점</label><input id="iMicroCredits" type="number" min="0" value="'+num(s.microdegreeCredits)+'"></div>' +
+        '<div class="field"><label>졸업논문 (복수전공일 때만 적용, 학칙 제44조①)</label>' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; margin-bottom:4px;">' +
+            '<input type="checkbox" id="iThesisReq" '+(s.thesisRequired?'checked':'')+'> 제1전공 학과의 졸업논문이 필수과목이다' +
+          '</label>' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400;">' +
+            '<input type="checkbox" id="iThesisDone" '+(s.thesisDone?'checked':'')+'> 졸업논문을 이수했다' +
+          '</label>' +
+        '</div>' +
         '<div class="row" style="gap:8px;">' +
           '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
           '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
@@ -718,7 +802,9 @@ function screenProfile(){
 }
 
 async function saveCourse(form){
-  var name = form.querySelector('#cName').value.trim();
+  var courseCode = form.querySelector('#cCourse').value;
+  var catalogCourse = courseCode==='__custom__' ? null : courseInCatalog(courseCode);
+  var name = catalogCourse ? catalogCourse.name : form.querySelector('#cName').value.trim();
   var credits = form.querySelector('#cCredits').value;
   var semester = form.querySelector('#cSemester').value.trim();
   if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
@@ -728,13 +814,14 @@ async function saveCourse(form){
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
   var list = courses(student).slice();
+  var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
 
   if(state.editingCourseId){
     list = list.map(function(c){
-      return c.id===state.editingCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester } : c;
+      return c.id===state.editingCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave } : c;
     });
   } else {
-    list.push({ id:uid(), name:name, credits:num(credits), semester:semester });
+    list.push({ id:uid(), name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave });
   }
   await storeUpdate(col, id, { courses:list });
   student.courses = list;
@@ -758,13 +845,16 @@ async function saveInfo(form){
   var primaryMajorCredits = num(form.querySelector('#iPrimary').value);
   var microdegreeKey = form.querySelector('#iMicro').value;
   var microdegreeCredits = num(form.querySelector('#iMicroCredits').value);
+  var thesisRequired = form.querySelector('#iThesisReq').checked;
+  var thesisDone = form.querySelector('#iThesisDone').checked;
 
   var isAdmin = state.role==='admin';
   var col = 'cvg_students';
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
   var patch = { trackType:trackType, recognizedSemesters:recognizedSemesters, primaryMajorCredits:primaryMajorCredits,
-    microdegreeKey:microdegreeKey, microdegreeCredits:microdegreeCredits };
+    microdegreeKey:microdegreeKey, microdegreeCredits:microdegreeCredits,
+    thesisRequired:thesisRequired, thesisDone:thesisDone };
   await storeUpdate(col, id, patch);
   Object.assign(student, patch);
   state.formError='';
@@ -963,6 +1053,20 @@ document.addEventListener('input', function(e){
   render();
   var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
   if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+});
+
+document.addEventListener('change', function(e){
+  if(e.target.id !== 'cCourse') return;
+  var form = e.target.closest('form');
+  var wrap = form.querySelector('#cCustomWrap');
+  var creditsInput = form.querySelector('#cCredits');
+  if(e.target.value === '__custom__'){
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    var c = courseInCatalog(e.target.value);
+    if(c) creditsInput.value = c.credits;
+  }
 });
 
 document.addEventListener('click', function(e){
