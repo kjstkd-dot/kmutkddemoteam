@@ -311,6 +311,15 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
 .install-preview b{display:block; font-size:14px;}
 .install-preview span{display:block; font-size:12px; color:var(--text-muted); margin-top:4px; line-height:1.55;}
 
+/* 이번 달 점수 올리기 알림 */
+.monthly{border:2px solid var(--amber-border); background:var(--amber-bg); color:var(--amber);
+  border-radius:var(--radius-m); padding:15px 16px; margin-bottom:14px;}
+.monthly b{display:block; font-size:14.5px; font-weight:800; margin-bottom:5px;}
+.monthly span{display:block; font-size:12.5px; line-height:1.6; opacity:.95;}
+.monthly .last{display:block; font-size:11.5px; margin-top:6px; opacity:.8;}
+.monthly button{margin-top:11px; width:100%; border:none; border-radius:var(--radius-s);
+  background:var(--amber); color:#fff; font-weight:800; font-size:14px; padding:11px; cursor:pointer;}
+
 /* K-STAR 인증 현황 피라미드 */
 .pyr{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3);
   padding:13px 14px 8px; margin-bottom:14px;}
@@ -415,7 +424,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 x';
+var APP_VERSION = '2026-09-16 y';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -828,6 +837,26 @@ function recommendation(s, a){
     '<li><b>'+b.area+'영역</b>을 <b>'+b.gap+'점</b> 채우면 가장 빨리 S단계 도달</li></ul>' +
     '<span class="rsub">추천 활동</span><ul>'+lines+'</ul>' +
     '<span class="rfoot">(추정 — 정확한 인정 여부는 학생성공센터에 확인)</span>' };
+}
+
+/* 이번 달에 점수를 올렸는지 본다 */
+function updatedThisMonth(s){
+  if(!s || !s.updatedAt) return false;
+  var d = new Date(s.updatedAt), n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
+}
+function monthlyNudge(s){
+  if(updatedThisMonth(s)) return '';
+  var last = s && s.updatedAt ? new Date(s.updatedAt) : null;
+  return '<div class="monthly">' +
+    '<b>이번 달 점수를 아직 안 올렸어요</b>' +
+    '<span>계명스튜던트포털(STORY+) → 역량관리 → 역량 대시보드를 열고, ' +
+    '화면에 나온 숫자를 그대로 옮겨 적어 주세요. 1분이면 됩니다.</span>' +
+    '<span class="last">' + (last
+      ? '마지막으로 올린 날: ' + last.getFullYear() + '. ' + (last.getMonth()+1) + '. ' + last.getDate() + '.'
+      : '아직 한 번도 올린 적이 없어요.') + '</span>' +
+    '<button data-action="goto-scores">지금 입력하기</button>' +
+  '</div>';
 }
 
 /* 계명스튜던트포털의 K-STAR 인증 현황 그림을 그대로 옮긴 피라미드 */
@@ -1301,6 +1330,7 @@ function screenMyStatus(){
       '<button class="linklike" data-action="logout">로그아웃</button>' +
     '</div>' +
     '<div style="height:14px;"></div>' +
+    monthlyNudge(s) +
     pyramidHtml(s, analyze(s)) +
     deadlineBox(true) +
     analysisHtml(s, {noCerts:true}) +
@@ -1569,6 +1599,7 @@ function screenBoard(){
   var rCount = cur('R'), aCount = cur('A'), tCount = cur('T');
   var noneCount = list.filter(function(s){ return !currentStage(s, analyze(s)); }).length;
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
+  var staleCount = list.filter(function(s){ return !updatedThisMonth(s); }).length;
 
 
   return (
@@ -1577,6 +1608,7 @@ function screenBoard(){
       '<h2 class="screen-title" style="white-space:nowrap;">전체 단원 현황</h2></div>' +
       '<div class="row" style="gap:12px; flex-wrap:wrap; margin-left:auto;">' +
         '<button class="linklike" data-action="goto-import">일괄 입력</button>' +
+        '<button class="linklike" data-action="copy-notice">공지문 복사</button>' +
         '<button class="linklike" data-action="copy-roster">명단 복사</button>' +
         '<button class="linklike" data-action="export-csv">엑셀 저장</button>' +
         '<button class="linklike" data-action="goto-profile">설정</button>' +
@@ -1616,6 +1648,11 @@ function screenBoard(){
       '<b>이름 옆 배지</b>에 표시됩니다. 아직 아무 단계도 인증받지 못했으면 ' +
       '<span class="curpill none" style="margin-left:0;">인증 전</span> 으로 나옵니다.' +
     '</div>' +
+    (staleCount ?
+      '<div class="notice-box" style="border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;gap:10px;">' +
+        '<span>이번 달 점수를 아직 안 올린 단원 <b>'+staleCount+'명</b>입니다.</span>' +
+        '<button class="linklike" data-action="copy-notice" style="margin-left:auto;color:var(--amber);">공지문 복사</button>' +
+      '</div>' : '') +
     (state.tileFilter ?
       '<div class="notice-box" style="display:flex;align-items:center;gap:10px;border-color:var(--primary);">' +
         '<span><b>'+esc(TILE_LABEL[state.tileFilter])+'</b> 단원만 보는 중입니다.</span>' +
@@ -2395,6 +2432,28 @@ document.addEventListener('click', function(e){
   else if(act==='copy-url'){ copyInstallUrl(); }
   else if(act==='sib-prev'){ gotoSibling(-1); }
   else if(act==='sib-next'){ gotoSibling(1); }
+  else if(act==='copy-notice'){
+    var mm = new Date().getMonth() + 1;
+    var dd = daysUntil(SEMESTER.visitEnd);
+    var msg =
+      '[K-STAR 현황판] ' + mm + '월 점수 올리기\n\n' +
+      '이번 달 역량 점수를 올려 주세요. 1분이면 끝납니다.\n\n' +
+      '1) 계명스튜던트포털(STORY+) 접속\n' +
+      '2) 역량관리 → 역량 대시보드\n' +
+      '3) COMpass K 총점과 F·A·C·E 점수 확인\n' +
+      '4) 아래 링크에서 "내 점수 입력·수정하기"\n\n' +
+      'https://kmutkddemoteam.vercel.app\n\n' +
+      '처음이면 "비밀번호 설정하기"로 등록하세요.\n' +
+      '이름이 명단에 있으면 기존 기록을 그대로 이어받습니다.\n\n' +
+      '※ 2026-2학기 실적 승인 마감 — 2026. 12. 28.(월) 16:00' +
+      (dd >= 0 ? ' (D-' + dd + ')' : '') + '\n' +
+      '자격증·봉사·수상은 EDWARD에 직접 입력하고 승인까지 받아야\n' +
+      '이번 학기 점수에 들어갑니다. 입력 안 하면 점수가 안 생깁니다.';
+    var okMsg = function(){ alert('공지문을 복사했습니다.\n단톡방에 붙여넣어 주세요.'); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(msg).then(okMsg).catch(function(){ window.prompt('아래 내용을 복사해 주세요', msg); });
+    } else { window.prompt('아래 내용을 복사해 주세요', msg); }
+  }
   else if(act==='copy-roster'){
     var out = cache.roster.map(function(r){
       var o = { name:r.name, year:num(r.year), major:r.major||'', role:r.role||'',
