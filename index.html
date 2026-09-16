@@ -1012,6 +1012,12 @@ function screenBoard(){
       '<div class="tile"><div class="num mono">'+sCount+'</div><div class="lbl">S단계 도전 가능</div></div>' +
       '<div class="tile"><div class="num mono">'+joined+'</div><div class="lbl">앱 가입 완료</div></div>' +
     '</div>' +
+    '<div class="notice-box" style="display:flex;align-items:center;gap:10px;">' +
+      '<span>' + (apiMode ? '서버 연결됨' : '이 기기에만 저장 중') +
+      ' · 명단 <b>'+cache.roster.length+'명</b>' +
+      (cache.roster.length ? '' : ' — 명단이 비어 있습니다') + '</span>' +
+      '<button class="linklike" data-action="reload" style="margin-left:auto;white-space:nowrap;">다시 불러오기</button>' +
+    '</div>' +
     '<div class="controls">' +
       '<input id="adminSearch" placeholder="이름으로 검색" value="'+esc(state.search)+'">' +
       '<select id="adminYear">' +
@@ -1517,6 +1523,11 @@ document.addEventListener('click', function(e){
   else if(act==='copy-url'){ copyInstallUrl(); }
   else if(act==='sib-prev'){ gotoSibling(-1); }
   else if(act==='sib-next'){ gotoSibling(1); }
+  else if(act==='reload'){
+    state.apiError = '';
+    render();
+    loadRoster().then(function(){ render(); }, function(err){ state.apiError = errMsg(err); render(); });
+  }
   else if(act==='export-csv'){ exportCsv(); }
   else if(act==='reset-pw'){ navGo(function(){ state.modal={type:'confirmReset', id:el.dataset.id}; }); }
   else if(act==='close-modal' || act==='overlay-bg'){ navBack(function(){ state.modal=null; }); }
@@ -1588,8 +1599,10 @@ document.addEventListener('keydown', function(e){
     }catch(e){ db = null; }
     if(!db){ fallbackMode = true; loadFallback(); }
   }
-  if(state.adminSession) await loadRoster();
-  if(state.studentSession) await loadMe();
+  try{
+    if(state.adminSession) await loadRoster();
+    if(state.studentSession) await loadMe();
+  }catch(e){ state.apiError = errMsg(e); }
   navReplace();
 })();
 
