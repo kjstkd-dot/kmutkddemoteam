@@ -415,7 +415,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 v';
+var APP_VERSION = '2026-09-16 w';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1404,13 +1404,13 @@ function renderAdmin(){
 
 // 현황판에 보이는 순서(S→T→A→R, 각 단계 안에서는 다음 단계에 가까운 순)
 var TILE_PICK = {
-  R: function(s,a){ return a.rDone; },
-  A: function(s){ return !!s.certA; },
-  T: function(s){ return !!s.certT; },
+  R: function(s,a){ return currentStage(s,a) === 'R'; },
+  A: function(s,a){ return currentStage(s,a) === 'A'; },
+  T: function(s,a){ return currentStage(s,a) === 'T'; },
   S: function(s,a){ return a.achievedCount >= 1; },
   joined: function(s){ return !!s.claimedBy; }
 };
-var TILE_LABEL = { R:'R단계 이수', A:'A단계 이수', T:'T단계 이수',
+var TILE_LABEL = { R:'R단계까지 인증한', A:'A단계까지 인증한', T:'T단계까지 인증한',
                    S:'S단계 도전 가능', joined:'앱 가입 완료' };
 
 function boardGroups(){
@@ -1562,10 +1562,12 @@ function screenBoard(){
   var sess = state.adminSession;
   var list = cache.roster.slice();
   var total = list.length;
-  var rCount = list.filter(function(s){ return analyze(s).rDone; }).length;
   var sCount = list.filter(function(s){ return analyze(s).achievedCount>=1; }).length;
-  var aCount = list.filter(function(s){ return !!s.certA; }).length;
-  var tCount = list.filter(function(s){ return !!s.certT; }).length;
+  var cur = function(k){
+    return list.filter(function(s){ return currentStage(s, analyze(s)) === k; }).length;
+  };
+  var rCount = cur('R'), aCount = cur('A'), tCount = cur('T');
+  var noneCount = list.filter(function(s){ return !currentStage(s, analyze(s)); }).length;
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
 
 
@@ -1582,10 +1584,10 @@ function screenBoard(){
       '</div>' +
     '</div>' +
     '<div class="summary">' +
-      [ ['',      't-indigo', '등록 단원',      total,  '시범단원 수'],
-        ['R',     't-red',    'R단계 이수',     rCount, '자소서·계획서·상담 완료'],
-        ['A',     't-teal',   'A단계 이수',     aCount, 'A단계 인증 도장 확인'],
-        ['T',     't-purple', 'T단계 이수',     tCount, 'T단계 인증 도장 확인'],
+      [ ['',      't-indigo', '등록 단원',      total,  '인증 전 '+noneCount+'명 포함'],
+        ['R',     't-red',    'R단계 이수',     rCount, 'R까지만 인증 (A·T 없음)'],
+        ['A',     't-teal',   'A단계 이수',     aCount, 'A까지 인증 (T 없음)'],
+        ['T',     't-purple', 'T단계 이수',     tCount, 'T까지 인증'],
         ['S',     't-blue',   'S단계 도전 가능', sCount, 'FACE 1개 영역 이상 달성'],
         ['joined','t-gold',   '앱 가입 완료',   joined, '앱에 등록한 단원 수']
       ].map(function(t){
