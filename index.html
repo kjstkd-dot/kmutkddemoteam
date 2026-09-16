@@ -626,7 +626,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:'', apiError:'', loading:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
+  detailId:null, search:'', yearFilter:'', slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
 };
 var cache = { roster:[], me:null };
 
@@ -768,6 +768,7 @@ function renderApp(){
         '<button class="roletab '+(state.role==='admin'?'active':'')+'" data-action="set-role" data-role="admin">관리자</button>' +
       '</div>') +
       '<div class="phone">' + body + modalHtml() + '</div>' +
+      (state.previewMode ? '<div class="notice-box" style="max-width:460px;border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);"><b>미리보기 화면입니다.</b><br>실제 단원 자료는 앱 주소(kmutkddemoteam.vercel.app)에 있습니다. 여기서 고친 내용은 학생들에게 반영되지 않습니다.</div>' : '') +
       (state.apiError ? '<div class="notice-box" style="max-width:460px;border-color:var(--danger-border);background:var(--danger-bg);color:var(--danger);"><b>자료 서버에 연결하지 못했습니다.</b><br>' + esc(state.apiError) + '</div>' : '') +
       (fallbackMode ? '<div class="notice-box" style="max-width:460px;">지금은 서버에 연결되지 않아 <b>이 기기에만</b> 저장되는 임시 모드로 동작합니다. 실제 운영에서는 서버 연결이 필요합니다.</div>' : '') +
     '</div>'
@@ -1877,6 +1878,7 @@ document.addEventListener('keydown', function(e){
         db = await window.claude.use('db');
         if(db){
           apiMode = false;
+          state.previewMode = true;   // 실제 운영본이 아니라 미리보기임을 알린다
           await loadAll();
           recovered = true;
         }
