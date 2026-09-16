@@ -1,4 +1,4 @@
-const CACHE = 'kstar-v3';
+const CACHE = 'kstar-v4';
 
 // 새 버전이 올라오면 기다리지 않고 바로 넘겨받는다.
 self.addEventListener('install', function(){ self.skipWaiting(); });
