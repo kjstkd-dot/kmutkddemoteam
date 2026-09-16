@@ -393,6 +393,9 @@ async function sha256Hex(str){
   return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
 }
 function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+function sameName(a, b){
+  return String(a==null?'':a).replace(/\s+/g,'') === String(b==null?'':b).replace(/\s+/g,'');
+}
 
 /* ============ 저장소 설정 ============
    구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
@@ -401,7 +404,7 @@ function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 t';
+var APP_VERSION = '2026-09-16 u';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -937,7 +940,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
+  detailId:null, search:'', certSearch:'', yearFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
 };
 var cache = { roster:[], me:null };
 
@@ -1156,7 +1159,8 @@ function screenRegister(){
       '</div>' +
       field('regPw','비밀번호 (6자 이상)','password',{required:true, min:6}) +
       field('regPw2','비밀번호 확인','password',{required:true, min:6}) +
-      '<button type="submit" class="btn btn-primary">단원 등록 완료</button>' +
+      '<button type="submit" class="btn btn-primary"'+(state.regBusy?' disabled':'')+'>' +
+        (state.regBusy ? '등록하는 중이에요… 잠시만요' : '단원 등록 완료') + '</button>' +
     '</form>' +
     '<div style="height:8px;"></div>' +
     '<button class="btn btn-line" data-action="goto-login">← 로그인으로 돌아가기</button>'
@@ -2005,7 +2009,21 @@ async function loadRoster(){ cache.roster = await storeAll('roster'); }
 async function loadMe(){
   var sess = state.studentSession;
   if(!sess) return;
-  cache.me = await storeGet('roster', sess.rosterId);
+  var me = sess.rosterId ? await storeGet('roster', sess.rosterId) : null;
+  if(!me){
+    // 가리키던 기록이 사라졌거나 잘못 연결된 경우, 학번·이름으로 다시 찾아 이어붙인다
+    var roster = await storeAll('roster');
+    var fix = roster.find(function(r){ return r.claimedBy === sess.id; })
+           || roster.find(function(r){ return sameName(r.name, sess.name) && !r.claimedBy; });
+    if(fix){
+      if(!fix.claimedBy) await storeUpdate('roster', fix.id, { claimedBy: sess.id, updatedAt: nowIso() });
+      await storeUpdate('students', sess.id, { rosterId: fix.id });
+      sess.rosterId = fix.id;
+      setSession('student', sess);
+      me = fix;
+    }
+  }
+  cache.me = me;
 }
 
 /* ============ auth actions ============ */
@@ -2028,13 +2046,19 @@ async function doLogin(role, id, pw){
 }
 
 async function doRegisterStudent(id, name, dept, year, pw, pw2){
+  if(state.regBusy) return;                       // 이미 처리 중이면 무시
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  state.regBusy = true; state.formError=''; render();
+  try{
   var existing = await storeGet('students', id);
   if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
 
   var roster = await storeAll('roster');
-  var match = roster.find(function(r){ return r.name===name && !r.claimedBy; });
+  // 이 학번이 이미 잡아둔 기록이 있으면 그것을 쓴다.
+  // (등록 단추를 여러 번 눌러 빈 기록이 계속 생기던 것을 막는다)
+  var mine = roster.find(function(r){ return r.claimedBy === id; });
+  var match = mine || roster.find(function(r){ return sameName(r.name, name) && !r.claimedBy; });
   var rosterId;
   if(match){
     rosterId = match.id;
@@ -2053,6 +2077,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   state.formError=''; state.view='list';
   await loadMe();
   navReset();
+  }finally{ state.regBusy = false; }
 }
 
 async function doRegisterAdmin(id, name, pw, pw2, code){
