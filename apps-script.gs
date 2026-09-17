@@ -78,6 +78,14 @@ function handle(req) {
     return { ok: true, sheet: book.getUrl() };
   }
 
+  if (action === 'analyze') {
+    return analyzeShot(req);
+  }
+
+  if (!req.collection) {
+    return { error: '어느 자료인지 알 수 없습니다.' };
+  }
+
   var sh = getSheet(book, req.collection);
 
   if (action === 'all') {
@@ -126,6 +134,137 @@ function handle(req) {
   }
 
   return { error: '알 수 없는 요청: ' + action };
+}
+
+/* ══════════════════════════════════════════════════
+ *  캡쳐 이미지 읽기 (analyze)
+ *
+ *  학생이 STORY+ "역량 대시보드" 화면을 캡쳐해서 올리면
+ *   1) 구글 드라이브 "K-STAR 캡쳐" 폴더에 원본을 보관하고
+ *   2) 구글 문자인식(OCR)으로 글자를 뽑아
+ *   3) F·A·C·E 점수를 찾아 돌려준다.
+ *  못 읽으면 사진만 보관하고 학생이 직접 입력하게 한다.
+ * ══════════════════════════════════════════════════ */
+
+var SHOT_FOLDER = 'K-STAR 캡쳐';
+
+// STORY+ 화면의 "최소인증 기준점수" — 이 숫자를 기준점 삼아 바로 뒤의 "나의 점수"를 읽는다.
+var THRESHOLDS = [
+  { area: 'F', base: 350 },
+  { area: 'A', base: 200 },
+  { area: 'C', base: 280 },
+  { area: 'E', base: 720 }
+];
+
+function getShotFolder() {
+  var it = DriveApp.getFoldersByName(SHOT_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(SHOT_FOLDER);
+}
+
+function stamp() {
+  return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd_HHmmss');
+}
+
+function analyzeShot(req) {
+  var m = String(req.dataUrl || '').match(/^data:([^;]+);base64,(.*)$/);
+  if (!m) return { error: '이미지를 알아보지 못했습니다. 다시 한 번 올려 주세요.' };
+
+  var who = String(req.name || 'capture').replace(/[\\/:*?"<>|]/g, '');
+  var blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], who + '_' + stamp() + '.jpg');
+
+  var file;
+  try {
+    file = getShotFolder().createFile(blob);
+  } catch (e) {
+    return { error: '캡쳐를 저장하지 못했습니다: ' + (e && e.message ? e.message : e) };
+  }
+
+  var out = { fileId: file.getId(), fileUrl: file.getUrl() };
+
+  try {
+    var values = parseDashboard(ocrText(blob));
+    if (values) out.values = values;
+    else out.readError = '캡쳐에서 점수를 찾지 못했습니다.';
+  } catch (e) {
+    out.readError = '자동 읽기에 실패했습니다. (' + (e && e.message ? e.message : e) + ')';
+  }
+  return out;
+}
+
+// 이미지를 구글 문서로 변환하면서 OCR을 돌리고, 글자만 뽑은 뒤 임시 문서는 지운다.
+function ocrText(blob) {
+  var boundary = '----kstar' + Date.now();
+  var head = Utilities.newBlob(
+    '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify({ name: 'kstar-ocr-tmp', mimeType: 'application/vnd.google-apps.document' }) +
+    '\r\n--' + boundary + '\r\n' +
+    'Content-Type: ' + blob.getContentType() + '\r\n\r\n'
+  ).getBytes();
+  var tail = Utilities.newBlob('\r\n--' + boundary + '--\r\n').getBytes();
+
+  var res = UrlFetchApp.fetch(
+    'https://www.googleapis.com/upload/drive/v3/files' +
+    '?uploadType=multipart&ocrLanguage=ko&fields=id',
+    {
+      method: 'post',
+      contentType: 'multipart/related; boundary=' + boundary,
+      payload: head.concat(blob.getBytes()).concat(tail),
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      muteHttpExceptions: true
+    }
+  );
+  if (res.getResponseCode() >= 300) throw new Error('OCR 요청 실패 ' + res.getResponseCode());
+
+  var id = JSON.parse(res.getContentText()).id;
+  try {
+    return DocumentApp.openById(id).getBody().getText();
+  } finally {
+    try { DriveApp.getFileById(id).setTrashed(true); } catch (e) { /* 임시파일 정리 실패는 무시 */ }
+  }
+}
+
+// 글자 속 숫자를 순서대로 뽑는다. ("1,234" 같은 쉼표와 +/- 부호 포함)
+function numbersIn(text) {
+  var out = [];
+  var re = /[+-]?\d[\d,]*/g, m;
+  while ((m = re.exec(String(text || '')))) {
+    var v = parseInt(m[0].replace(/,/g, ''), 10);
+    if (!isNaN(v)) out.push(v);
+  }
+  return out;
+}
+
+/* STORY+ 화면은 영역마다 [기준점수, 나의 점수, 점수차] 가 이 순서로 나오고
+   점수차 = 나의 점수 − 기준점수 다. 이 관계가 맞는 묶음만 믿는다. */
+function parseDashboard(text) {
+  var nums = numbersIn(text);
+  var got = {}, found = 0;
+
+  // 1순위: 아는 기준점수(350/200/280/720)를 찾아 그 뒤 숫자를 읽는다.
+  for (var t = 0; t < THRESHOLDS.length; t++) {
+    var base = THRESHOLDS[t].base;
+    for (var i = 0; i + 2 < nums.length; i++) {
+      if (nums[i] === base && nums[i + 1] - base === nums[i + 2]) {
+        got[THRESHOLDS[t].area] = nums[i + 1];
+        found++;
+        break;
+      }
+    }
+  }
+  if (found === 4) return got;
+
+  // 2순위: 기준점수가 학과마다 다를 수 있으니, 관계가 맞는 묶음을 순서대로 F·A·C·E 에 넣는다.
+  var trips = [];
+  for (var j = 0; j + 2 < nums.length; j++) {
+    if (nums[j] >= 50 && nums[j + 1] >= 0 && nums[j + 1] - nums[j] === nums[j + 2]) {
+      trips.push(nums[j + 1]);
+      j += 2;
+    }
+  }
+  if (trips.length === 4) return { F: trips[0], A: trips[1], C: trips[2], E: trips[3] };
+
+  return found ? got : null;   // 4개를 다 못 찾으면 찾은 것만이라도 돌려준다
 }
 
 function doPost(e) {

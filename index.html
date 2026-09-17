@@ -424,7 +424,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 y';
+var APP_VERSION = '2026-09-17 z';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -2288,7 +2288,11 @@ async function handleShot(file){
       render();
     }
   }catch(e){
-    state.shotMsg = errMsg(e);
+    var msg = errMsg(e);
+    // 서버(Apps Script)가 아직 캡쳐 읽기를 못 하는 옛 버전일 때
+    state.shotMsg = /알 수 없는 요청/.test(msg)
+      ? '지금은 캡쳐 자동 읽기를 쓸 수 없습니다. 점수는 위 칸에 직접 입력해 주세요. (관리자에게 알려 주세요)'
+      : msg;
     render();
   }finally{
     state.shotBusy = false;
