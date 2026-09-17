@@ -226,6 +226,28 @@ async function sha256Hex(str){
 }
 function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+// 이수학기 선택: 2022년부터 올해+1년까지, 1학기/2학기 중 고른다. 저장 형식은 "YYYY-N".
+var SEMESTER_YEAR_MIN = 2022;
+function semesterYearMax(){ return new Date().getFullYear() + 1; }
+function parseSemester(s){
+  var m = /^(\d{4})-([12])$/.exec(s||'');
+  return m ? { year:m[1], term:m[2] } : { year:'', term:'' };
+}
+function semesterFieldHtml(current){
+  var parsed = parseSemester(current);
+  var yearMax = semesterYearMax();
+  var yearOpts = '<option value="">연도</option>';
+  for(var y=yearMax; y>=SEMESTER_YEAR_MIN; y--){
+    yearOpts += '<option value="'+y+'" '+(parsed.year===String(y)?'selected':'')+'>'+y+'년</option>';
+  }
+  var termOpts = '<option value="">학기</option>' +
+    '<option value="1" '+(parsed.term==='1'?'selected':'')+'>1학기</option>' +
+    '<option value="2" '+(parsed.term==='2'?'selected':'')+'>2학기</option>';
+  return '<div class="field"><label>이수학기</label><div class="row" style="gap:8px;">' +
+    '<select id="cYear" style="flex:1;">'+yearOpts+'</select>' +
+    '<select id="cTerm" style="flex:1;">'+termOpts+'</select>' +
+  '</div></div>';
+}
 
 /* ============ 저장소 설정 ============
    구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
@@ -235,7 +257,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-17 d';
+var APP_VERSION = '2026-09-17 e';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -696,9 +718,32 @@ var PRIMARY_CATALOGS = {
 };
 function primaryCatalogForDept(dept){ return PRIMARY_CATALOGS[dept] || []; }
 function primaryCourseInCatalog(dept, code){ return primaryCatalogForDept(dept).filter(function(c){ return c.code===code; })[0] || null; }
-function primaryCourses(student){ return (student && student.primaryCourses) || []; }
+function sortByName(list){
+  return list.slice().sort(function(a,b){ return a.name.localeCompare(b.name, 'ko'); });
+}
+// 과목 하나를 고를 때 보여줄 통합 목록: 본인 학과 교육과정표 + (본인 학과에 없는) 융합전공 자체 개설과목.
+// 찾기 쉽도록 이름 가나다순으로 정렬하고, 이미 등록한 과목(excludeCodes)은 다시 고르지 못하게 뺀다.
+function unifiedCatalogGroups(dept, excludeCodes){
+  var deptList = primaryCatalogForDept(dept);
+  var deptCodes = deptList.map(function(c){ return c.code; });
+  var extra = COURSE_CATALOG.filter(function(c){ return deptCodes.indexOf(c.code) < 0; });
+  if(excludeCodes && excludeCodes.length){
+    deptList = deptList.filter(function(c){ return excludeCodes.indexOf(c.code) < 0; });
+    extra = extra.filter(function(c){ return excludeCodes.indexOf(c.code) < 0; });
+  }
+  return { deptList: sortByName(deptList), extra: sortByName(extra) };
+}
+// 코드로 과목 정보를 찾을 때는 본인 학과 교육과정표를 먼저, 없으면 융합전공 자체 개설과목에서 찾는다.
+function anyCourseInfo(dept, code){ return primaryCourseInCatalog(dept, code) || courseInCatalog(code) || null; }
+// 융합전공 인정과목인지: 코드가 COURSE_CATALOG(48개 융합전공 교육과정)에 있으면 인정된다.
+function courseIsConvergence(c){ return !!(c && c.courseCode && courseInCatalog(c.courseCode)); }
+// 제1전공 인정과목인지: 코드가 본인 학과 교육과정표에 있으면 인정된다. 목록에 없는 과목을 직접
+// 입력한 경우에는(코드가 없음) 제1전공 과목으로 입력한 것으로 보고 제1전공 학점에 넣어준다.
+function courseIsPrimary(c, dept){ return c.courseCode ? !!primaryCourseInCatalog(dept, c.courseCode) : true; }
 function primaryCreditsTotal(student){
-  return primaryCourses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+  var dept = student && student.dept;
+  return courses(student).filter(function(c){ return courseIsPrimary(c, dept); })
+    .reduce(function(s,c){ return s + num(c.credits); }, 0);
 }
 function applyCoreCourseCodes(codes){
   CORE_COURSES = (codes||[]).map(courseInCatalog).filter(Boolean).map(function(c){ return { name:c.name, credits:c.credits }; });
@@ -724,7 +769,7 @@ var TRACK_ORDER = ['double', 'minor_single', 'minor_multi'];
 function courses(student){ return (student && student.courses) || []; }
 function normName(s){ return String(s==null?'':s).replace(/\s+/g,''); }
 function totalCredits(student){
-  return courses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+  return courses(student).filter(courseIsConvergence).reduce(function(s,c){ return s + num(c.credits); }, 0);
 }
 function coreStatus(student){
   var have = courses(student).map(function(c){ return normName(c.name); });
@@ -834,7 +879,6 @@ var state = {
   formError: '', formOk: '',
   editingCourseId: null,
   editingMicrodegreeId: null,
-  editingPrimaryCourseId: null,
   detailId: null,
   q: '', filter: 'all',
   cache: { me:null, roster:[] }
@@ -995,7 +1039,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
   var hash = await sha256Hex(pw);
   var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
-    recognizedSemesters:'', primaryCourses:[],
+    recognizedSemesters:'',
     microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
   await storeSet('cvg_students', id, doc);
   setSession('student', { id:id, name:name });
@@ -1027,7 +1071,6 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
 /* ============ 학생 화면 ============ */
 function renderStudent(){
   if(state.view==='course-form') return screenCourseForm();
-  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
   if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
@@ -1098,32 +1141,24 @@ function microdegreeListBlock(student, editable){
 }
 function courseListBlock(student, editable){
   var list = courses(student);
+  var dept = student && student.dept;
   var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
   if(!list.length) return '<div class="empty-state">아직 등록된 과목이 없어요.</div>';
   return '<div class="courselist">' + list.map(function(c){
     var isCore = coreNames.indexOf(normName(c.name)) >= 0;
+    var isCvg = courseIsConvergence(c);
+    var isPri = courseIsPrimary(c, dept);
+    var tags = '';
+    if(isCore) tags += '<span class="catpill">핵심과목</span>';
+    if(isCvg) tags += '<span class="catpill" style="background:var(--success-bg); color:var(--success);">융합전공 인정</span>';
+    if(!isPri) tags += '<span class="catpill" style="background:var(--amber-bg); color:var(--amber);">제1전공 미인정</span>';
     return '<div class="courserow">' +
-      '<div class="ci">'+(isCore?'<span class="catpill">핵심과목</span>':'')+'<div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="ci">'+tags+'<div class="cn">'+esc(c.name)+'</div>' +
       '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
       '<div class="cc">'+num(c.credits)+'학점</div>' +
       (editable ? '<div class="cact">' +
         '<button class="icobtn" data-action="edit-course" data-id="'+esc(c.id)+'">수정</button>' +
         '<button class="icobtn danger" data-action="delete-course" data-id="'+esc(c.id)+'">삭제</button>' +
-      '</div>' : '') +
-    '</div>';
-  }).join('') + '</div>';
-}
-function primaryCourseListBlock(student, editable){
-  var list = primaryCourses(student);
-  if(!list.length) return '<div class="empty-state">아직 등록된 제1전공 과목이 없어요.</div>';
-  return '<div class="courselist">' + list.map(function(c){
-    return '<div class="courserow">' +
-      '<div class="ci"><div class="cn">'+esc(c.name)+'</div>' +
-      '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
-      '<div class="cc">'+num(c.credits)+'학점</div>' +
-      (editable ? '<div class="cact">' +
-        '<button class="icobtn" data-action="edit-primary-course" data-id="'+esc(c.id)+'">수정</button>' +
-        '<button class="icobtn danger" data-action="delete-primary-course" data-id="'+esc(c.id)+'">삭제</button>' +
       '</div>' : '') +
     '</div>';
   }).join('') + '</div>';
@@ -1138,12 +1173,9 @@ function screenStudentHome(){
       '<p class="screen-sub">'+esc(TRACK_NAME)+' · 참여학과: '+PARTICIPATING_DEPTS.map(esc).join(', ')+'</p>' +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       progressBlock(s) +
-      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
-      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
-        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
-      primaryCourseListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
         '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
       microdegreeListBlock(s, true) +
@@ -1157,68 +1189,44 @@ function screenStudentHome(){
     '</div>'
   );
 }
+function unifiedCatalogOptions(dept, pickedCode, excludeCodes){
+  var groups = unifiedCatalogGroups(dept, excludeCodes);
+  var deptOpts = groups.deptList.map(function(c){
+    return '<option value="'+esc(c.code)+'" '+(pickedCode===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+  }).join('');
+  var extraOpts = groups.extra.map(function(c){
+    return '<option value="'+esc(c.code)+'" '+(pickedCode===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+  }).join('');
+  return (deptOpts ? '<optgroup label="'+esc(dept||'제1전공')+' 교육과정">'+deptOpts+'</optgroup>' : '') +
+    (extraOpts ? '<optgroup label="융합전공 자체 개설과목">'+extraOpts+'</optgroup>' : '');
+}
 function screenCourseForm(){
   var isAdmin = state.role==='admin';
   var s = isAdmin ? state.cache.detail : state.cache.me;
+  var dept = s.dept || '';
   var editing = state.editingCourseId ? courses(s).filter(function(c){ return c.id===state.editingCourseId; })[0] : null;
+  var excludeCodes = courses(s).filter(function(c){ return c.courseCode && (!editing || c.id!==editing.id); })
+    .map(function(c){ return c.courseCode; });
+  var groups = unifiedCatalogGroups(dept, excludeCodes);
+  var firstCourse = groups.deptList[0] || groups.extra[0];
   return (
     '<div class="phone">' +
       '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
       '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
-      '<p class="screen-sub">교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' +
+      '<p class="screen-sub">'+esc(dept||'본인 학과')+' 교육과정표에서 고르면 자동으로 제1전공 학점에 들어가요. 그중 융합전공 인정과목이면 융합전공 학점에도 함께 들어가요.' +
         (CORE_COURSES.length ? ' 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '') +
       '</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course" class="stack">' +
         '<div class="field"><label>과목</label><select id="cCourse">' +
-          COURSE_CATALOG.map(function(c){
-            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
-          }).join('') +
-          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
+          unifiedCatalogOptions(dept, editing?editing.courseCode:null, excludeCodes) +
+          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력, 제1전공 학점으로만 인정)</option>' +
         '</select></div>' +
         '<div class="field" id="cCustomWrap" style="'+((!editing||editing.courseCode)?'display:none;':'')+'">' +
           '<label>과목명 직접 입력</label><input id="cName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
         '</div>' +
-        '<div class="grid2">' +
-          '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(COURSE_CATALOG[0]?COURSE_CATALOG[0].credits:3))+'"></div>' +
-          '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
-        '</div>' +
-        '<div class="row" style="gap:8px;">' +
-          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
-          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
-        '</div>' +
-      '</form>' +
-    '</div>'
-  );
-}
-function screenPrimaryCourseForm(){
-  var isAdmin = state.role==='admin';
-  var s = isAdmin ? state.cache.detail : state.cache.me;
-  var editing = state.editingPrimaryCourseId ? primaryCourses(s).filter(function(c){ return c.id===state.editingPrimaryCourseId; })[0] : null;
-  var dept = s.dept || '';
-  var catalog = primaryCatalogForDept(dept);
-  return (
-    '<div class="phone">' +
-      '<div class="eyebrow">'+(editing?'제1전공 과목 수정':'제1전공 과목 추가')+'</div>' +
-      '<h2 class="screen-title">'+(editing?'제1전공 과목 정보 수정':'제1전공 이수 과목 추가')+'</h2>' +
-      '<p class="screen-sub">' +
-        (catalog.length ? esc(dept)+' 교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' : '학과가 지정되지 않아 목록을 보여드릴 수 없어요. 직접 입력해 주세요.') +
-      '</p>' +
-      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
-      '<form id="form-primary-course" class="stack">' +
-        '<div class="field"><label>과목</label><select id="pCourse">' +
-          catalog.map(function(c){
-            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
-          }).join('') +
-          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
-        '</select></div>' +
-        '<div class="field" id="pCustomWrap" style="'+((catalog.length && (!editing||editing.courseCode))?'display:none;':'')+'">' +
-          '<label>과목명 직접 입력</label><input id="pName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
-        '</div>' +
-        '<div class="grid2">' +
-          '<div class="field"><label>학점</label><input id="pCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(catalog[0]?catalog[0].credits:3))+'"></div>' +
-          '<div class="field"><label>이수학기</label><input id="pSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
-        '</div>' +
+        '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(firstCourse?firstCourse.credits:3))+'"></div>' +
+        semesterFieldHtml(editing?editing.semester:'') +
         '<div class="row" style="gap:8px;">' +
           '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
           '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
@@ -1312,17 +1320,19 @@ function screenProfile(){
 }
 
 async function saveCourse(form){
-  var courseCode = form.querySelector('#cCourse').value;
-  var catalogCourse = courseCode==='__custom__' ? null : courseInCatalog(courseCode);
-  var name = catalogCourse ? catalogCourse.name : form.querySelector('#cName').value.trim();
-  var credits = form.querySelector('#cCredits').value;
-  var semester = form.querySelector('#cSemester').value.trim();
-  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
-
   var isAdmin = state.role==='admin';
   var col = 'cvg_students';
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
+  var courseCode = form.querySelector('#cCourse').value;
+  var catalogCourse = courseCode==='__custom__' ? null : anyCourseInfo(student.dept||'', courseCode);
+  var name = catalogCourse ? catalogCourse.name : form.querySelector('#cName').value.trim();
+  var credits = form.querySelector('#cCredits').value;
+  var year = form.querySelector('#cYear').value;
+  var term = form.querySelector('#cTerm').value;
+  var semester = (year && term) ? (year+'-'+term) : '';
+  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
+
   var list = courses(student).slice();
   var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
 
@@ -1399,45 +1409,6 @@ async function saveInfo(form){
   state.view = isAdmin ? 'detail' : 'home';
   render();
 }
-async function savePrimaryCourse(form){
-  var isAdmin = state.role==='admin';
-  var col = 'cvg_students';
-  var id = isAdmin ? state.detailId : state.studentSession.id;
-  var student = isAdmin ? state.cache.detail : state.cache.me;
-  var dept = student.dept || '';
-  var courseCode = form.querySelector('#pCourse').value;
-  var catalogCourse = courseCode==='__custom__' ? null : primaryCourseInCatalog(dept, courseCode);
-  var name = catalogCourse ? catalogCourse.name : form.querySelector('#pName').value.trim();
-  var credits = form.querySelector('#pCredits').value;
-  var semester = form.querySelector('#pSemester').value.trim();
-  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
-
-  var list = primaryCourses(student).slice();
-  var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
-
-  if(state.editingPrimaryCourseId){
-    list = list.map(function(c){
-      return c.id===state.editingPrimaryCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave } : c;
-    });
-  } else {
-    list.push({ id:uid(), name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave });
-  }
-  await storeUpdate(col, id, { primaryCourses:list });
-  student.primaryCourses = list;
-  state.editingPrimaryCourseId = null; state.formError='';
-  state.view = isAdmin ? 'detail' : 'home';
-  render();
-}
-async function deletePrimaryCourse(courseId){
-  var isAdmin = state.role==='admin';
-  var col = 'cvg_students';
-  var id = isAdmin ? state.detailId : state.studentSession.id;
-  var student = isAdmin ? state.cache.detail : state.cache.me;
-  var list = primaryCourses(student).filter(function(c){ return c.id!==courseId; });
-  await storeUpdate(col, id, { primaryCourses:list });
-  student.primaryCourses = list;
-  render();
-}
 async function changePassword(oldPw, newPw, newPw2){
   if(newPw.length<6){ state.formError='새 비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(newPw!==newPw2){ state.formError='새 비밀번호가 서로 달라요.'; render(); return; }
@@ -1461,7 +1432,6 @@ async function loadRoster(){
 function renderAdmin(){
   if(state.view==='detail') return screenAdminDetail();
   if(state.view==='course-form') return screenCourseForm();
-  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
   if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
@@ -1528,12 +1498,9 @@ function screenAdminDetail(){
       '<p class="screen-sub">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</p>' +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       progressBlock(s) +
-      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
-      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
-        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
-      primaryCourseListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
         '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
       microdegreeListBlock(s, true) +
@@ -1556,7 +1523,7 @@ function screenAdminSettings(){
   var code = state.cache.adminCode || '';
   var curCodes = CORE_COURSES.map(function(c){ return courseCodeByName(c.name); });
   var slotOptions = function(picked){
-    return '<option value="">미지정</option>' + COURSE_CATALOG.map(function(c){
+    return '<option value="">미지정</option>' + sortByName(COURSE_CATALOG).map(function(c){
       return '<option value="'+esc(c.code)+'" '+(picked===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
     }).join('');
   };
@@ -1646,21 +1613,22 @@ function guideStudent(){
       '<p>화면 위쪽에서 <b>학생</b>을 선택해 주세요.</p>' +
       '<ul>' +
         '<li>처음이라면 <b>처음이신가요? 비밀번호 설정하기</b>를 눌러 주세요.</li>' +
-        '<li><b>학번, 이름, 6자 이상 비밀번호</b>를 입력하면 등록과 동시에 로그인됩니다. 학과·입학년도는 몰라도 나중에 채울 수 있어요.</li>' +
+        '<li><b>학번, 이름, 6자 이상 비밀번호, 학과(제1전공)</b>를 입력하면 등록과 동시에 로그인됩니다.</li>' +
         '<li>다음부터는 학번과 비밀번호로 로그인해 주세요.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">2</div>' +
       '<h2>이수한 과목 추가하기</h2>' +
       '<p>이수형태(복수전공/부전공)를 미리 고를 필요는 없어요. 홈 화면의 <b>+ 과목 추가</b>를 눌러 이수한 과목만 넣어 주세요.</p>' +
       '<ul>' +
-        '<li>교육과정표에 있는 과목은 목록에서 고르면 <b>학점이 자동으로 채워집니다.</b></li>' +
-        '<li>목록에 없는 과목(예전 교육과정, 전과 인정과목 등)은 <b>목록에 없는 과목(직접 입력)</b>을 골라 직접 입력하세요.</li>' +
+        '<li>등록할 때 고른 <b>본인 학과의 교육과정표</b> 과목이 목록으로 나와요. 고르면 학점이 자동으로 채워지고, <b>제1전공 학점</b>에 자동으로 들어갑니다.</li>' +
+        '<li>그중 융합전공 인정과목이면 <b>융합전공 인정</b> 표시가 붙고 융합전공 학점에도 함께 들어가요. 본인 학과에 없는 융합전공 자체 개설과목은 목록 아래쪽 <b>융합전공 자체 개설과목</b> 묶음에서 고르면 되고, 이 경우 융합전공 학점에만 들어갑니다.</li>' +
+        '<li>교육과정이 바뀌어 목록에 없는 과목(예전 교육과정, 전과 인정과목 등)은 <b>목록에 없는 과목(직접 입력)</b>을 골라 직접 입력하세요. 이 경우 제1전공 학점으로만 인정됩니다.</li>' +
         '<li>관리자가 지정한 핵심과목을 이수하면 자동으로 <b>핵심과목</b> 표시가 붙습니다.</li>' +
+        '<li>이수학기는 연도(2022년~)와 학기를 골라서 넣습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
-      '<h2>제1전공 과목·학기 정보 채우기</h2>' +
-      '<p>홈 화면의 <b>+ 제1전공 과목 추가</b>에서 등록할 때 고른 학과의 교육과정표 과목을 골라 넣으면 학점이 자동으로 채워지고 합산됩니다. 부전공(1개는 54학점, 2개 이상은 42학점 필요)을 계산하는 데 쓰여요.</p>' +
-      '<p><b>이수정보 &gt; 수정</b>에서는 아래 정보를 입력해 주세요.</p>' +
+      '<h2>인정학기·졸업논문 정보 채우기</h2>' +
+      '<p>제1전공 이수학점은 과목을 추가하면 자동으로 합산되니 따로 입력할 필요가 없어요. <b>이수정보 &gt; 수정</b>에서는 아래 정보만 입력해 주세요.</p>' +
       '<ul>' +
         '<li><b>인정학기</b> — 3학기 이상이어야 실제 EDWARD 이수신청 자격이 생깁니다.</li>' +
         '<li>제1전공 학과의 졸업논문이 필수과목이라면 체크해 주세요. 복수전공 경로에서만 확인합니다.</li>' +
@@ -1711,7 +1679,7 @@ function guideAdmin(){
       '<h2>학생별로 관리하기</h2>' +
       '<p>학생 상세 화면에서 학생을 대신해 관리할 수 있어요.</p>' +
       '<ul>' +
-        '<li>과목, 제1전공 과목, 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
+        '<li>과목과 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
         '<li>인정학기·제1전공 학점·졸업논문 같은 이수정보도 대신 수정할 수 있습니다.</li>' +
         '<li><b>비밀번호 초기화</b>는 임시 비밀번호(000000)로 바꿔주니 학생에게 알려주세요.</li>' +
         '<li><b>학생 삭제</b>는 되돌릴 수 없으니 신중하게 사용해 주세요.</li>' +
@@ -1744,10 +1712,6 @@ document.addEventListener('submit', function(e){
   if(f.id==='form-course'){
     e.preventDefault();
     saveCourse(f).catch(failWith);
-  }
-  if(f.id==='form-primary-course'){
-    e.preventDefault();
-    savePrimaryCourse(f).catch(failWith);
   }
   if(f.id==='form-microdegree'){
     e.preventDefault();
@@ -1787,25 +1751,13 @@ document.addEventListener('change', function(e){
     var form = e.target.closest('form');
     var wrap = form.querySelector('#cCustomWrap');
     var creditsInput = form.querySelector('#cCredits');
+    var s = state.role==='admin' ? state.cache.detail : state.cache.me;
     if(e.target.value === '__custom__'){
       wrap.style.display = 'block';
     } else {
       wrap.style.display = 'none';
-      var c = courseInCatalog(e.target.value);
+      var c = anyCourseInfo(s.dept||'', e.target.value);
       if(c) creditsInput.value = c.credits;
-    }
-  }
-  if(e.target.id === 'pCourse'){
-    var pform = e.target.closest('form');
-    var pwrap = pform.querySelector('#pCustomWrap');
-    var pcreditsInput = pform.querySelector('#pCredits');
-    var s = state.role==='admin' ? state.cache.detail : state.cache.me;
-    if(e.target.value === '__custom__'){
-      pwrap.style.display = 'block';
-    } else {
-      pwrap.style.display = 'none';
-      var pc = primaryCourseInCatalog(s.dept||'', e.target.value);
-      if(pc) pcreditsInput.value = pc.credits;
     }
   }
 });
@@ -1822,21 +1774,18 @@ document.addEventListener('click', function(e){
   else if(act==='goto-register'){ state.view='register'; }
   else if(act==='goto-register-admin'){ state.view='register-admin'; }
   else if(act==='goto-login'){ state.view='login'; state.formOk=''; }
-  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
+  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; }
   else if(act==='goto-list'){
     state.view='list'; state.formOk='';
     loadRoster().then(render);
     render(); return;
   }
-  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
+  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; }
   else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
-  else if(act==='goto-primary-course-form'){ state.editingPrimaryCourseId=null; state.view='primary-course-form'; }
   else if(act==='goto-microdegree-form'){ state.editingMicrodegreeId=null; state.view='microdegree-form'; }
   else if(act==='goto-info-form'){ state.view='info-form'; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
-  else if(act==='edit-primary-course'){ state.editingPrimaryCourseId = el.dataset.id; state.view='primary-course-form'; }
-  else if(act==='delete-primary-course'){ deletePrimaryCourse(el.dataset.id).catch(failWith); return; }
   else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
   else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }
   else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
