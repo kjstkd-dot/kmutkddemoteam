@@ -272,7 +272,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 k';
+var APP_VERSION = '2026-09-18 l';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1074,7 +1074,40 @@ function loadSessions(){
   });
 }
 
-function render(){ root.innerHTML = state.mode==='guide' ? renderGuide() : renderApp(); }
+/* ============ 뒤로가기(안드로이드 뒤로가기·스와이프) ============
+   화면이 바뀔 때마다 브라우저 히스토리에 한 단계씩 쌓아서, 안드로이드 기기의
+   뒤로가기 버튼이나 뒤로가기 스와이프 제스처를 누르면 앱이 꺼지지 않고
+   바로 전 화면으로 돌아가게 한다. */
+var lastNavSnapshot = null;
+var isRestoringHistory = false;
+function navSnapshot(){
+  return {
+    mode: state.mode, role: state.role, view: state.view, guideRole: state.guideRole,
+    detailId: state.detailId, editingCourseId: state.editingCourseId,
+    editingMicrodegreeId: state.editingMicrodegreeId, showInstallModal: state.showInstallModal
+  };
+}
+function syncHistoryOnRender(){
+  var snap = navSnapshot();
+  var snapStr = JSON.stringify(snap);
+  if(snapStr === lastNavSnapshot) return;
+  lastNavSnapshot = snapStr;
+  if(isRestoringHistory) return; // popstate로 이미 그 위치로 이동한 것뿐, 새로 쌓지 않는다.
+  try{ history.pushState(snap, ''); }catch(e){}
+}
+window.addEventListener('popstate', function(e){
+  if(!e.state) return;
+  isRestoringHistory = true;
+  Object.assign(state, e.state);
+  lastNavSnapshot = JSON.stringify(navSnapshot());
+  render();
+  isRestoringHistory = false;
+});
+
+function render(){
+  root.innerHTML = state.mode==='guide' ? renderGuide() : renderApp();
+  syncHistoryOnRender();
+}
 function errMsg(e){ return e && e.message ? e.message : String(e); }
 function failWith(e){ state.formError = errMsg(e); render(); }
 
@@ -2339,6 +2372,8 @@ loadFallback();
 loadSessions();
 if(state.studentSession){ state.role='student'; state.view='home'; }
 else if(state.adminSession){ state.role='admin'; state.view='list'; }
+lastNavSnapshot = JSON.stringify(navSnapshot());
+try{ history.replaceState(navSnapshot(), ''); }catch(e){}
 render();
 
 (async function boot(){
