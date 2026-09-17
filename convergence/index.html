@@ -219,7 +219,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-17 b';
+var APP_VERSION = '2026-09-17 c';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -344,6 +344,346 @@ var COURSE_CATALOG = [
   { code:'46706', name:'세계뮤지컬콘텐츠의이해와번역', credits:2 }
 ];
 function courseInCatalog(code){ return COURSE_CATALOG.filter(function(c){ return c.code===code; })[0] || null; }
+// 참여학과별 2026년도 일반전공(제1전공) 교육과정표. 학생이 제1전공 과목을 골라 넣으면
+// 학점이 자동으로 합산된다. 편성표가 바뀌면 이 배열들을 고쳐주세요.
+var PRIMARY_CATALOGS = {
+  '영어영문학과': [
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'44298', name:'전공기초영어(1)', credits:3 },
+    { code:'15362', name:'영국문학사', credits:3 },
+    { code:'28454', name:'영산문강독', credits:3 },
+    { code:'44299', name:'전공기초영어(2)', credits:3 },
+    { code:'27855', name:'영어영문학입문', credits:3 },
+    { code:'13110', name:'미국문학사', credits:3 },
+    { code:'19005', name:'현대영문법', credits:3 },
+    { code:'21511', name:'영미소설개관(1)', credits:3 },
+    { code:'30562', name:'심화영어회화(1)', credits:3 },
+    { code:'40406', name:'PRACTICAL ENGLISH WRITING', credits:3 },
+    { code:'42013', name:'영미드라마개관', credits:3 },
+    { code:'15482', name:'영어학개론', credits:3 },
+    { code:'21512', name:'영미소설개관(2)', credits:3 },
+    { code:'30563', name:'심화영어회화(2)', credits:3 },
+    { code:'30564', name:'심화영어글쓰기', credits:3 },
+    { code:'40409', name:'CAREER ENGLISH', credits:3 },
+    { code:'42367', name:'현대영미드라마', credits:3 },
+    { code:'42510', name:'영미소설과영화', credits:3 },
+    { code:'26735', name:'WRITING ABOUT ENGLISH LITERATURE', credits:3 },
+    { code:'15463', name:'영어사', credits:3 },
+    { code:'15471', name:'영어음성학', credits:3 },
+    { code:'21513', name:'영미시개관(1)', credits:3 },
+    { code:'27907', name:'CAREER WRITING', credits:3 },
+    { code:'28422', name:'실용영어연습', credits:3 },
+    { code:'28471', name:'영어논리및논술', credits:3 },
+    { code:'33717', name:'외국어와커뮤니케이션', credits:3 },
+    { code:'44300', name:'근대영미소설', credits:3 },
+    { code:'11005', name:'고급영어강독', credits:3 },
+    { code:'15452', name:'영어교육론', credits:3 },
+    { code:'15473', name:'영어음운론', credits:3 },
+    { code:'21514', name:'영미시개관(2)', credits:3 },
+    { code:'21547', name:'영어문장구조의이해', credits:3 },
+    { code:'25053', name:'셰익스피어', credits:3 },
+    { code:'26736', name:'CREATIVE WRITING IN ENGLISH', credits:3 },
+    { code:'31998', name:'영어영문학전공글쓰기', credits:3 },
+    { code:'42014', name:'현대영미시', credits:3 },
+    { code:'42018', name:'현대영미소설', credits:3 },
+    { code:'42498', name:'기초통번역', credits:3 },
+    { code:'43199', name:'실용영어문법', credits:3 },
+    { code:'44296', name:'영어데이터분석', credits:3 },
+    { code:'44297', name:'영어와사회', credits:3 },
+    { code:'25233', name:'영어영문학프로젝트', credits:2 },
+    { code:'27898', name:'ACADEMIC WRITING(미국현지이수)', credits:3 },
+    { code:'27901', name:'APPLIED ENGLISH GRAMMAR(미국현지이수)', credits:3 },
+    { code:'27984', name:'PRACTICAL ENGLISH(미국현지이수)', credits:3 },
+    { code:'27985', name:'PRACTICE IN LISTENING(미국현지이수)', credits:3 },
+    { code:'27986', name:'PRACTICE IN READING(미국현지이수)', credits:3 },
+    { code:'27987', name:'PRESENTATION AND DEBATE(미국현지이수)', credits:3 },
+    { code:'40092', name:'국외외국어연수(영어)', credits:3 },
+    { code:'15382', name:'영미문학특강', credits:3 },
+    { code:'15454', name:'영어교재연구및지도법', credits:2 },
+    { code:'26737', name:'CULTURE THROUGH ENGLISH LITERATURE', credits:3 },
+    { code:'30766', name:'초급라틴어', credits:3 },
+    { code:'43209', name:'유럽낭만주의문학개관', credits:3 },
+    { code:'26734', name:'졸업논문(공인영어시험)', credits:0 },
+    { code:'21113', name:'미국문화의이해', credits:3 },
+    { code:'27220', name:'INTRODUCTION TO TEACHING ENGLISH', credits:3 },
+    { code:'28909', name:'영어교수법', credits:3 },
+    { code:'33980', name:'영어영문학창업현장실습(1)', credits:3 },
+    { code:'34064', name:'영어영문학창업현장실습(2)', credits:3 },
+    { code:'34155', name:'영어영문학학기창업현장실습', credits:15 },
+    { code:'35850', name:'영어영문학현장실습(1)', credits:3 },
+    { code:'35928', name:'영어영문학현장실습(2)', credits:3 },
+    { code:'36006', name:'영어영문학현장실습(3)', credits:3 },
+    { code:'36085', name:'영어영문학학기현장실습', credits:15 },
+    { code:'39239', name:'영어영문학현장실습(4)', credits:5 }
+  ],
+  '연극뮤지컬과': [
+    { code:'22474', name:'연기(1)', credits:2 },
+    { code:'24134', name:'연극세계의이해', credits:2 },
+    { code:'28223', name:'몸짓과표현', credits:2 },
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'42543', name:'뮤지컬레파토리', credits:2 },
+    { code:'44714', name:'공연예술의이해와감상', credits:2 },
+    { code:'13257', name:'민속학', credits:2 },
+    { code:'22475', name:'연기(2)', credits:2 },
+    { code:'24693', name:'기초무대기술', credits:2 },
+    { code:'25707', name:'희곡소개와읽기', credits:2 },
+    { code:'22449', name:'극작론', credits:2 },
+    { code:'22464', name:'세계연극사', credits:2 },
+    { code:'22476', name:'연기(3)', credits:2 },
+    { code:'24649', name:'극장실습(1)', credits:1 },
+    { code:'24848', name:'무대미술테크닉(1)', credits:2 },
+    { code:'28953', name:'연출이론실습(1)', credits:2 },
+    { code:'36912', name:'뮤지컬댄스(1)', credits:2 },
+    { code:'42544', name:'뮤지컬연기(1)', credits:2 },
+    { code:'44304', name:'공연기획', credits:2 },
+    { code:'12896', name:'무대론', credits:2 },
+    { code:'22477', name:'연기(4)', credits:2 },
+    { code:'22500', name:'한국연극사', credits:2 },
+    { code:'24650', name:'극장실습(2)', credits:1 },
+    { code:'24849', name:'무대미술테크닉(2)', credits:2 },
+    { code:'28954', name:'연출이론실습(2)', credits:2 },
+    { code:'38403', name:'뮤지컬댄스(2)', credits:2 },
+    { code:'42545', name:'뮤지컬연기(2)', credits:2 },
+    { code:'44321', name:'화술연기', credits:2 },
+    { code:'44323', name:'창작컨텐츠워크숍', credits:2 },
+    { code:'22478', name:'연기(5)', credits:2 },
+    { code:'25197', name:'연극연출프로젝트(1)', credits:2 },
+    { code:'28224', name:'무대기술테크닉(1)', credits:2 },
+    { code:'28956', name:'공연예술감상비평', credits:2 },
+    { code:'42546', name:'뮤지컬프로덕션(1)', credits:2 },
+    { code:'44315', name:'연극뮤지컬창작LAB(1)', credits:2 },
+    { code:'44320', name:'오디션연기', credits:2 },
+    { code:'22450', name:'극작워크샵', credits:2 },
+    { code:'24653', name:'극장일반상식', credits:2 },
+    { code:'25198', name:'연극연출프로젝트(2)', credits:2 },
+    { code:'28225', name:'무대기술테크닉(2)', credits:2 },
+    { code:'32052', name:'연극예술전공글쓰기', credits:3 },
+    { code:'37735', name:'연극뮤지컬프로젝트', credits:2 },
+    { code:'37736', name:'연극뮤지컬캡스톤디자인', credits:2 },
+    { code:'40668', name:'MUSICAL AUDITION TECHNIQUES', credits:2 },
+    { code:'42547', name:'뮤지컬프로덕션(2)', credits:2 },
+    { code:'44316', name:'연극뮤지컬창작LAB(2)', credits:2 },
+    { code:'44322', name:'ACTING IN ENGLISH', credits:2 },
+    { code:'44324', name:'카메라연기(1)', credits:2 },
+    { code:'38708', name:'연극뮤지컬융합실무', credits:3 },
+    { code:'22467', name:'연극비평론', credits:2 },
+    { code:'28793', name:'포트폴리오제작', credits:2 },
+    { code:'38370', name:'졸업작품공연및창업', credits:2 },
+    { code:'44313', name:'무대예술전문인실무', credits:3 },
+    { code:'22471', name:'연극졸업작품공연', credits:2 },
+    { code:'44325', name:'카메라연기(2)', credits:2 },
+    { code:'32319', name:'융합캡스톤디자인', credits:3 },
+    { code:'31636', name:'공연제작실습(1)', credits:3 },
+    { code:'31638', name:'즉흥연기', credits:2 },
+    { code:'36791', name:'연극뮤지컬전공실기(1)', credits:2 },
+    { code:'36793', name:'연극뮤지컬전공실기(3)', credits:2 },
+    { code:'36794', name:'공연제작실습(3)', credits:3 },
+    { code:'40161', name:'CREATING MUSICAL CHARACTERS', credits:2 },
+    { code:'40162', name:'VOICE AND MOVEMENT FOR THE MUSICAL ACTOR', credits:2 },
+    { code:'42540', name:'신체연기트레이닝(1)', credits:2 },
+    { code:'44317', name:'스테이지보컬(1)', credits:2 },
+    { code:'31637', name:'공연제작실습(2)', credits:3 },
+    { code:'35795', name:'연극뮤지컬전공실기(2)', credits:2 },
+    { code:'35796', name:'연극뮤지컬전공실기(4)', credits:2 },
+    { code:'38402', name:'공연제작실습(4)', credits:3 },
+    { code:'42542', name:'신체연기트레이닝(2)', credits:2 },
+    { code:'44318', name:'스테이지보컬(2)', credits:2 },
+    { code:'21063', name:'무용전공실기(1)', credits:3 },
+    { code:'21066', name:'무용종합실기(1)', credits:2 },
+    { code:'21067', name:'무용종합실기(2)', credits:2 },
+    { code:'21393', name:'시창청음(1)', credits:2 },
+    { code:'21394', name:'시창청음(2)', credits:2 },
+    { code:'21957', name:'째즈(1)', credits:1 },
+    { code:'21958', name:'째즈(2)', credits:1 },
+    { code:'24592', name:'공연학개론', credits:2 },
+    { code:'25202', name:'연극예술프로젝트', credits:2 },
+    { code:'25261', name:'요가(1)', credits:1 },
+    { code:'25262', name:'요가(2)', credits:1 },
+    { code:'34044', name:'연극뮤지컬창업현장실습(1)', credits:3 },
+    { code:'34133', name:'연극뮤지컬창업현장실습(2)', credits:3 },
+    { code:'34224', name:'연극뮤지컬학기창업현장실습', credits:15 },
+    { code:'35912', name:'연극뮤지컬현장실습(1)', credits:3 },
+    { code:'35990', name:'연극뮤지컬현장실습(2)', credits:3 },
+    { code:'36068', name:'연극뮤지컬현장실습(3)', credits:3 },
+    { code:'36147', name:'연극뮤지컬학기현장실습', credits:15 },
+    { code:'39307', name:'연극뮤지컬현장실습(4)', credits:5 }
+  ],
+  '무용학과': [
+    { code:'12988', name:'무용학원론', credits:2 },
+    { code:'21063', name:'무용전공실기(1)', credits:3 },
+    { code:'21066', name:'무용종합실기(1)', credits:2 },
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'44463', name:'무대기술법', credits:2 },
+    { code:'44714', name:'공연예술의이해와감상', credits:2 },
+    { code:'13257', name:'민속학', credits:2 },
+    { code:'21064', name:'무용전공실기(2)', credits:3 },
+    { code:'21067', name:'무용종합실기(2)', credits:2 },
+    { code:'15619', name:'외국무용사', credits:2 },
+    { code:'21065', name:'무용전공실기(3)', credits:3 },
+    { code:'21068', name:'무용종합실기(3)', credits:2 },
+    { code:'25588', name:'필라테스(1)', credits:1 },
+    { code:'39924', name:'BALLET HERITAGE REPERTORY(1)', credits:3 },
+    { code:'44459', name:'퍼포먼스컴피티션', credits:2 },
+    { code:'12896', name:'무대론', credits:2 },
+    { code:'18431', name:'한국무용사', credits:2 },
+    { code:'22034', name:'타악실기(국악)', credits:1 },
+    { code:'24860', name:'무용전공실기(4)', credits:3 },
+    { code:'24865', name:'무용종합실기(4)', credits:2 },
+    { code:'25589', name:'필라테스(2)', credits:1 },
+    { code:'34421', name:'컨템포러리힙합', credits:1 },
+    { code:'34422', name:'파워무브먼트', credits:1 },
+    { code:'41087', name:'컨템포러리얼반댄스', credits:1 },
+    { code:'44489', name:'무대조명색채학', credits:2 },
+    { code:'17462', name:'창작론', credits:2 },
+    { code:'21059', name:'무용미학입문', credits:2 },
+    { code:'21957', name:'째즈(1)', credits:1 },
+    { code:'22230', name:'한국민속무용', credits:1 },
+    { code:'24861', name:'무용전공실기(5)', credits:3 },
+    { code:'24866', name:'무용종합실기(5)', credits:2 },
+    { code:'30572', name:'세계음악과공연예술', credits:3 },
+    { code:'32350', name:'EURHYTHMICS FOR DANCERS', credits:2 },
+    { code:'32351', name:'무용교수학습방법', credits:2 },
+    { code:'39926', name:'ADVANCED POINT TECHNIQUE', credits:3 },
+    { code:'46470', name:'EUROPEAN HISTORICAL DANCE(1)', credits:3 },
+    { code:'46472', name:'CREATIVE SKILL AND IMPROVISATION', credits:2 },
+    { code:'12955', name:'무용예술론', credits:2 },
+    { code:'21958', name:'째즈(2)', credits:1 },
+    { code:'24856', name:'무용기능학', credits:2 },
+    { code:'24862', name:'무용전공실기(6)', credits:3 },
+    { code:'24867', name:'무용종합실기(6)', credits:2 },
+    { code:'25493', name:'캐릭터댄스', credits:1 },
+    { code:'32053', name:'무용학전공글쓰기', credits:3 },
+    { code:'39925', name:'BALLET HERITAGE REPERTORY(2)', credits:3 },
+    { code:'41651', name:'무용캡스톤디자인', credits:2 },
+    { code:'44462', name:'유아무용지도법', credits:2 },
+    { code:'46471', name:'EUROPEAN HISTORICAL DANCE(2)', credits:3 },
+    { code:'12938', name:'무용교육론', credits:2 },
+    { code:'21776', name:'작품해설', credits:2 },
+    { code:'22248', name:'한국전통무용', credits:1 },
+    { code:'24729', name:'댄스컴포지션(1)', credits:1 },
+    { code:'24863', name:'무용전공실기(7)', credits:3 },
+    { code:'24868', name:'무용종합실기(7)', credits:2 },
+    { code:'25261', name:'요가(1)', credits:1 },
+    { code:'20754', name:'공연실습', credits:3 },
+    { code:'21060', name:'무용비평론', credits:2 },
+    { code:'24730', name:'댄스컴포지션(2)', credits:1 },
+    { code:'24864', name:'무용전공실기(8)', credits:3 },
+    { code:'24869', name:'무용종합실기(8)', credits:2 },
+    { code:'25262', name:'요가(2)', credits:1 },
+    { code:'37734', name:'공연실습및창업', credits:2 },
+    { code:'22655', name:'졸업논문(무용)', credits:0 },
+    { code:'32319', name:'융합캡스톤디자인', credits:3 },
+    { code:'22474', name:'연기(1)', credits:2 },
+    { code:'22475', name:'연기(2)', credits:2 },
+    { code:'22480', name:'연기이론', credits:2 },
+    { code:'24870', name:'무용학프로젝트', credits:2 },
+    { code:'28223', name:'몸짓과표현', credits:2 },
+    { code:'34045', name:'무용창업현장실습(1)', credits:3 },
+    { code:'34134', name:'무용창업현장실습(2)', credits:3 },
+    { code:'34225', name:'무용학기창업현장실습', credits:15 },
+    { code:'35913', name:'무용현장실습(1)', credits:3 },
+    { code:'35991', name:'무용현장실습(2)', credits:3 },
+    { code:'36069', name:'무용현장실습(3)', credits:3 },
+    { code:'36148', name:'무용학기현장실습', credits:15 },
+    { code:'39308', name:'무용현장실습(4)', credits:5 }
+  ],
+  '태권도학과': [
+    { code:'17567', name:'체조', credits:1 },
+    { code:'31961', name:'대학생활과진로설계', credits:1 },
+    { code:'32912', name:'스포츠의과학적기초', credits:3 },
+    { code:'44418', name:'태권도체력육성(1)', credits:1 },
+    { code:'44603', name:'태권도기본동작', credits:1 },
+    { code:'44419', name:'태권도체력육성(2)', credits:1 },
+    { code:'44599', name:'유급자품새', credits:1 },
+    { code:'14617', name:'수영', credits:1 },
+    { code:'14689', name:'스포츠맛사지(1)', credits:1 },
+    { code:'22056', name:'태권도총론', credits:3 },
+    { code:'22059', name:'태권도품새론', credits:2 },
+    { code:'25515', name:'태권도실용영어(1)', credits:1 },
+    { code:'33877', name:'태권도응용호신술', credits:2 },
+    { code:'39672', name:'태권도와스포츠생리학', credits:3 },
+    { code:'39689', name:'태권도교육과정론', credits:3 },
+    { code:'42699', name:'4차산업과뉴노멀태권도', credits:3 },
+    { code:'44600', name:'유단자품새', credits:1 },
+    { code:'44606', name:'태권도실용중국어(1)', credits:2 },
+    { code:'22041', name:'태권도교육론', credits:3 },
+    { code:'22045', name:'태권도사', credits:3 },
+    { code:'25492', name:'카이로프락틱', credits:1 },
+    { code:'25516', name:'태권도실용영어(2)', credits:2 },
+    { code:'39666', name:'체육인문학', credits:3 },
+    { code:'39674', name:'휘트니스프로그램', credits:3 },
+    { code:'39675', name:'소도구운동실습', credits:1 },
+    { code:'39687', name:'익스트림트레킹', credits:2 },
+    { code:'44605', name:'태권도시범및격파', credits:1 },
+    { code:'44607', name:'태권도실용중국어(2)', credits:2 },
+    { code:'41968', name:'스포츠심리상담의이론과실제', credits:3 },
+    { code:'44594', name:'K-POP과태권도', credits:1 },
+    { code:'44613', name:'태권도와미디어', credits:2 },
+    { code:'44614', name:'태권도행정실무', credits:2 },
+    { code:'22039', name:'태권도겨루기론', credits:2 },
+    { code:'25091', name:'스포츠테이핑', credits:1 },
+    { code:'25520', name:'태권도철학', credits:3 },
+    { code:'33879', name:'올림픽태권도훈련방법의이해', credits:2 },
+    { code:'39665', name:'사회이론과스포츠', credits:3 },
+    { code:'39673', name:'기능적운동프로그램', credits:3 },
+    { code:'44602', name:'태권도겨루기', credits:1 },
+    { code:'46480', name:'실전태권도', credits:1 },
+    { code:'14700', name:'스포츠영양학', credits:3 },
+    { code:'20821', name:'구기', credits:1 },
+    { code:'22044', name:'태권도동작학', credits:3 },
+    { code:'27766', name:'스포츠철학', credits:3 },
+    { code:'32068', name:'태권도학전공글쓰기', credits:3 },
+    { code:'39676', name:'개인운동지도법', credits:3 },
+    { code:'39724', name:'태권도경기지도법', credits:3 },
+    { code:'44601', name:'창작및자유품새', credits:1 },
+    { code:'44596', name:'비교무술', credits:1 },
+    { code:'44597', name:'아동‧청소년태권도', credits:2 },
+    { code:'44598', name:'성인‧노인태권도', credits:2 },
+    { code:'44604', name:'태권도문화의이해', credits:3 },
+    { code:'44612', name:'태권도측정평가', credits:3 },
+    { code:'44633', name:'태권도빅데이터분석', credits:3 },
+    { code:'17827', name:'태권도시범론', credits:3 },
+    { code:'22055', name:'태권도지도프로그램', credits:3 },
+    { code:'30240', name:'스포츠현장정보와취업', credits:3 },
+    { code:'42700', name:'태권체조', credits:1 },
+    { code:'44595', name:'마샬아츠트리킹', credits:1 },
+    { code:'22040', name:'태권도경기규칙및심판법', credits:2 },
+    { code:'22060', name:'태권도현장실습', credits:2 },
+    { code:'33878', name:'태권도시범프로그램', credits:2 },
+    { code:'39667', name:'HUMANISTIC UNDERSTANDING OF TAEKWONDO', credits:2 },
+    { code:'44611', name:'태권도종합실기', credits:1 },
+    { code:'19744', name:'졸업논문(태권도)', credits:0 },
+    { code:'43357', name:'글로벌태권도지도실무', credits:15 },
+    { code:'44608', name:'태권도와K-문화콘텐츠', credits:2 },
+    { code:'44609', name:'태권도장경영관리', credits:2 },
+    { code:'44615', name:'태권도캡스톤디자인', credits:3 },
+    { code:'44635', name:'태권도공연기획', credits:2 },
+    { code:'39679', name:'MARTIAL ARTS EDUCATION THEORY AND APPLICATION', credits:3 },
+    { code:'39699', name:'국제스포츠이벤트오퍼레이션실무', credits:3 },
+    { code:'39704', name:'TAEKWONDO INTERNATIONAL PEACE AND CONFLICT RESOLUTION', credits:3 },
+    { code:'39707', name:'TAEKWONDO LITERATURE', credits:3 },
+    { code:'42698', name:'태권도취·창업인사이트', credits:3 },
+    { code:'37004', name:'태권도스타트업통합마케팅전략', credits:3 },
+    { code:'39701', name:'ITF TAEKWON-DO PATTERN THEORY', credits:3 },
+    { code:'39702', name:'코칭리더쉽과임파워먼트', credits:3 },
+    { code:'39709', name:'TAEKWONDO RANK EXAMINATION THEORY', credits:3 },
+    { code:'25522', name:'태권도학프로젝트', credits:2 },
+    { code:'34038', name:'태권도학창업현장실습(1)', credits:3 },
+    { code:'34127', name:'태권도학창업현장실습(2)', credits:3 },
+    { code:'34218', name:'태권도학학기창업현장실습', credits:15 },
+    { code:'35906', name:'태권도학현장실습(1)', credits:3 },
+    { code:'35984', name:'태권도학현장실습(2)', credits:3 },
+    { code:'36062', name:'태권도학현장실습(3)', credits:3 },
+    { code:'36141', name:'태권도학학기현장실습', credits:15 },
+    { code:'39300', name:'태권도학현장실습(4)', credits:5 }
+  ]
+};
+function primaryCatalogForDept(dept){ return PRIMARY_CATALOGS[dept] || []; }
+function primaryCourseInCatalog(dept, code){ return primaryCatalogForDept(dept).filter(function(c){ return c.code===code; })[0] || null; }
+function primaryCourses(student){ return (student && student.primaryCourses) || []; }
+function primaryCreditsTotal(student){
+  return primaryCourses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+}
 function applyCoreCourseCodes(codes){
   CORE_COURSES = (codes||[]).map(courseInCatalog).filter(Boolean).map(function(c){ return { name:c.name, credits:c.credits }; });
 }
@@ -394,7 +734,7 @@ function trackAnalysis(student, key){
   var missCore = missingCoreCredits(student);
   var cvgGap = cvgMet ? 0 : (missCore + Math.max(0, cvgMin - cvgCur - missCore));
   var pMin = info.primaryMin || null;
-  var pCur = pMin ? num(student.primaryMajorCredits) : null;
+  var pCur = pMin ? primaryCreditsTotal(student) : null;
   var pMet = pMin ? pCur >= pMin : true;
   var pGap = pMin ? Math.max(0, pMin - pCur) : 0;
   var tMet = thesisMetFor(student, key);
@@ -478,6 +818,7 @@ var state = {
   formError: '', formOk: '',
   editingCourseId: null,
   editingMicrodegreeId: null,
+  editingPrimaryCourseId: null,
   detailId: null,
   q: '', filter: 'all',
   cache: { me:null, roster:[] }
@@ -572,7 +913,10 @@ function screenRegisterStudent(){
         '<div class="field"><label>학번</label><input id="regId" required></div>' +
         '<div class="field"><label>이름</label><input id="regName" required></div>' +
         '<div class="grid2">' +
-          '<div class="field"><label>학과(선택)</label><input id="regDept"></div>' +
+          '<div class="field"><label>학과(제1전공)</label><select id="regDept" required>' +
+            '<option value="">선택해 주세요</option>' +
+            PARTICIPATING_DEPTS.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('') +
+          '</select></div>' +
           '<div class="field"><label>입학년도(선택)</label><input id="regYear" inputmode="numeric" placeholder="예: 2023"></div>' +
         '</div>' +
         '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
@@ -628,13 +972,14 @@ async function doLogin(role, id, pw){
 }
 async function doRegisterStudent(id, name, dept, year, pw, pw2){
   if(!id || !name){ state.formError='학번과 이름을 입력해 주세요.'; render(); return; }
+  if(!dept){ state.formError='학과(제1전공)를 선택해 주세요.'; render(); return; }
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
   var existing = await storeGet('cvg_students', id);
   if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
   var hash = await sha256Hex(pw);
   var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
-    recognizedSemesters:'', primaryMajorCredits:0,
+    recognizedSemesters:'', primaryCourses:[],
     microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
   await storeSet('cvg_students', id, doc);
   setSession('student', { id:id, name:name });
@@ -666,6 +1011,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
 /* ============ 학생 화면 ============ */
 function renderStudent(){
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
   if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
@@ -751,6 +1097,21 @@ function courseListBlock(student, editable){
     '</div>';
   }).join('') + '</div>';
 }
+function primaryCourseListBlock(student, editable){
+  var list = primaryCourses(student);
+  if(!list.length) return '<div class="empty-state">아직 등록된 제1전공 과목이 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(c){
+    return '<div class="courserow">' +
+      '<div class="ci"><div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
+      '<div class="cc">'+num(c.credits)+'학점</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-primary-course" data-id="'+esc(c.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-primary-course" data-id="'+esc(c.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
 function screenStudentHome(){
   var s = state.cache.me;
   if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
@@ -764,12 +1125,15 @@ function screenStudentHome(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
+        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
+      primaryCourseListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
         '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
       microdegreeListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
         '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
-      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' +
+      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+primaryCreditsTotal(s)+'학점' +
       '</div>' +
       '<div class="row" style="margin-top:18px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
@@ -802,6 +1166,42 @@ function screenCourseForm(){
         '<div class="grid2">' +
           '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(COURSE_CATALOG[0]?COURSE_CATALOG[0].credits:3))+'"></div>' +
           '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
+        '</div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenPrimaryCourseForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  var editing = state.editingPrimaryCourseId ? primaryCourses(s).filter(function(c){ return c.id===state.editingPrimaryCourseId; })[0] : null;
+  var dept = s.dept || '';
+  var catalog = primaryCatalogForDept(dept);
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'제1전공 과목 수정':'제1전공 과목 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'제1전공 과목 정보 수정':'제1전공 이수 과목 추가')+'</h2>' +
+      '<p class="screen-sub">' +
+        (catalog.length ? esc(dept)+' 교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' : '학과가 지정되지 않아 목록을 보여드릴 수 없어요. 직접 입력해 주세요.') +
+      '</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-primary-course" class="stack">' +
+        '<div class="field"><label>과목</label><select id="pCourse">' +
+          catalog.map(function(c){
+            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+          }).join('') +
+          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
+        '</select></div>' +
+        '<div class="field" id="pCustomWrap" style="'+((catalog.length && (!editing||editing.courseCode))?'display:none;':'')+'">' +
+          '<label>과목명 직접 입력</label><input id="pName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
+        '</div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학점</label><input id="pCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(catalog[0]?catalog[0].credits:3))+'"></div>' +
+          '<div class="field"><label>이수학기</label><input id="pSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
         '</div>' +
         '<div class="row" style="gap:8px;">' +
           '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
@@ -855,11 +1255,10 @@ function screenInfoForm(){
     '<div class="phone">' +
       '<div class="eyebrow">이수정보</div>' +
       '<h2 class="screen-title">학기·제1전공 정보 수정</h2>' +
-      '<p class="screen-sub">이수형태는 따로 고르지 않아도 돼요. 과목을 입력하면 복수전공·부전공 경로를 자동으로 비교해서 보여드려요.</p>' +
+      '<p class="screen-sub">이수형태는 따로 고르지 않아도 돼요. 과목을 입력하면 복수전공·부전공 경로를 자동으로 비교해서 보여드려요. 제1전공 이수학점은 홈 화면의 "제1전공 과목"에서 과목을 추가하면 자동으로 합산돼요.</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-info" class="stack">' +
         '<div class="field"><label>인정학기 (신청 자격: 3학기 이상)</label><input id="iSem" type="number" min="0" value="'+num(s.recognizedSemesters)+'"></div>' +
-        '<div class="field"><label>제1전공 이수학점 (부전공 경로 계산에 필요)</label><input id="iPrimary" type="number" min="0" value="'+num(s.primaryMajorCredits)+'"></div> ' +
         '<div class="field"><label>졸업논문 (복수전공일 때만 적용, 학칙 제44조①)</label>' +
           '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; margin-bottom:4px;">' +
             '<input type="checkbox" id="iThesisReq" '+(s.thesisRequired?'checked':'')+'> 제1전공 학과의 졸업논문이 필수과목이다' +
@@ -969,7 +1368,6 @@ async function deleteMicrodegree(mdId){
 }
 async function saveInfo(form){
   var recognizedSemesters = num(form.querySelector('#iSem').value);
-  var primaryMajorCredits = num(form.querySelector('#iPrimary').value);
   var thesisRequired = form.querySelector('#iThesisReq').checked;
   var thesisDone = form.querySelector('#iThesisDone').checked;
 
@@ -977,12 +1375,51 @@ async function saveInfo(form){
   var col = 'cvg_students';
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
-  var patch = { recognizedSemesters:recognizedSemesters, primaryMajorCredits:primaryMajorCredits,
+  var patch = { recognizedSemesters:recognizedSemesters,
     thesisRequired:thesisRequired, thesisDone:thesisDone };
   await storeUpdate(col, id, patch);
   Object.assign(student, patch);
   state.formError='';
   state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function savePrimaryCourse(form){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var dept = student.dept || '';
+  var courseCode = form.querySelector('#pCourse').value;
+  var catalogCourse = courseCode==='__custom__' ? null : primaryCourseInCatalog(dept, courseCode);
+  var name = catalogCourse ? catalogCourse.name : form.querySelector('#pName').value.trim();
+  var credits = form.querySelector('#pCredits').value;
+  var semester = form.querySelector('#pSemester').value.trim();
+  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
+
+  var list = primaryCourses(student).slice();
+  var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
+
+  if(state.editingPrimaryCourseId){
+    list = list.map(function(c){
+      return c.id===state.editingPrimaryCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave } : c;
+    });
+  } else {
+    list.push({ id:uid(), name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave });
+  }
+  await storeUpdate(col, id, { primaryCourses:list });
+  student.primaryCourses = list;
+  state.editingPrimaryCourseId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deletePrimaryCourse(courseId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = primaryCourses(student).filter(function(c){ return c.id!==courseId; });
+  await storeUpdate(col, id, { primaryCourses:list });
+  student.primaryCourses = list;
   render();
 }
 async function changePassword(oldPw, newPw, newPw2){
@@ -1008,6 +1445,7 @@ async function loadRoster(){
 function renderAdmin(){
   if(state.view==='detail') return screenAdminDetail();
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
   if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
@@ -1077,12 +1515,15 @@ function screenAdminDetail(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
+        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
+      primaryCourseListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
         '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
       microdegreeListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
         '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
-      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' +
+      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+primaryCreditsTotal(s)+'학점' +
       '</div>' +
       '<div class="row" style="margin-top:18px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="reset-password" style="width:auto; flex:1;">비밀번호 초기화</button>' +
@@ -1122,7 +1563,7 @@ function screenAdminSettings(){
         }).join('') +
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
-      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
+      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을, 참여학과별 제1전공 교육과정표는 PRIMARY_CATALOGS 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
     '</div>'
   );
 }
@@ -1201,11 +1642,11 @@ function guideStudent(){
         '<li>관리자가 지정한 핵심과목을 이수하면 자동으로 <b>핵심과목</b> 표시가 붙습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
-      '<h2>학기·제1전공 정보 채우기</h2>' +
-      '<p>홈 화면의 <b>이수정보 &gt; 수정</b>에서 아래 정보를 입력해 주세요. 부전공 경로를 계산하는 데 필요해요.</p>' +
+      '<h2>제1전공 과목·학기 정보 채우기</h2>' +
+      '<p>홈 화면의 <b>+ 제1전공 과목 추가</b>에서 등록할 때 고른 학과의 교육과정표 과목을 골라 넣으면 학점이 자동으로 채워지고 합산됩니다. 부전공(1개는 54학점, 2개 이상은 42학점 필요)을 계산하는 데 쓰여요.</p>' +
+      '<p><b>이수정보 &gt; 수정</b>에서는 아래 정보를 입력해 주세요.</p>' +
       '<ul>' +
         '<li><b>인정학기</b> — 3학기 이상이어야 실제 EDWARD 이수신청 자격이 생깁니다.</li>' +
-        '<li><b>제1전공 이수학점</b> — 부전공(1개는 54학점, 2개 이상은 42학점 필요)을 계산할 때 쓰입니다.</li>' +
         '<li>제1전공 학과의 졸업논문이 필수과목이라면 체크해 주세요. 복수전공 경로에서만 확인합니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">4</div>' +
@@ -1254,7 +1695,7 @@ function guideAdmin(){
       '<h2>학생별로 관리하기</h2>' +
       '<p>학생 상세 화면에서 학생을 대신해 관리할 수 있어요.</p>' +
       '<ul>' +
-        '<li>과목과 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
+        '<li>과목, 제1전공 과목, 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
         '<li>인정학기·제1전공 학점·졸업논문 같은 이수정보도 대신 수정할 수 있습니다.</li>' +
         '<li><b>비밀번호 초기화</b>는 임시 비밀번호(000000)로 바꿔주니 학생에게 알려주세요.</li>' +
         '<li><b>학생 삭제</b>는 되돌릴 수 없으니 신중하게 사용해 주세요.</li>' +
@@ -1287,6 +1728,10 @@ document.addEventListener('submit', function(e){
   if(f.id==='form-course'){
     e.preventDefault();
     saveCourse(f).catch(failWith);
+  }
+  if(f.id==='form-primary-course'){
+    e.preventDefault();
+    savePrimaryCourse(f).catch(failWith);
   }
   if(f.id==='form-microdegree'){
     e.preventDefault();
@@ -1322,16 +1767,30 @@ document.addEventListener('input', function(e){
 });
 
 document.addEventListener('change', function(e){
-  if(e.target.id !== 'cCourse') return;
-  var form = e.target.closest('form');
-  var wrap = form.querySelector('#cCustomWrap');
-  var creditsInput = form.querySelector('#cCredits');
-  if(e.target.value === '__custom__'){
-    wrap.style.display = 'block';
-  } else {
-    wrap.style.display = 'none';
-    var c = courseInCatalog(e.target.value);
-    if(c) creditsInput.value = c.credits;
+  if(e.target.id === 'cCourse'){
+    var form = e.target.closest('form');
+    var wrap = form.querySelector('#cCustomWrap');
+    var creditsInput = form.querySelector('#cCredits');
+    if(e.target.value === '__custom__'){
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+      var c = courseInCatalog(e.target.value);
+      if(c) creditsInput.value = c.credits;
+    }
+  }
+  if(e.target.id === 'pCourse'){
+    var pform = e.target.closest('form');
+    var pwrap = pform.querySelector('#pCustomWrap');
+    var pcreditsInput = pform.querySelector('#pCredits');
+    var s = state.role==='admin' ? state.cache.detail : state.cache.me;
+    if(e.target.value === '__custom__'){
+      pwrap.style.display = 'block';
+    } else {
+      pwrap.style.display = 'none';
+      var pc = primaryCourseInCatalog(s.dept||'', e.target.value);
+      if(pc) pcreditsInput.value = pc.credits;
+    }
   }
 });
 
@@ -1347,18 +1806,21 @@ document.addEventListener('click', function(e){
   else if(act==='goto-register'){ state.view='register'; }
   else if(act==='goto-register-admin'){ state.view='register-admin'; }
   else if(act==='goto-login'){ state.view='login'; state.formOk=''; }
-  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; }
+  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
   else if(act==='goto-list'){
     state.view='list'; state.formOk='';
     loadRoster().then(render);
     render(); return;
   }
-  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; }
+  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
   else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
+  else if(act==='goto-primary-course-form'){ state.editingPrimaryCourseId=null; state.view='primary-course-form'; }
   else if(act==='goto-microdegree-form'){ state.editingMicrodegreeId=null; state.view='microdegree-form'; }
   else if(act==='goto-info-form'){ state.view='info-form'; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
+  else if(act==='edit-primary-course'){ state.editingPrimaryCourseId = el.dataset.id; state.view='primary-course-form'; }
+  else if(act==='delete-primary-course'){ deletePrimaryCourse(el.dataset.id).catch(failWith); return; }
   else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
   else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }
   else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
