@@ -1,0 +1,1861 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>융합전공 이수 현황판</title>
+<meta name="theme-color" content="#2F8F5B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="융합전공현황">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F4F6F9; --surface:#FFFFFF; --surface-2:#EEF7F0; --surface-3:#F8FAFC;
+  --border:#E6E9ED; --text:#22303F; --text-muted:#79828C; --text-faint:#9AA3AC;
+  --primary:#2F8F5B; --primary-dark:#1F7346; --primary-contrast:#FFFFFF;
+  --banner:linear-gradient(90deg,#1F7346,#4FBE85);
+  --grad-1:#2F8F5B; --grad-2:#63C793;
+  --amber:#B57A08; --amber-bg:#FDF8EC; --amber-border:#F6E3B8;
+  --danger:#D32027; --danger-bg:#FDF1F1; --danger-border:#F7CFD1;
+  --success:#12805A; --success-bg:#E8F6F0;
+  --overlay:rgba(20,28,38,.5);
+  --radius-s:8px; --radius-m:14px; --radius-l:18px;
+  --shadow-card:0 1px 2px rgba(34,48,63,.05), 0 8px 22px -14px rgba(34,48,63,.2);
+  --font-display:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-body:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-mono:'JetBrains Mono','SFMono-Regular',monospace;
+  --track:#EAEDF1;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body); padding:28px 16px 64px; min-height:100vh;}
+h1,h2,h3{font-family:var(--font-display); text-wrap:balance; margin:0; font-weight:800; letter-spacing:-.01em;}
+button{font-family:inherit;}
+.mono{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+::selection{background:var(--primary); color:var(--primary-contrast);}
+
+.page{max-width:1080px; margin:0 auto; display:flex; flex-direction:column; align-items:center; gap:18px;}
+.topbar{width:100%; max-width:460px; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap; padding:20px 22px; border-radius:16px; color:#fff;
+  background:linear-gradient(100deg, var(--grad-1), var(--grad-2)); box-shadow:var(--shadow-card);}
+.page.wide .topbar, .page.wide .roletabs, .page.wide .phone{max-width:1000px;}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-mark{width:38px; height:38px; border-radius:11px; background:rgba(255,255,255,.22); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;}
+.brand-text strong{display:block; font-size:18px; font-weight:900; letter-spacing:-.01em; color:#fff;}
+.brand-text span{display:block; font-size:11.5px; color:rgba(255,255,255,.86); margin-top:2px; line-height:1.4; word-break:keep-all;}
+.topbar-actions{display:flex; gap:6px; margin-left:auto;}
+.ghost-btn{border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.16); color:#fff;
+  font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.ghost-btn:hover{background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.65);}
+
+.roletabs{width:100%; max-width:460px; display:flex; gap:8px; background:var(--surface-2); padding:5px; border-radius:999px;}
+.roletab{flex:1; border:none; background:transparent; padding:9px 0; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer;}
+.roletab.active{background:var(--surface); color:var(--primary); box-shadow:var(--shadow-card);}
+
+.phone{width:100%; max-width:460px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); box-shadow:var(--shadow-card); padding:24px 20px; position:relative; min-height:300px;}
+.eyebrow{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint);}
+.screen-title{font-size:21px; margin-top:6px; margin-bottom:4px; word-break:keep-all;}
+.screen-sub{font-size:13px; color:var(--text-muted); margin-bottom:18px;}
+
+.field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+.field label{font-size:12.5px; font-weight:600; color:var(--text-muted);}
+.field input, .field select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:11px 13px; font-size:14px; font-family:var(--font-body); width:100%;}
+.field input:focus, .field select:focus{outline:2px solid var(--primary); outline-offset:1px; background:var(--surface);}
+.field .hint{font-size:11.5px; color:var(--text-faint); line-height:1.5;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:var(--radius-s); border:1px solid transparent; font-weight:700; font-size:14.5px; padding:12px 16px; cursor:pointer; width:100%;}
+.btn-primary{background:var(--primary); color:var(--primary-contrast);}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-ghost{background:var(--surface-2); color:var(--primary); border-color:var(--border);}
+.btn-ghost:hover{border-color:var(--primary);}
+.btn-line{background:transparent; color:var(--text-muted); border:1px dashed var(--border);}
+.btn-danger{background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border);}
+.btn-small{width:auto; padding:8px 12px; font-size:12.5px;}
+.linklike{background:none; border:none; color:var(--primary); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; white-space:nowrap;}
+.row{display:flex; align-items:center; gap:10px;}
+.row-between{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;}
+.stack{display:flex; flex-direction:column; gap:10px;}
+
+.notice-box{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-m); padding:13px 15px; font-size:12.5px; color:var(--text-muted); line-height:1.55; margin-bottom:16px;}
+.errbox{background:var(--danger-bg); border:1px solid var(--danger-border); color:var(--danger); border-radius:var(--radius-s); padding:10px 13px; font-size:12.5px; margin-bottom:14px; font-weight:600;}
+.okbox{background:var(--success-bg); border:1px solid var(--border); color:var(--success); border-radius:var(--radius-s); padding:10px 13px; font-size:12.5px; margin-bottom:14px; font-weight:600;}
+.empty-state{text-align:center; padding:36px 12px; color:var(--text-faint); font-size:13px;}
+
+/* 진행률 요약 */
+.statusband{display:flex; align-items:center; gap:12px; border-radius:var(--radius-m); padding:14px 16px; margin-bottom:16px; color:#fff;}
+.statusband.met{background:linear-gradient(100deg,#1F7346,#4FBE85);}
+.statusband.unmet{background:linear-gradient(100deg,#B5580E,#E0904A);}
+.statusband .mark{width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:17px; flex:none;}
+.statusband b{display:block; font-size:15px;}
+.statusband span{display:block; font-size:11.5px; opacity:.9; margin-top:2px;}
+.catcard{border:1px solid var(--border); border-radius:var(--radius-m); padding:12px 14px; margin-bottom:10px; background:var(--surface-3);}
+.catcard .cthead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; gap:8px;}
+.catcard .cthead b{font-size:13.5px;}
+.catcard .cthead span{font-size:12px; font-weight:700; color:var(--text-muted); font-family:var(--font-mono); white-space:nowrap;}
+.catcard.met .cthead span{color:var(--success);}
+.pbar{height:9px; border-radius:5px; background:var(--track); overflow:hidden; position:relative;}
+.pbar i{position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:var(--primary);}
+.catcard.met .pbar i{background:var(--success);}
+.totalline{font-size:13px; color:var(--text-muted); margin:14px 0 4px; display:flex; justify-content:space-between; align-items:baseline;}
+.totalline b{color:var(--text); font-size:15px;}
+
+/* 과목 목록 */
+.courselist{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.courserow{display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:var(--radius-s); padding:10px 12px; background:var(--surface);}
+.courserow .ci{flex:1; min-width:0;}
+.courserow .cn{font-weight:700; font-size:13.5px; word-break:break-all;}
+.courserow .cm{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+.courserow .cc{font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--primary); white-space:nowrap;}
+.courserow .cact{display:flex; gap:4px;}
+.icobtn{border:1px solid var(--border); background:var(--surface-3); color:var(--text-muted); font-size:12px; padding:6px 9px; border-radius:7px; cursor:pointer;}
+.icobtn:hover{border-color:var(--primary); color:var(--primary);}
+.icobtn.danger:hover{border-color:var(--danger); color:var(--danger);}
+.catpill{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--surface-2); color:var(--primary); margin-right:4px;}
+
+/* admin board */
+.summary{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px;}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow-card);}
+.tile .num{font-size:28px; font-weight:700; font-family:var(--font-mono); line-height:1; color:var(--primary);}
+.tile.t-danger .num{color:var(--danger);}
+.tile .lbl{color:var(--text-muted); font-size:11.5px; margin-top:6px; line-height:1.4;}
+.controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+.controls input, .controls select{border:1px solid var(--border); background:var(--surface-3); color:var(--text); border-radius:var(--radius-s); padding:9px 12px; font-size:13px; font-family:var(--font-body);}
+.controls input{flex:1; min-width:150px;}
+.roster{display:flex; flex-direction:column; gap:9px;}
+.rcard{border:1px solid var(--border); border-left:4px solid var(--border); border-radius:var(--radius-m); padding:12px 13px; background:var(--surface); cursor:pointer;}
+.rcard:hover{border-color:var(--primary);}
+.rcard.met{border-left-color:var(--success);}
+.rcard.unmet{border-left-color:var(--amber);}
+.rcard .nm{font-weight:700; font-size:14px;}
+.rcard .mt{font-size:11px; color:var(--text-faint); margin-top:2px;}
+.rcard .mini{display:flex; justify-content:space-between; align-items:center; margin-top:8px;}
+.badge{font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px;}
+.badge.met{background:var(--success-bg); color:var(--success);}
+.badge.unmet{background:var(--amber-bg); color:var(--amber);}
+
+.overlay{position:fixed; inset:0; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;}
+.modal{width:100%; max-width:420px; background:var(--surface); border-radius:var(--radius-l); padding:22px 20px; box-shadow:var(--shadow-card); max-height:86vh; overflow-y:auto;}
+.modal h3{font-size:17px; margin-bottom:4px;}
+.modal .modal-sub{font-size:12.5px; color:var(--text-muted); margin-bottom:16px;}
+.modal-actions{display:flex; gap:8px; margin-top:16px;}
+.modal-actions .btn{width:auto; flex:1;}
+.footer-note{font-size:11px; color:var(--text-faint); text-align:center; margin-top:8px;}
+.guide-link{border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.16); color:#fff;
+  font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+.guide-link:hover{background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.65);}
+
+/* 이용안내 */
+.guide-shell{width:100%; max-width:640px; display:flex; flex-direction:column; gap:18px;}
+.guide-hero{background:linear-gradient(160deg, var(--primary), var(--primary-dark)); color:#fff; border-radius:var(--radius-l); padding:28px 26px; box-shadow:var(--shadow-card);}
+.guide-hero .eyebrow{color:rgba(255,255,255,.75);}
+.guide-hero h1{font-size:26px; color:#fff; margin:8px 0 10px;}
+.guide-hero p{font-size:13.5px; color:rgba(255,255,255,.88); margin:0 0 14px; line-height:1.6;}
+.guide-hero .back{color:#fff; font-weight:700; font-size:13px; text-decoration:underline; background:none; border:none; cursor:pointer; padding:0;}
+.guide-tabs{display:flex; gap:8px; background:var(--surface-2); padding:5px; border-radius:999px;}
+.guide-tabs button{flex:1; border:none; background:transparent; padding:9px 0; border-radius:999px; font-weight:700; font-size:13px; color:var(--text-muted); cursor:pointer;}
+.guide-tabs button.active{background:var(--surface); color:var(--primary); box-shadow:var(--shadow-card);}
+.guide-note{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-m); padding:15px 17px; font-size:13px; line-height:1.65; color:var(--text-muted);}
+.guide-note b{color:var(--text);}
+.step{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); padding:22px 20px; box-shadow:var(--shadow-card);}
+.step-num{width:32px; height:32px; border-radius:50%; background:var(--primary); color:var(--primary-contrast); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:14px; margin-bottom:12px;}
+.step h2{font-size:18px; margin-bottom:9px;}
+.step p{font-size:13.5px; line-height:1.7; margin:0 0 9px;}
+.step ul{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px;}
+.step li{font-size:13.5px; line-height:1.6;}
+.plat-title{font-size:13px; font-weight:800; margin:14px 0 8px; display:flex; align-items:center; gap:6px;}
+.plat-title:first-of-type{margin-top:2px;}
+.install-steps{counter-reset:step; display:flex; flex-direction:column; gap:9px; margin:0; padding:0; list-style:none;}
+.install-steps li{position:relative; padding-left:28px; font-size:13px; line-height:1.6;}
+.install-steps li::before{counter-increment:step; content:counter(step); position:absolute; left:0; top:1px;
+  width:20px; height:20px; border-radius:50%; background:var(--primary); color:#fff;
+  font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+
+@media (max-width:520px){
+  body{padding:18px 12px 48px;}
+  .summary{grid-template-columns:repeat(3,1fr); gap:8px;}
+  .tile{padding:11px 10px;}
+  .tile .num{font-size:22px;}
+  .grid2,.grid3{grid-template-columns:1fr 1fr;}
+  .guide-hero{padding:22px 18px;}
+  .step{padding:19px 16px;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ helpers ============ */
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function nowIso(){ return new Date().toISOString(); }
+async function sha256Hex(str){
+  var enc = new TextEncoder().encode(str);
+  var buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+function num(v){ var n = Number(v); return isFinite(n) ? n : 0; }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+/* ============ 저장소 설정 ============
+   구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
+   비워두면 이 기기 안에만 저장됩니다(시험용).
+   설치 방법은 apps-script.gs 맨 위 설명을 참고하세요.
+   예: var API_URL = 'https://script.google.com/macros/s/AKfy...../exec'; */
+var API_URL = '';
+
+// 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
+var APP_VERSION = '2026-09-17 c';
+
+/* ============ store: 서버 → 기기저장 순으로 사용 ============ */
+var apiMode = !!API_URL;
+var fallbackData = {};
+
+function loadFallback(){
+  try{ var raw = localStorage.getItem('cvg_store'); fallbackData = raw ? JSON.parse(raw) : {}; }
+  catch(e){ fallbackData = {}; }
+}
+function saveFallback(){
+  try{ localStorage.setItem('cvg_store', JSON.stringify(fallbackData)); }catch(e){}
+}
+async function apiCall(action, body){
+  var res;
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 40000) : null;
+  try{
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action: action }, body || {})),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+  }catch(e){
+    if(e && e.name === 'AbortError'){
+      throw new Error('자료 서버 응답이 너무 느립니다. 잠시 후 다시 시도해 주세요.');
+    }
+    throw new Error('자료 서버에 연결하지 못했습니다. 구글 Apps Script 배포에서 "액세스 권한이 있는 사용자"가 "모든 사용자"인지 확인해 주세요.');
+  }finally{
+    if(timer) clearTimeout(timer);
+  }
+  if(!res.ok) throw new Error('자료 서버 응답 오류 (' + res.status + ')');
+  var text = await res.text();
+  var out;
+  try{ out = JSON.parse(text); }
+  catch(e){ throw new Error('자료 서버가 예상과 다른 답을 보냈습니다.'); }
+  if(out && out.error) throw new Error(out.error);
+  return out;
+}
+async function storeGet(col, id){
+  if(apiMode){ var r = await apiCall('get', {collection:col, id:id}); return r.doc || null; }
+  var d = (fallbackData[col]||{})[id];
+  return d ? Object.assign({id:id}, d) : null;
+}
+async function storeSet(col, id, data){
+  if(apiMode){ await apiCall('set', {collection:col, id:id, data:data}); return; }
+  fallbackData[col] = fallbackData[col]||{}; fallbackData[col][id] = data; saveFallback();
+}
+async function storeUpdate(col, id, data){
+  if(apiMode){ await apiCall('update', {collection:col, id:id, data:data}); return; }
+  fallbackData[col] = fallbackData[col]||{};
+  fallbackData[col][id] = Object.assign({}, fallbackData[col][id]||{}, data);
+  saveFallback();
+}
+async function storeDelete(col, id){
+  if(apiMode){ await apiCall('delete', {collection:col, id:id}); return; }
+  if(fallbackData[col]) delete fallbackData[col][id];
+  saveFallback();
+}
+async function storeAll(col){
+  if(apiMode){ var r = await apiCall('all', {collection:col}); return r.docs || []; }
+  var all = fallbackData[col]||{};
+  return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); });
+}
+
+/* ============ 융합전공 이수 조건 ============
+   계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준. */
+var TRACK_NAME = '글로벌K-공연콘텐츠전공';
+var PARTICIPATING_DEPTS = ['태권도학과', '연극뮤지컬과', '무용학과', '영어영문학과'];
+// 핵심과목(제4조②, 최대 3과목)은 코드에 미리 넣지 않고 관리자 설정 화면에서
+// 나중에 고를 수 있게 비워둔다. cvg_config/app 문서의 coreCourseCodes에 저장된다.
+var CORE_COURSES = [];
+// 2026년도 연계전공(융합전공) 교육과정표에 실린 개설 과목 목록. 편성표가 바뀌면 이 배열을 고쳐주세요.
+var COURSE_CATALOG = [
+  { code:'17567', name:'체조', credits:1 },
+  { code:'28223', name:'몸짓과표현', credits:2 },
+  { code:'44463', name:'무대기술법', credits:2 },
+  { code:'44714', name:'공연예술의이해와감상', credits:2 },
+  { code:'24693', name:'기초무대기술', credits:2 },
+  { code:'24649', name:'극장실습(1)', credits:1 },
+  { code:'25588', name:'필라테스(1)', credits:1 },
+  { code:'30562', name:'심화영어회화(1)', credits:3 },
+  { code:'42544', name:'뮤지컬연기(1)', credits:2 },
+  { code:'44459', name:'퍼포먼스컴피티션', credits:2 },
+  { code:'12896', name:'무대론', credits:2 },
+  { code:'22034', name:'타악실기(국악)', credits:1 },
+  { code:'24650', name:'극장실습(2)', credits:1 },
+  { code:'25589', name:'필라테스(2)', credits:1 },
+  { code:'34421', name:'컨템포러리힙합', credits:1 },
+  { code:'42510', name:'영미소설과영화', credits:3 },
+  { code:'42545', name:'뮤지컬연기(2)', credits:2 },
+  { code:'44594', name:'K-POP과태권도', credits:1 },
+  { code:'44613', name:'태권도와미디어', credits:2 },
+  { code:'21513', name:'영미시개관(1)', credits:3 },
+  { code:'21957', name:'째즈(1)', credits:1 },
+  { code:'25197', name:'연극연출프로젝트(1)', credits:2 },
+  { code:'28224', name:'무대기술테크닉(1)', credits:2 },
+  { code:'12955', name:'무용예술론', credits:2 },
+  { code:'21958', name:'째즈(2)', credits:1 },
+  { code:'25198', name:'연극연출프로젝트(2)', credits:2 },
+  { code:'25493', name:'캐릭터댄스', credits:1 },
+  { code:'28225', name:'무대기술테크닉(2)', credits:2 },
+  { code:'41651', name:'무용캡스톤디자인', credits:2 },
+  { code:'42498', name:'기초통번역', credits:3 },
+  { code:'44604', name:'태권도문화의이해', credits:3 },
+  { code:'17827', name:'태권도시범론', credits:3 },
+  { code:'42700', name:'태권체조', credits:1 },
+  { code:'44595', name:'마샬아츠트리킹', credits:1 },
+  { code:'44608', name:'태권도와K-문화콘텐츠', credits:2 },
+  { code:'44615', name:'태권도캡스톤디자인', credits:3 },
+  { code:'44635', name:'태권도공연기획', credits:2 },
+  { code:'42540', name:'신체연기트레이닝(1)', credits:2 },
+  { code:'44317', name:'스테이지보컬(1)', credits:2 },
+  { code:'46707', name:'K-문화콘텐츠창작LAB(1)', credits:2 },
+  { code:'42542', name:'신체연기트레이닝(2)', credits:2 },
+  { code:'44318', name:'스테이지보컬(2)', credits:2 },
+  { code:'46708', name:'K-공연콘텐츠창작LAB(2)', credits:2 },
+  { code:'24592', name:'공연학개론', credits:2 },
+  { code:'46703', name:'K-문화콘텐츠스토리텔링', credits:2 },
+  { code:'46704', name:'한류와K-컬처', credits:2 },
+  { code:'46705', name:'공연및이벤트기획', credits:2 },
+  { code:'46706', name:'세계뮤지컬콘텐츠의이해와번역', credits:2 }
+];
+function courseInCatalog(code){ return COURSE_CATALOG.filter(function(c){ return c.code===code; })[0] || null; }
+// 참여학과별 2026년도 일반전공(제1전공) 교육과정표. 학생이 제1전공 과목을 골라 넣으면
+// 학점이 자동으로 합산된다. 편성표가 바뀌면 이 배열들을 고쳐주세요.
+var PRIMARY_CATALOGS = {
+  '영어영문학과': [
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'44298', name:'전공기초영어(1)', credits:3 },
+    { code:'15362', name:'영국문학사', credits:3 },
+    { code:'28454', name:'영산문강독', credits:3 },
+    { code:'44299', name:'전공기초영어(2)', credits:3 },
+    { code:'27855', name:'영어영문학입문', credits:3 },
+    { code:'13110', name:'미국문학사', credits:3 },
+    { code:'19005', name:'현대영문법', credits:3 },
+    { code:'21511', name:'영미소설개관(1)', credits:3 },
+    { code:'30562', name:'심화영어회화(1)', credits:3 },
+    { code:'40406', name:'PRACTICAL ENGLISH WRITING', credits:3 },
+    { code:'42013', name:'영미드라마개관', credits:3 },
+    { code:'15482', name:'영어학개론', credits:3 },
+    { code:'21512', name:'영미소설개관(2)', credits:3 },
+    { code:'30563', name:'심화영어회화(2)', credits:3 },
+    { code:'30564', name:'심화영어글쓰기', credits:3 },
+    { code:'40409', name:'CAREER ENGLISH', credits:3 },
+    { code:'42367', name:'현대영미드라마', credits:3 },
+    { code:'42510', name:'영미소설과영화', credits:3 },
+    { code:'26735', name:'WRITING ABOUT ENGLISH LITERATURE', credits:3 },
+    { code:'15463', name:'영어사', credits:3 },
+    { code:'15471', name:'영어음성학', credits:3 },
+    { code:'21513', name:'영미시개관(1)', credits:3 },
+    { code:'27907', name:'CAREER WRITING', credits:3 },
+    { code:'28422', name:'실용영어연습', credits:3 },
+    { code:'28471', name:'영어논리및논술', credits:3 },
+    { code:'33717', name:'외국어와커뮤니케이션', credits:3 },
+    { code:'44300', name:'근대영미소설', credits:3 },
+    { code:'11005', name:'고급영어강독', credits:3 },
+    { code:'15452', name:'영어교육론', credits:3 },
+    { code:'15473', name:'영어음운론', credits:3 },
+    { code:'21514', name:'영미시개관(2)', credits:3 },
+    { code:'21547', name:'영어문장구조의이해', credits:3 },
+    { code:'25053', name:'셰익스피어', credits:3 },
+    { code:'26736', name:'CREATIVE WRITING IN ENGLISH', credits:3 },
+    { code:'31998', name:'영어영문학전공글쓰기', credits:3 },
+    { code:'42014', name:'현대영미시', credits:3 },
+    { code:'42018', name:'현대영미소설', credits:3 },
+    { code:'42498', name:'기초통번역', credits:3 },
+    { code:'43199', name:'실용영어문법', credits:3 },
+    { code:'44296', name:'영어데이터분석', credits:3 },
+    { code:'44297', name:'영어와사회', credits:3 },
+    { code:'25233', name:'영어영문학프로젝트', credits:2 },
+    { code:'27898', name:'ACADEMIC WRITING(미국현지이수)', credits:3 },
+    { code:'27901', name:'APPLIED ENGLISH GRAMMAR(미국현지이수)', credits:3 },
+    { code:'27984', name:'PRACTICAL ENGLISH(미국현지이수)', credits:3 },
+    { code:'27985', name:'PRACTICE IN LISTENING(미국현지이수)', credits:3 },
+    { code:'27986', name:'PRACTICE IN READING(미국현지이수)', credits:3 },
+    { code:'27987', name:'PRESENTATION AND DEBATE(미국현지이수)', credits:3 },
+    { code:'40092', name:'국외외국어연수(영어)', credits:3 },
+    { code:'15382', name:'영미문학특강', credits:3 },
+    { code:'15454', name:'영어교재연구및지도법', credits:2 },
+    { code:'26737', name:'CULTURE THROUGH ENGLISH LITERATURE', credits:3 },
+    { code:'30766', name:'초급라틴어', credits:3 },
+    { code:'43209', name:'유럽낭만주의문학개관', credits:3 },
+    { code:'26734', name:'졸업논문(공인영어시험)', credits:0 },
+    { code:'21113', name:'미국문화의이해', credits:3 },
+    { code:'27220', name:'INTRODUCTION TO TEACHING ENGLISH', credits:3 },
+    { code:'28909', name:'영어교수법', credits:3 },
+    { code:'33980', name:'영어영문학창업현장실습(1)', credits:3 },
+    { code:'34064', name:'영어영문학창업현장실습(2)', credits:3 },
+    { code:'34155', name:'영어영문학학기창업현장실습', credits:15 },
+    { code:'35850', name:'영어영문학현장실습(1)', credits:3 },
+    { code:'35928', name:'영어영문학현장실습(2)', credits:3 },
+    { code:'36006', name:'영어영문학현장실습(3)', credits:3 },
+    { code:'36085', name:'영어영문학학기현장실습', credits:15 },
+    { code:'39239', name:'영어영문학현장실습(4)', credits:5 }
+  ],
+  '연극뮤지컬과': [
+    { code:'22474', name:'연기(1)', credits:2 },
+    { code:'24134', name:'연극세계의이해', credits:2 },
+    { code:'28223', name:'몸짓과표현', credits:2 },
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'42543', name:'뮤지컬레파토리', credits:2 },
+    { code:'44714', name:'공연예술의이해와감상', credits:2 },
+    { code:'13257', name:'민속학', credits:2 },
+    { code:'22475', name:'연기(2)', credits:2 },
+    { code:'24693', name:'기초무대기술', credits:2 },
+    { code:'25707', name:'희곡소개와읽기', credits:2 },
+    { code:'22449', name:'극작론', credits:2 },
+    { code:'22464', name:'세계연극사', credits:2 },
+    { code:'22476', name:'연기(3)', credits:2 },
+    { code:'24649', name:'극장실습(1)', credits:1 },
+    { code:'24848', name:'무대미술테크닉(1)', credits:2 },
+    { code:'28953', name:'연출이론실습(1)', credits:2 },
+    { code:'36912', name:'뮤지컬댄스(1)', credits:2 },
+    { code:'42544', name:'뮤지컬연기(1)', credits:2 },
+    { code:'44304', name:'공연기획', credits:2 },
+    { code:'12896', name:'무대론', credits:2 },
+    { code:'22477', name:'연기(4)', credits:2 },
+    { code:'22500', name:'한국연극사', credits:2 },
+    { code:'24650', name:'극장실습(2)', credits:1 },
+    { code:'24849', name:'무대미술테크닉(2)', credits:2 },
+    { code:'28954', name:'연출이론실습(2)', credits:2 },
+    { code:'38403', name:'뮤지컬댄스(2)', credits:2 },
+    { code:'42545', name:'뮤지컬연기(2)', credits:2 },
+    { code:'44321', name:'화술연기', credits:2 },
+    { code:'44323', name:'창작컨텐츠워크숍', credits:2 },
+    { code:'22478', name:'연기(5)', credits:2 },
+    { code:'25197', name:'연극연출프로젝트(1)', credits:2 },
+    { code:'28224', name:'무대기술테크닉(1)', credits:2 },
+    { code:'28956', name:'공연예술감상비평', credits:2 },
+    { code:'42546', name:'뮤지컬프로덕션(1)', credits:2 },
+    { code:'44315', name:'연극뮤지컬창작LAB(1)', credits:2 },
+    { code:'44320', name:'오디션연기', credits:2 },
+    { code:'22450', name:'극작워크샵', credits:2 },
+    { code:'24653', name:'극장일반상식', credits:2 },
+    { code:'25198', name:'연극연출프로젝트(2)', credits:2 },
+    { code:'28225', name:'무대기술테크닉(2)', credits:2 },
+    { code:'32052', name:'연극예술전공글쓰기', credits:3 },
+    { code:'37735', name:'연극뮤지컬프로젝트', credits:2 },
+    { code:'37736', name:'연극뮤지컬캡스톤디자인', credits:2 },
+    { code:'40668', name:'MUSICAL AUDITION TECHNIQUES', credits:2 },
+    { code:'42547', name:'뮤지컬프로덕션(2)', credits:2 },
+    { code:'44316', name:'연극뮤지컬창작LAB(2)', credits:2 },
+    { code:'44322', name:'ACTING IN ENGLISH', credits:2 },
+    { code:'44324', name:'카메라연기(1)', credits:2 },
+    { code:'38708', name:'연극뮤지컬융합실무', credits:3 },
+    { code:'22467', name:'연극비평론', credits:2 },
+    { code:'28793', name:'포트폴리오제작', credits:2 },
+    { code:'38370', name:'졸업작품공연및창업', credits:2 },
+    { code:'44313', name:'무대예술전문인실무', credits:3 },
+    { code:'22471', name:'연극졸업작품공연', credits:2 },
+    { code:'44325', name:'카메라연기(2)', credits:2 },
+    { code:'32319', name:'융합캡스톤디자인', credits:3 },
+    { code:'31636', name:'공연제작실습(1)', credits:3 },
+    { code:'31638', name:'즉흥연기', credits:2 },
+    { code:'36791', name:'연극뮤지컬전공실기(1)', credits:2 },
+    { code:'36793', name:'연극뮤지컬전공실기(3)', credits:2 },
+    { code:'36794', name:'공연제작실습(3)', credits:3 },
+    { code:'40161', name:'CREATING MUSICAL CHARACTERS', credits:2 },
+    { code:'40162', name:'VOICE AND MOVEMENT FOR THE MUSICAL ACTOR', credits:2 },
+    { code:'42540', name:'신체연기트레이닝(1)', credits:2 },
+    { code:'44317', name:'스테이지보컬(1)', credits:2 },
+    { code:'31637', name:'공연제작실습(2)', credits:3 },
+    { code:'35795', name:'연극뮤지컬전공실기(2)', credits:2 },
+    { code:'35796', name:'연극뮤지컬전공실기(4)', credits:2 },
+    { code:'38402', name:'공연제작실습(4)', credits:3 },
+    { code:'42542', name:'신체연기트레이닝(2)', credits:2 },
+    { code:'44318', name:'스테이지보컬(2)', credits:2 },
+    { code:'21063', name:'무용전공실기(1)', credits:3 },
+    { code:'21066', name:'무용종합실기(1)', credits:2 },
+    { code:'21067', name:'무용종합실기(2)', credits:2 },
+    { code:'21393', name:'시창청음(1)', credits:2 },
+    { code:'21394', name:'시창청음(2)', credits:2 },
+    { code:'21957', name:'째즈(1)', credits:1 },
+    { code:'21958', name:'째즈(2)', credits:1 },
+    { code:'24592', name:'공연학개론', credits:2 },
+    { code:'25202', name:'연극예술프로젝트', credits:2 },
+    { code:'25261', name:'요가(1)', credits:1 },
+    { code:'25262', name:'요가(2)', credits:1 },
+    { code:'34044', name:'연극뮤지컬창업현장실습(1)', credits:3 },
+    { code:'34133', name:'연극뮤지컬창업현장실습(2)', credits:3 },
+    { code:'34224', name:'연극뮤지컬학기창업현장실습', credits:15 },
+    { code:'35912', name:'연극뮤지컬현장실습(1)', credits:3 },
+    { code:'35990', name:'연극뮤지컬현장실습(2)', credits:3 },
+    { code:'36068', name:'연극뮤지컬현장실습(3)', credits:3 },
+    { code:'36147', name:'연극뮤지컬학기현장실습', credits:15 },
+    { code:'39307', name:'연극뮤지컬현장실습(4)', credits:5 }
+  ],
+  '무용학과': [
+    { code:'12988', name:'무용학원론', credits:2 },
+    { code:'21063', name:'무용전공실기(1)', credits:3 },
+    { code:'21066', name:'무용종합실기(1)', credits:2 },
+    { code:'31960', name:'대학생활과진로설계', credits:1 },
+    { code:'44463', name:'무대기술법', credits:2 },
+    { code:'44714', name:'공연예술의이해와감상', credits:2 },
+    { code:'13257', name:'민속학', credits:2 },
+    { code:'21064', name:'무용전공실기(2)', credits:3 },
+    { code:'21067', name:'무용종합실기(2)', credits:2 },
+    { code:'15619', name:'외국무용사', credits:2 },
+    { code:'21065', name:'무용전공실기(3)', credits:3 },
+    { code:'21068', name:'무용종합실기(3)', credits:2 },
+    { code:'25588', name:'필라테스(1)', credits:1 },
+    { code:'39924', name:'BALLET HERITAGE REPERTORY(1)', credits:3 },
+    { code:'44459', name:'퍼포먼스컴피티션', credits:2 },
+    { code:'12896', name:'무대론', credits:2 },
+    { code:'18431', name:'한국무용사', credits:2 },
+    { code:'22034', name:'타악실기(국악)', credits:1 },
+    { code:'24860', name:'무용전공실기(4)', credits:3 },
+    { code:'24865', name:'무용종합실기(4)', credits:2 },
+    { code:'25589', name:'필라테스(2)', credits:1 },
+    { code:'34421', name:'컨템포러리힙합', credits:1 },
+    { code:'34422', name:'파워무브먼트', credits:1 },
+    { code:'41087', name:'컨템포러리얼반댄스', credits:1 },
+    { code:'44489', name:'무대조명색채학', credits:2 },
+    { code:'17462', name:'창작론', credits:2 },
+    { code:'21059', name:'무용미학입문', credits:2 },
+    { code:'21957', name:'째즈(1)', credits:1 },
+    { code:'22230', name:'한국민속무용', credits:1 },
+    { code:'24861', name:'무용전공실기(5)', credits:3 },
+    { code:'24866', name:'무용종합실기(5)', credits:2 },
+    { code:'30572', name:'세계음악과공연예술', credits:3 },
+    { code:'32350', name:'EURHYTHMICS FOR DANCERS', credits:2 },
+    { code:'32351', name:'무용교수학습방법', credits:2 },
+    { code:'39926', name:'ADVANCED POINT TECHNIQUE', credits:3 },
+    { code:'46470', name:'EUROPEAN HISTORICAL DANCE(1)', credits:3 },
+    { code:'46472', name:'CREATIVE SKILL AND IMPROVISATION', credits:2 },
+    { code:'12955', name:'무용예술론', credits:2 },
+    { code:'21958', name:'째즈(2)', credits:1 },
+    { code:'24856', name:'무용기능학', credits:2 },
+    { code:'24862', name:'무용전공실기(6)', credits:3 },
+    { code:'24867', name:'무용종합실기(6)', credits:2 },
+    { code:'25493', name:'캐릭터댄스', credits:1 },
+    { code:'32053', name:'무용학전공글쓰기', credits:3 },
+    { code:'39925', name:'BALLET HERITAGE REPERTORY(2)', credits:3 },
+    { code:'41651', name:'무용캡스톤디자인', credits:2 },
+    { code:'44462', name:'유아무용지도법', credits:2 },
+    { code:'46471', name:'EUROPEAN HISTORICAL DANCE(2)', credits:3 },
+    { code:'12938', name:'무용교육론', credits:2 },
+    { code:'21776', name:'작품해설', credits:2 },
+    { code:'22248', name:'한국전통무용', credits:1 },
+    { code:'24729', name:'댄스컴포지션(1)', credits:1 },
+    { code:'24863', name:'무용전공실기(7)', credits:3 },
+    { code:'24868', name:'무용종합실기(7)', credits:2 },
+    { code:'25261', name:'요가(1)', credits:1 },
+    { code:'20754', name:'공연실습', credits:3 },
+    { code:'21060', name:'무용비평론', credits:2 },
+    { code:'24730', name:'댄스컴포지션(2)', credits:1 },
+    { code:'24864', name:'무용전공실기(8)', credits:3 },
+    { code:'24869', name:'무용종합실기(8)', credits:2 },
+    { code:'25262', name:'요가(2)', credits:1 },
+    { code:'37734', name:'공연실습및창업', credits:2 },
+    { code:'22655', name:'졸업논문(무용)', credits:0 },
+    { code:'32319', name:'융합캡스톤디자인', credits:3 },
+    { code:'22474', name:'연기(1)', credits:2 },
+    { code:'22475', name:'연기(2)', credits:2 },
+    { code:'22480', name:'연기이론', credits:2 },
+    { code:'24870', name:'무용학프로젝트', credits:2 },
+    { code:'28223', name:'몸짓과표현', credits:2 },
+    { code:'34045', name:'무용창업현장실습(1)', credits:3 },
+    { code:'34134', name:'무용창업현장실습(2)', credits:3 },
+    { code:'34225', name:'무용학기창업현장실습', credits:15 },
+    { code:'35913', name:'무용현장실습(1)', credits:3 },
+    { code:'35991', name:'무용현장실습(2)', credits:3 },
+    { code:'36069', name:'무용현장실습(3)', credits:3 },
+    { code:'36148', name:'무용학기현장실습', credits:15 },
+    { code:'39308', name:'무용현장실습(4)', credits:5 }
+  ],
+  '태권도학과': [
+    { code:'17567', name:'체조', credits:1 },
+    { code:'31961', name:'대학생활과진로설계', credits:1 },
+    { code:'32912', name:'스포츠의과학적기초', credits:3 },
+    { code:'44418', name:'태권도체력육성(1)', credits:1 },
+    { code:'44603', name:'태권도기본동작', credits:1 },
+    { code:'44419', name:'태권도체력육성(2)', credits:1 },
+    { code:'44599', name:'유급자품새', credits:1 },
+    { code:'14617', name:'수영', credits:1 },
+    { code:'14689', name:'스포츠맛사지(1)', credits:1 },
+    { code:'22056', name:'태권도총론', credits:3 },
+    { code:'22059', name:'태권도품새론', credits:2 },
+    { code:'25515', name:'태권도실용영어(1)', credits:1 },
+    { code:'33877', name:'태권도응용호신술', credits:2 },
+    { code:'39672', name:'태권도와스포츠생리학', credits:3 },
+    { code:'39689', name:'태권도교육과정론', credits:3 },
+    { code:'42699', name:'4차산업과뉴노멀태권도', credits:3 },
+    { code:'44600', name:'유단자품새', credits:1 },
+    { code:'44606', name:'태권도실용중국어(1)', credits:2 },
+    { code:'22041', name:'태권도교육론', credits:3 },
+    { code:'22045', name:'태권도사', credits:3 },
+    { code:'25492', name:'카이로프락틱', credits:1 },
+    { code:'25516', name:'태권도실용영어(2)', credits:2 },
+    { code:'39666', name:'체육인문학', credits:3 },
+    { code:'39674', name:'휘트니스프로그램', credits:3 },
+    { code:'39675', name:'소도구운동실습', credits:1 },
+    { code:'39687', name:'익스트림트레킹', credits:2 },
+    { code:'44605', name:'태권도시범및격파', credits:1 },
+    { code:'44607', name:'태권도실용중국어(2)', credits:2 },
+    { code:'41968', name:'스포츠심리상담의이론과실제', credits:3 },
+    { code:'44594', name:'K-POP과태권도', credits:1 },
+    { code:'44613', name:'태권도와미디어', credits:2 },
+    { code:'44614', name:'태권도행정실무', credits:2 },
+    { code:'22039', name:'태권도겨루기론', credits:2 },
+    { code:'25091', name:'스포츠테이핑', credits:1 },
+    { code:'25520', name:'태권도철학', credits:3 },
+    { code:'33879', name:'올림픽태권도훈련방법의이해', credits:2 },
+    { code:'39665', name:'사회이론과스포츠', credits:3 },
+    { code:'39673', name:'기능적운동프로그램', credits:3 },
+    { code:'44602', name:'태권도겨루기', credits:1 },
+    { code:'46480', name:'실전태권도', credits:1 },
+    { code:'14700', name:'스포츠영양학', credits:3 },
+    { code:'20821', name:'구기', credits:1 },
+    { code:'22044', name:'태권도동작학', credits:3 },
+    { code:'27766', name:'스포츠철학', credits:3 },
+    { code:'32068', name:'태권도학전공글쓰기', credits:3 },
+    { code:'39676', name:'개인운동지도법', credits:3 },
+    { code:'39724', name:'태권도경기지도법', credits:3 },
+    { code:'44601', name:'창작및자유품새', credits:1 },
+    { code:'44596', name:'비교무술', credits:1 },
+    { code:'44597', name:'아동‧청소년태권도', credits:2 },
+    { code:'44598', name:'성인‧노인태권도', credits:2 },
+    { code:'44604', name:'태권도문화의이해', credits:3 },
+    { code:'44612', name:'태권도측정평가', credits:3 },
+    { code:'44633', name:'태권도빅데이터분석', credits:3 },
+    { code:'17827', name:'태권도시범론', credits:3 },
+    { code:'22055', name:'태권도지도프로그램', credits:3 },
+    { code:'30240', name:'스포츠현장정보와취업', credits:3 },
+    { code:'42700', name:'태권체조', credits:1 },
+    { code:'44595', name:'마샬아츠트리킹', credits:1 },
+    { code:'22040', name:'태권도경기규칙및심판법', credits:2 },
+    { code:'22060', name:'태권도현장실습', credits:2 },
+    { code:'33878', name:'태권도시범프로그램', credits:2 },
+    { code:'39667', name:'HUMANISTIC UNDERSTANDING OF TAEKWONDO', credits:2 },
+    { code:'44611', name:'태권도종합실기', credits:1 },
+    { code:'19744', name:'졸업논문(태권도)', credits:0 },
+    { code:'43357', name:'글로벌태권도지도실무', credits:15 },
+    { code:'44608', name:'태권도와K-문화콘텐츠', credits:2 },
+    { code:'44609', name:'태권도장경영관리', credits:2 },
+    { code:'44615', name:'태권도캡스톤디자인', credits:3 },
+    { code:'44635', name:'태권도공연기획', credits:2 },
+    { code:'39679', name:'MARTIAL ARTS EDUCATION THEORY AND APPLICATION', credits:3 },
+    { code:'39699', name:'국제스포츠이벤트오퍼레이션실무', credits:3 },
+    { code:'39704', name:'TAEKWONDO INTERNATIONAL PEACE AND CONFLICT RESOLUTION', credits:3 },
+    { code:'39707', name:'TAEKWONDO LITERATURE', credits:3 },
+    { code:'42698', name:'태권도취·창업인사이트', credits:3 },
+    { code:'37004', name:'태권도스타트업통합마케팅전략', credits:3 },
+    { code:'39701', name:'ITF TAEKWON-DO PATTERN THEORY', credits:3 },
+    { code:'39702', name:'코칭리더쉽과임파워먼트', credits:3 },
+    { code:'39709', name:'TAEKWONDO RANK EXAMINATION THEORY', credits:3 },
+    { code:'25522', name:'태권도학프로젝트', credits:2 },
+    { code:'34038', name:'태권도학창업현장실습(1)', credits:3 },
+    { code:'34127', name:'태권도학창업현장실습(2)', credits:3 },
+    { code:'34218', name:'태권도학학기창업현장실습', credits:15 },
+    { code:'35906', name:'태권도학현장실습(1)', credits:3 },
+    { code:'35984', name:'태권도학현장실습(2)', credits:3 },
+    { code:'36062', name:'태권도학현장실습(3)', credits:3 },
+    { code:'36141', name:'태권도학학기현장실습', credits:15 },
+    { code:'39300', name:'태권도학현장실습(4)', credits:5 }
+  ]
+};
+function primaryCatalogForDept(dept){ return PRIMARY_CATALOGS[dept] || []; }
+function primaryCourseInCatalog(dept, code){ return primaryCatalogForDept(dept).filter(function(c){ return c.code===code; })[0] || null; }
+function primaryCourses(student){ return (student && student.primaryCourses) || []; }
+function primaryCreditsTotal(student){
+  return primaryCourses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+}
+function applyCoreCourseCodes(codes){
+  CORE_COURSES = (codes||[]).map(courseInCatalog).filter(Boolean).map(function(c){ return { name:c.name, credits:c.credits }; });
+}
+async function loadCoreCourses(){
+  var cfg = await storeGet('cvg_config', 'app');
+  applyCoreCourseCodes(cfg && cfg.coreCourseCodes);
+}
+var DOUBLE_MAJOR_MIN = 33;      // 제7조① 복수전공: 33학점(핵심과목 포함) 이상
+var MINOR_MIN = 15;             // 제7조② 부전공: 15학점(핵심과목 포함) 이상 (단일/2개 이상 동일)
+var MINOR_PRIMARY_SINGLE = 54;  // 제7조② 부전공 1개 이수 시 제1전공 54학점 이상
+var MINOR_PRIMARY_MULTI = 42;   // 제7조② 융합 부전공 2개 이상 이수 시 제1전공 각 42학점 이상
+var APPLY_MIN_SEMESTERS = 3;    // 제5조 이수신청 자격: 인정학기 3학기 이상
+
+// 학생에게 이수형태를 먼저 고르라고 하지 않는다. 과목만 입력하면 세 경로
+// (복수전공/부전공 1개/부전공 2개 이상)를 전부 계산해서 비교해 준다.
+var TRACK_TYPES = {
+  double:      { label:'복수전공', convergenceMin: DOUBLE_MAJOR_MIN },
+  minor_single:{ label:'부전공(1개)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_SINGLE },
+  minor_multi: { label:'부전공(2개 이상 동시이수)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_MULTI }
+};
+var TRACK_ORDER = ['double', 'minor_single', 'minor_multi'];
+function courses(student){ return (student && student.courses) || []; }
+function normName(s){ return String(s==null?'':s).replace(/\s+/g,''); }
+function totalCredits(student){
+  return courses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
+}
+function coreStatus(student){
+  var have = courses(student).map(function(c){ return normName(c.name); });
+  return CORE_COURSES.map(function(cc){
+    return { name:cc.name, credits:cc.credits, done: have.indexOf(normName(cc.name)) >= 0 };
+  });
+}
+function coreDoneCount(student){ return coreStatus(student).filter(function(x){ return x.done; }).length; }
+function coreMet(student){ return coreDoneCount(student) >= CORE_COURSES.length; }
+function missingCoreCredits(student){
+  return coreStatus(student).filter(function(x){ return !x.done; }).reduce(function(s,x){ return s+num(x.credits); }, 0);
+}
+// 학칙 제44조①: 복수전공(융합전공 포함)으로 이수하는 경우, 제1전공 학과의 졸업논문이
+// 필수과목이면 반드시 이수해야 한다. 부전공에는 적용되지 않는다.
+function thesisApplies(student, trackKey){ return trackKey==='double' && !!student.thesisRequired; }
+function thesisMetFor(student, trackKey){ return !thesisApplies(student, trackKey) || !!student.thesisDone; }
+// 경로 하나(복수전공/부전공 1개/부전공 2개 이상)에 대한 진행 상황을 계산한다.
+function trackAnalysis(student, key){
+  var info = TRACK_TYPES[key];
+  var cvgCur = totalCredits(student), cvgMin = info.convergenceMin;
+  var cvgMet = coreMet(student) && cvgCur >= cvgMin;
+  // 남은 학점 = 아직 안 채운 핵심과목 학점(반드시 채워야 함) + 그 외 부족분
+  var missCore = missingCoreCredits(student);
+  var cvgGap = cvgMet ? 0 : (missCore + Math.max(0, cvgMin - cvgCur - missCore));
+  var pMin = info.primaryMin || null;
+  var pCur = pMin ? primaryCreditsTotal(student) : null;
+  var pMet = pMin ? pCur >= pMin : true;
+  var pGap = pMin ? Math.max(0, pMin - pCur) : 0;
+  var tMet = thesisMetFor(student, key);
+  return {
+    key: key, label: info.label,
+    cvgCur: cvgCur, cvgMin: cvgMin, cvgMet: cvgMet, cvgGap: cvgGap,
+    primaryMin: pMin, primaryCur: pCur, primaryMet: pMet, primaryGap: pGap,
+    thesisApplies: thesisApplies(student, key), thesisMet: tMet,
+    met: cvgMet && pMet && tMet
+  };
+}
+function trackAnalyses(student){ return TRACK_ORDER.map(function(k){ return trackAnalysis(student, k); }); }
+// 지금 상태에서 가장 빨리 채울 수 있는 경로를 고른다: 이미 충족한 경로가 있으면 그중
+// 첫 번째, 없으면 융합전공 학점 부족분이 가장 적은 경로.
+function bestTrack(student){
+  var list = trackAnalyses(student);
+  var met = list.filter(function(a){ return a.met; });
+  if(met.length) return met[0];
+  return list.slice().sort(function(a,b){ return a.cvgGap - b.cvgGap; })[0];
+}
+function anyTrackMet(student){ return trackAnalyses(student).some(function(a){ return a.met; }); }
+function eligibleToApply(student){ return num(student.recognizedSemesters) >= APPLY_MIN_SEMESTERS; }
+function pct(cur, min){ return min>0 ? Math.min(100, Math.round(cur/min*100)) : 100; }
+
+/* ============ 마이크로디그리 (첨단분야 혁신융합대학사업 학사 운영 내규 제5조, 별표1·별표2) ============
+   컨소시엄 대학·과정이 바뀌면 이 목록을 고쳐주세요. min은 각 과정의 최소 이수학점입니다. */
+var MICRODEGREE_PROGRAMS = [
+  { key:'auto_basic', group:'미래자동차', name:'미래자동차공학전공 (초급)', min:9, note:'초·중·고급 지정 과목 중 초급 6학점 포함 9학점' },
+  { key:'auto_mid',   group:'미래자동차', name:'미래자동차공학전공 (중급)', min:9, note:'중급 이상 6학점 포함 9학점' },
+  { key:'auto_adv',   group:'미래자동차', name:'미래자동차공학전공 (고급)', min:9, note:'고급 과목 6학점 포함 9학점' },
+  { key:'eco_vehicle',group:'미래자동차', name:'친환경자동차 (중급)', min:9 },
+  { key:'uam',        group:'미래자동차', name:'UAM (초급)', min:9 },
+  { key:'mobility_vision', group:'미래자동차', name:'모빌리티비전 (중급)', min:9 },
+  { key:'xr_fundamental', group:'실감미디어', name:'실감미디어 펀더멘털 (초급)', min:12 },
+  { key:'metaverse_content_design', group:'실감미디어', name:'메타버스콘텐츠디자인 (중급)', min:9 },
+  { key:'xr_planning', group:'실감미디어', name:'실감미디어 기획 (중급)', min:9 },
+  { key:'xr_tech', group:'실감미디어', name:'실감미디어 기술 (중급)', min:9 },
+  { key:'game_graphic', group:'실감미디어', name:'게임그래픽디자인 (중급)', min:9 },
+  { key:'game_eng', group:'실감미디어', name:'게임공학 (중급)', min:9 },
+  { key:'game_planning', group:'실감미디어', name:'게임기획 (중급)', min:9 },
+  { key:'xr_design', group:'실감미디어', name:'실감미디어디자인 (중급)', min:9 },
+  { key:'xr_content_production', group:'실감미디어', name:'실감미디어 콘텐츠제작 (중급)', min:9 },
+  { key:'xr_business', group:'실감미디어', name:'실감미디어 비즈니스 (중급)', min:9 },
+  { key:'xr_business_practice', group:'실감미디어', name:'실감미디어 비즈니스실전 (중급)', min:9 },
+  { key:'xr_startup', group:'실감미디어', name:'XR창업실전 (중급)', min:9 },
+  { key:'global_game', group:'실감미디어', name:'글로벌실감게임 (중급)', min:9 },
+  { key:'xr_global_innovator', group:'실감미디어', name:'실감미디어글로벌이노베이터 (고급)', min:9 },
+  { key:'social_livinglab', group:'실감미디어', name:'소셜리빙랩 실감미디어 (중급)', min:9 },
+  { key:'local_culture_xr', group:'실감미디어', name:'로컬문화 실감미디어 (중급)', min:9 },
+  { key:'kculture_xr', group:'실감미디어', name:'K-Culture 실감콘텐츠 개발실습 (중급)', min:9 },
+  { key:'xr_content_design2', group:'실감미디어', name:'실감미디어 콘텐츠디자인 (중급)', min:9 },
+  { key:'xr_content_design3', group:'실감미디어', name:'XR콘텐츠디자인 (중급)', min:9 },
+  { key:'haptic_tech', group:'실감미디어', name:'체감기술 (고급)', min:12 },
+  { key:'xr_io_tech', group:'실감미디어', name:'XR입출력기술 (고급)', min:12 },
+  { key:'xr_content_design_tech', group:'실감미디어', name:'실감미디어콘텐츠 디자인테크 (고급)', min:9 },
+  { key:'strategic_comm_xr', group:'실감미디어', name:'전략커뮤니케이션 실감미디어 (고급)', min:9 },
+  { key:'xr_video_production', group:'실감미디어', name:'실감영상제작 (중급)', min:9 },
+  { key:'virtual_3d_character', group:'실감미디어', name:'버추얼3D캐릭터디자인 (중급)', min:9 },
+  { key:'virtual_graphic_design', group:'실감미디어', name:'버추얼그래픽디자인 (중급)', min:9 },
+  { key:'xr_industry_academy', group:'실감미디어', name:'실감미디어 지산학협력 (중급)', min:9 }
+];
+function microdegreeInfo(key){ return MICRODEGREE_PROGRAMS.filter(function(p){ return p.key===key; })[0] || null; }
+function microdegrees(student){ return (student && student.microdegrees) || []; }
+function microdegreeStatus(student){
+  return microdegrees(student).map(function(m){
+    var info = microdegreeInfo(m.key);
+    var cur = num(m.credits);
+    return { id:m.id, key:m.key, name: info?info.name:m.key, min: info?info.min:0, note: info?info.note:'',
+      credits: cur, met: info ? cur >= info.min : false };
+  });
+}
+
+/* ============ state ============ */
+var root = document.getElementById('app');
+var state = {
+  mode: 'app',                // 'app' | 'guide'
+  guideRole: 'student',       // 'student' | 'admin'
+  role: 'student',           // 'student' | 'admin'
+  view: 'login',             // login | register | register-admin | home | course-form | profile | list | detail | settings
+  studentSession: null, adminSession: null,
+  formError: '', formOk: '',
+  editingCourseId: null,
+  editingMicrodegreeId: null,
+  editingPrimaryCourseId: null,
+  detailId: null,
+  q: '', filter: 'all',
+  cache: { me:null, roster:[] }
+};
+function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
+function setSession(role, val){
+  try{
+    if(val) localStorage.setItem('cvg_session_'+role, JSON.stringify(val));
+    else localStorage.removeItem('cvg_session_'+role);
+  }catch(e){}
+  if(role==='student') state.studentSession = val; else state.adminSession = val;
+}
+function loadSessions(){
+  ['student','admin'].forEach(function(role){
+    try{
+      var raw = localStorage.getItem('cvg_session_'+role);
+      if(raw){ if(role==='student') state.studentSession = JSON.parse(raw); else state.adminSession = JSON.parse(raw); }
+    }catch(e){}
+  });
+}
+
+function render(){ root.innerHTML = state.mode==='guide' ? renderGuide() : renderApp(); }
+function errMsg(e){ return e && e.message ? e.message : String(e); }
+function failWith(e){ state.formError = errMsg(e); render(); }
+
+/* ============ top-level layout ============ */
+function renderApp(){
+  var sess = session();
+  var wide = sess && state.role==='admin' && state.view!=='profile';
+  var body;
+  if(!sess){
+    if(state.view==='register') body = screenRegisterStudent();
+    else if(state.view==='register-admin') body = screenRegisterAdmin();
+    else body = screenLogin();
+  } else if(state.role==='student'){
+    body = renderStudent();
+  } else {
+    body = renderAdmin();
+  }
+  return (
+    '<div class="page'+(wide?' wide':'')+'">' +
+      '<div class="topbar">' +
+        '<div class="brand">' +
+          '<div class="brand-mark">🎓</div>' +
+          '<div class="brand-text"><strong>융합전공 이수 현황판</strong><span>'+esc(TRACK_NAME)+'</span></div>' +
+        '</div>' +
+        '<div class="topbar-actions">' +
+          '<button class="guide-link" data-action="open-guide">📘 이용안내</button>' +
+          (sess ? '<button class="ghost-btn" data-action="logout">로그아웃</button>' : '') +
+        '</div>' +
+      '</div>' +
+      (!sess ? (
+        '<div class="roletabs">' +
+          '<button class="roletab '+(state.role==='student'?'active':'')+'" data-action="set-role" data-role="student">학생</button>' +
+          '<button class="roletab '+(state.role==='admin'?'active':'')+'" data-action="set-role" data-role="admin">관리자</button>' +
+        '</div>'
+      ) : '') +
+      body +
+      '<div class="footer-note">v'+esc(APP_VERSION)+(apiMode?'':' · 서버 미연결(기기 저장)')+'</div>' +
+    '</div>'
+  );
+}
+
+/* ============ 로그인 / 등록 ============ */
+function screenLogin(){
+  var isStudent = state.role==='student';
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(isStudent?'학생 로그인':'관리자 로그인')+'</div>' +
+      '<h2 class="screen-title">'+(isStudent?'내 이수 현황 확인':'전체 학생 관리')+'</h2>' +
+      '<p class="screen-sub">'+(isStudent?'학번과 비밀번호로 들어와 이수 현황을 확인하세요.':'관리자 번호와 비밀번호로 들어와 학생들을 관리하세요.')+'</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-login" class="stack">' +
+        '<div class="field"><label>'+(isStudent?'학번':'관리자 번호')+'</label><input id="loginId" required autocomplete="username"></div>' +
+        '<div class="field"><label>비밀번호</label><input id="loginPw" type="password" required autocomplete="current-password"></div>' +
+        '<button class="btn btn-primary" type="submit">로그인</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="'+(isStudent?'goto-register':'goto-register-admin')+'">처음이신가요? 비밀번호 설정하기</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenRegisterStudent(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">학생 등록</div>' +
+      '<h2 class="screen-title">비밀번호 설정하기</h2>' +
+      '<p class="screen-sub">학번으로 처음 접속하는 경우 비밀번호를 만들어 주세요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-register" class="stack">' +
+        '<div class="field"><label>학번</label><input id="regId" required></div>' +
+        '<div class="field"><label>이름</label><input id="regName" required></div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학과(제1전공)</label><select id="regDept" required>' +
+            '<option value="">선택해 주세요</option>' +
+            PARTICIPATING_DEPTS.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('') +
+          '</select></div>' +
+          '<div class="field"><label>입학년도(선택)</label><input id="regYear" inputmode="numeric" placeholder="예: 2023"></div>' +
+        '</div>' +
+        '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password"></div>' +
+        '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="goto-login">이미 등록했어요, 로그인</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenRegisterAdmin(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">관리자 등록</div>' +
+      '<h2 class="screen-title">관리자 비밀번호 설정하기</h2>' +
+      '<p class="screen-sub">가장 처음 등록하는 관리자는 등록코드 없이 만들 수 있어요. 이후부터는 기존 관리자에게 등록코드를 받아야 해요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-register-admin" class="stack">' +
+        '<div class="field"><label>관리자 번호</label><input id="raId" required></div>' +
+        '<div class="field"><label>이름</label><input id="raName" required></div>' +
+        '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password"></div>' +
+        '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode"></div>' +
+        '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
+      '</form>' +
+      '<div class="row" style="justify-content:center; margin-top:14px;">' +
+        '<button class="linklike" data-action="goto-login">이미 등록했어요, 로그인</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+async function doLogin(role, id, pw){
+  var col = role==='student' ? 'cvg_students' : 'cvg_admins';
+  var doc = await storeGet(col, id);
+  var label = role==='student' ? '학번' : '관리자 번호';
+  if(!doc){ state.formError = '등록되지 않은 '+label+'이에요. 처음이시라면 비밀번호 설정하기를 눌러주세요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  if(hash !== doc.passwordHash){ state.formError = label+' 또는 비밀번호가 올바르지 않아요.'; render(); return; }
+  state.formError=''; state.formOk='';
+  if(role==='student'){
+    setSession('student', { id:id, name:doc.name });
+    state.cache.me = doc;
+    state.view='home';
+  } else {
+    setSession('admin', { id:id, name:doc.name });
+    state.view='list';
+    await loadRoster();
+  }
+  render();
+}
+async function doRegisterStudent(id, name, dept, year, pw, pw2){
+  if(!id || !name){ state.formError='학번과 이름을 입력해 주세요.'; render(); return; }
+  if(!dept){ state.formError='학과(제1전공)를 선택해 주세요.'; render(); return; }
+  if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  var existing = await storeGet('cvg_students', id);
+  if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
+    recognizedSemesters:'', primaryCourses:[],
+    microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
+  await storeSet('cvg_students', id, doc);
+  setSession('student', { id:id, name:name });
+  state.cache.me = Object.assign({id:id}, doc);
+  state.formError=''; state.view='home';
+  render();
+}
+async function doRegisterAdmin(id, name, pw, pw2, code){
+  if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
+  if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  var admins = await storeAll('cvg_admins');
+  if(admins.length>0){
+    var cfg = await storeGet('cvg_config','app');
+    var required = cfg && cfg.adminCode ? cfg.adminCode : '';
+    if(!required){ state.formError='관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.'; render(); return; }
+    if(code !== required){ state.formError='관리자 등록코드가 올바르지 않아요.'; render(); return; }
+  }
+  var existing = await storeGet('cvg_admins', id);
+  if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
+  var hash = await sha256Hex(pw);
+  await storeSet('cvg_admins', id, { name:name, passwordHash:hash, createdAt:nowIso() });
+  setSession('admin', { id:id, name:name });
+  state.formError=''; state.view='list';
+  await loadRoster();
+  render();
+}
+
+/* ============ 학생 화면 ============ */
+function renderStudent(){
+  if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
+  if(state.view==='microdegree-form') return screenMicrodegreeForm();
+  if(state.view==='info-form') return screenInfoForm();
+  if(state.view==='profile') return screenProfile();
+  return screenStudentHome();
+}
+async function loadMe(){
+  state.cache.me = await storeGet('cvg_students', state.studentSession.id);
+}
+function progressBlock(student){
+  var analyses = trackAnalyses(student);
+  var met = anyTrackMet(student);
+  var best = bestTrack(student);
+  var core = coreStatus(student);
+  var coreOkCount = core.filter(function(x){ return x.done; }).length;
+  var html = '';
+  html += '<div class="statusband '+(met?'met':'unmet')+'">' +
+    '<div class="mark">'+(met?'✓':'!')+'</div>' +
+    '<div><b>'+(met?esc(best.label)+'으로 이수 조건 충족':'아직 어떤 경로도 미충족')+'</b>' +
+    '<span>'+(met?'':'지금 페이스면 <b style="color:#fff;">'+esc(best.label)+'</b>이 가장 빨리 채워져요 (앞으로 '+best.cvgGap+'학점) · ')+
+      '인정학기 '+(eligibleToApply(student)?'신청 가능':'신청 자격 미충족(3학기 이상 필요)')+'</span></div>' +
+  '</div>';
+  if(!met){
+    html += '<div class="notice-box">제1전공 졸업요건은 충족했지만 이 융합전공 요건을 정해진 기간까지 못 채웠다면, ' +
+      '학사학위취득 유예를 신청할 수 있어요(최대 2회, 학칙 제69조의1). 신청하지 않으면 제1전공 학위만 수여돼요(학칙 제69조).</div>';
+  }
+  if(core.length){
+    html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
+      '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
+      '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
+        core.map(function(c){ return (c.done?'✓ ':'· ') + esc(c.name); }).join(' &nbsp; ') +
+      '</div>' +
+    '</div>';
+  }
+  html += '<div class="row-between" style="margin-top:16px; margin-bottom:2px;"><b style="font-size:13.5px;">경로별 비교</b></div>';
+  analyses.forEach(function(a){
+    var isBest = !met && a.key===best.key;
+    html += '<div class="catcard '+(a.met?'met':'')+'" style="'+(isBest?'border-color:var(--primary);border-width:1.5px;':'')+'">' +
+      '<div class="cthead"><b>'+esc(a.label)+(isBest?' <span class="catpill" style="margin-left:4px;">가장 가까움</span>':'')+'</b>' +
+      '<span>'+(a.met?'충족':'융합전공 '+a.cvgGap+'학점 남음')+'</span></div>' +
+      '<div class="cm" style="margin-bottom:6px;">융합전공 학점 · '+a.cvgCur+' / '+a.cvgMin+'학점</div>' +
+      '<div class="pbar"><i style="width:'+pct(a.cvgCur,a.cvgMin)+'%"></i></div>' +
+      (a.primaryMin ? (
+        '<div class="cm" style="margin:8px 0 6px;">제1전공 학점 · '+a.primaryCur+' / '+a.primaryMin+'학점'+(a.primaryMet?' (충족)':'')+'</div>' +
+        '<div class="pbar"><i style="width:'+pct(a.primaryCur,a.primaryMin)+'%"></i></div>'
+      ) : '') +
+      (a.thesisApplies ? '<div class="cm" style="margin-top:8px;">졸업논문(제1전공 필수과목, 학칙 제44조①): '+(a.thesisMet?'이수 완료':'미이수')+'</div>' : '') +
+    '</div>';
+  });
+  return html;
+}
+function microdegreeListBlock(student, editable){
+  var list = microdegreeStatus(student);
+  if(!list.length) return '<div class="empty-state">아직 등록된 마이크로디그리가 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(m){
+    return '<div class="courserow" style="align-items:flex-start;">' +
+      '<div class="ci">' +
+        '<div class="cn">'+esc(m.name)+(m.met?' <span class="catpill" style="background:var(--success-bg); color:var(--success);">충족</span>':'')+'</div>' +
+        '<div class="cm">'+m.credits+' / '+m.min+'학점'+(m.note?' · '+esc(m.note):'')+'</div>' +
+        '<div class="pbar" style="margin-top:6px; max-width:220px;"><i style="width:'+pct(m.credits,m.min)+'%"></i></div>' +
+      '</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-microdegree" data-id="'+esc(m.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-microdegree" data-id="'+esc(m.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
+function courseListBlock(student, editable){
+  var list = courses(student);
+  var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
+  if(!list.length) return '<div class="empty-state">아직 등록된 과목이 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(c){
+    var isCore = coreNames.indexOf(normName(c.name)) >= 0;
+    return '<div class="courserow">' +
+      '<div class="ci">'+(isCore?'<span class="catpill">핵심과목</span>':'')+'<div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
+      '<div class="cc">'+num(c.credits)+'학점</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-course" data-id="'+esc(c.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-course" data-id="'+esc(c.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
+function primaryCourseListBlock(student, editable){
+  var list = primaryCourses(student);
+  if(!list.length) return '<div class="empty-state">아직 등록된 제1전공 과목이 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(c){
+    return '<div class="courserow">' +
+      '<div class="ci"><div class="cn">'+esc(c.name)+'</div>' +
+      '<div class="cm">'+esc(c.semester||'')+'</div></div>' +
+      '<div class="cc">'+num(c.credits)+'학점</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-primary-course" data-id="'+esc(c.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-primary-course" data-id="'+esc(c.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
+}
+function screenStudentHome(){
+  var s = state.cache.me;
+  if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">학생</div>' +
+      '<h2 class="screen-title">'+esc(s.name)+'님의 이수 현황</h2>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+' · 참여학과: '+PARTICIPATING_DEPTS.map(esc).join(', ')+'</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      progressBlock(s) +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+        '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
+      courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
+        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
+      primaryCourseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
+        '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
+      microdegreeListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
+        '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
+      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+primaryCreditsTotal(s)+'학점' +
+      '</div>' +
+      '<div class="row" style="margin-top:18px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenCourseForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  var editing = state.editingCourseId ? courses(s).filter(function(c){ return c.id===state.editingCourseId; })[0] : null;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
+      '<p class="screen-sub">교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' +
+        (CORE_COURSES.length ? ' 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '') +
+      '</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-course" class="stack">' +
+        '<div class="field"><label>과목</label><select id="cCourse">' +
+          COURSE_CATALOG.map(function(c){
+            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+          }).join('') +
+          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
+        '</select></div>' +
+        '<div class="field" id="cCustomWrap" style="'+((!editing||editing.courseCode)?'display:none;':'')+'">' +
+          '<label>과목명 직접 입력</label><input id="cName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
+        '</div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학점</label><input id="cCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(COURSE_CATALOG[0]?COURSE_CATALOG[0].credits:3))+'"></div>' +
+          '<div class="field"><label>이수학기</label><input id="cSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
+        '</div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenPrimaryCourseForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  var editing = state.editingPrimaryCourseId ? primaryCourses(s).filter(function(c){ return c.id===state.editingPrimaryCourseId; })[0] : null;
+  var dept = s.dept || '';
+  var catalog = primaryCatalogForDept(dept);
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'제1전공 과목 수정':'제1전공 과목 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'제1전공 과목 정보 수정':'제1전공 이수 과목 추가')+'</h2>' +
+      '<p class="screen-sub">' +
+        (catalog.length ? esc(dept)+' 교육과정표에 있는 과목은 목록에서 고르면 학점이 자동으로 채워져요.' : '학과가 지정되지 않아 목록을 보여드릴 수 없어요. 직접 입력해 주세요.') +
+      '</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-primary-course" class="stack">' +
+        '<div class="field"><label>과목</label><select id="pCourse">' +
+          catalog.map(function(c){
+            return '<option value="'+esc(c.code)+'" '+((editing&&editing.courseCode===c.code)?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+          }).join('') +
+          '<option value="__custom__" '+((editing&&!editing.courseCode)?'selected':'')+'>목록에 없는 과목 (직접 입력)</option>' +
+        '</select></div>' +
+        '<div class="field" id="pCustomWrap" style="'+((catalog.length && (!editing||editing.courseCode))?'display:none;':'')+'">' +
+          '<label>과목명 직접 입력</label><input id="pName" value="'+((editing&&!editing.courseCode)?esc(editing.name):'')+'">' +
+        '</div>' +
+        '<div class="grid2">' +
+          '<div class="field"><label>학점</label><input id="pCredits" type="number" min="0" step="0.5" required value="'+(editing?num(editing.credits):(catalog[0]?catalog[0].credits:3))+'"></div>' +
+          '<div class="field"><label>이수학기</label><input id="pSemester" placeholder="예: 2024-2" value="'+(editing?esc(editing.semester||''):'')+'"></div>' +
+        '</div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function microdegreeGroupedOptions(pickedKey){
+  var groups = {}; var order = [];
+  MICRODEGREE_PROGRAMS.forEach(function(p){
+    var g = p.group || '';
+    if(order.indexOf(g)<0){ order.push(g); groups[g]=[]; }
+    groups[g].push(p);
+  });
+  return order.map(function(g){
+    var opts = groups[g].map(function(p){
+      return '<option value="'+esc(p.key)+'" '+(pickedKey===p.key?'selected':'')+'>'+esc(p.name)+'</option>';
+    }).join('');
+    return g ? '<optgroup label="'+esc(g)+'">'+opts+'</optgroup>' : opts;
+  }).join('');
+}
+function screenMicrodegreeForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  var editing = state.editingMicrodegreeId ? microdegrees(s).filter(function(m){ return m.id===state.editingMicrodegreeId; })[0] : null;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'마이크로디그리 수정':'마이크로디그리 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'마이크로디그리 정보 수정':'마이크로디그리 추가')+'</h2>' +
+      '<p class="screen-sub">준비 중인 과정을 골라 지금까지 이수한 학점을 입력하면 과정별 기준 학점과 비교해서 보여드려요. 여러 과정을 동시에 추가할 수 있어요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-microdegree" class="stack">' +
+        '<div class="field"><label>과정</label><select id="mdProgram">' +
+          microdegreeGroupedOptions(editing?editing.key:MICRODEGREE_PROGRAMS[0].key) +
+        '</select></div>' +
+        '<div class="field"><label>이수학점</label><input id="mdCredits" type="number" min="0" value="'+(editing?num(editing.credits):0)+'"></div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenInfoForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">이수정보</div>' +
+      '<h2 class="screen-title">학기·제1전공 정보 수정</h2>' +
+      '<p class="screen-sub">이수형태는 따로 고르지 않아도 돼요. 과목을 입력하면 복수전공·부전공 경로를 자동으로 비교해서 보여드려요. 제1전공 이수학점은 홈 화면의 "제1전공 과목"에서 과목을 추가하면 자동으로 합산돼요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-info" class="stack">' +
+        '<div class="field"><label>인정학기 (신청 자격: 3학기 이상)</label><input id="iSem" type="number" min="0" value="'+num(s.recognizedSemesters)+'"></div>' +
+        '<div class="field"><label>졸업논문 (복수전공일 때만 적용, 학칙 제44조①)</label>' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; margin-bottom:4px;">' +
+            '<input type="checkbox" id="iThesisReq" '+(s.thesisRequired?'checked':'')+'> 제1전공 학과의 졸업논문이 필수과목이다' +
+          '</label>' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400;">' +
+            '<input type="checkbox" id="iThesisDone" '+(s.thesisDone?'checked':'')+'> 졸업논문을 이수했다' +
+          '</label>' +
+        '</div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+function screenProfile(){
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">계정</div>' +
+      '<h2 class="screen-title">비밀번호 변경</h2>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      '<form id="form-changepw" class="stack">' +
+        '<div class="field"><label>현재 비밀번호</label><input id="pwOld" type="password" required></div>' +
+        '<div class="field"><label>새 비밀번호</label><input id="pwNew" type="password" required></div>' +
+        '<div class="field"><label>새 비밀번호 확인</label><input id="pwNew2" type="password" required></div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(state.role==='admin'?'goto-list':'goto-home')+'" style="width:auto; flex:1;">뒤로</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">변경하기</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
+
+async function saveCourse(form){
+  var courseCode = form.querySelector('#cCourse').value;
+  var catalogCourse = courseCode==='__custom__' ? null : courseInCatalog(courseCode);
+  var name = catalogCourse ? catalogCourse.name : form.querySelector('#cName').value.trim();
+  var credits = form.querySelector('#cCredits').value;
+  var semester = form.querySelector('#cSemester').value.trim();
+  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = courses(student).slice();
+  var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
+
+  if(state.editingCourseId){
+    list = list.map(function(c){
+      return c.id===state.editingCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave } : c;
+    });
+  } else {
+    list.push({ id:uid(), name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave });
+  }
+  await storeUpdate(col, id, { courses:list });
+  student.courses = list;
+  state.editingCourseId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deleteCourse(courseId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = courses(student).filter(function(c){ return c.id!==courseId; });
+  await storeUpdate(col, id, { courses:list });
+  student.courses = list;
+  render();
+}
+async function saveMicrodegree(form){
+  var key = form.querySelector('#mdProgram').value;
+  var credits = num(form.querySelector('#mdCredits').value);
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = microdegrees(student).slice();
+
+  if(state.editingMicrodegreeId){
+    list = list.map(function(m){
+      return m.id===state.editingMicrodegreeId ? { id:m.id, key:key, credits:credits } : m;
+    });
+  } else {
+    list.push({ id:uid(), key:key, credits:credits });
+  }
+  await storeUpdate(col, id, { microdegrees:list });
+  student.microdegrees = list;
+  state.editingMicrodegreeId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deleteMicrodegree(mdId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = microdegrees(student).filter(function(m){ return m.id!==mdId; });
+  await storeUpdate(col, id, { microdegrees:list });
+  student.microdegrees = list;
+  render();
+}
+async function saveInfo(form){
+  var recognizedSemesters = num(form.querySelector('#iSem').value);
+  var thesisRequired = form.querySelector('#iThesisReq').checked;
+  var thesisDone = form.querySelector('#iThesisDone').checked;
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var patch = { recognizedSemesters:recognizedSemesters,
+    thesisRequired:thesisRequired, thesisDone:thesisDone };
+  await storeUpdate(col, id, patch);
+  Object.assign(student, patch);
+  state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function savePrimaryCourse(form){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var dept = student.dept || '';
+  var courseCode = form.querySelector('#pCourse').value;
+  var catalogCourse = courseCode==='__custom__' ? null : primaryCourseInCatalog(dept, courseCode);
+  var name = catalogCourse ? catalogCourse.name : form.querySelector('#pName').value.trim();
+  var credits = form.querySelector('#pCredits').value;
+  var semester = form.querySelector('#pSemester').value.trim();
+  if(!name){ state.formError='과목명을 입력해 주세요.'; render(); return; }
+
+  var list = primaryCourses(student).slice();
+  var courseCodeToSave = catalogCourse ? catalogCourse.code : null;
+
+  if(state.editingPrimaryCourseId){
+    list = list.map(function(c){
+      return c.id===state.editingPrimaryCourseId ? { id:c.id, name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave } : c;
+    });
+  } else {
+    list.push({ id:uid(), name:name, credits:num(credits), semester:semester, courseCode:courseCodeToSave });
+  }
+  await storeUpdate(col, id, { primaryCourses:list });
+  student.primaryCourses = list;
+  state.editingPrimaryCourseId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deletePrimaryCourse(courseId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = primaryCourses(student).filter(function(c){ return c.id!==courseId; });
+  await storeUpdate(col, id, { primaryCourses:list });
+  student.primaryCourses = list;
+  render();
+}
+async function changePassword(oldPw, newPw, newPw2){
+  if(newPw.length<6){ state.formError='새 비밀번호는 6자 이상이어야 해요.'; render(); return; }
+  if(newPw!==newPw2){ state.formError='새 비밀번호가 서로 달라요.'; render(); return; }
+  var isAdmin = state.role==='admin';
+  var col = isAdmin ? 'cvg_admins' : 'cvg_students';
+  var id = isAdmin ? state.adminSession.id : state.studentSession.id;
+  var doc = await storeGet(col, id);
+  var oldHash = await sha256Hex(oldPw);
+  if(oldHash !== doc.passwordHash){ state.formError='현재 비밀번호가 올바르지 않아요.'; render(); return; }
+  var newHash = await sha256Hex(newPw);
+  await storeUpdate(col, id, { passwordHash:newHash });
+  state.formError=''; state.formOk='비밀번호를 바꿨어요.';
+  state.view = isAdmin ? 'list' : 'home';
+  render();
+}
+
+/* ============ 관리자 화면 ============ */
+async function loadRoster(){
+  state.cache.roster = await storeAll('cvg_students');
+}
+function renderAdmin(){
+  if(state.view==='detail') return screenAdminDetail();
+  if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='primary-course-form') return screenPrimaryCourseForm();
+  if(state.view==='microdegree-form') return screenMicrodegreeForm();
+  if(state.view==='info-form') return screenInfoForm();
+  if(state.view==='profile') return screenProfile();
+  if(state.view==='settings') return screenAdminSettings();
+  return screenAdminList();
+}
+function screenAdminList(){
+  var roster = state.cache.roster || [];
+  var total = roster.length;
+  var metCount = roster.filter(anyTrackMet).length;
+  var q = state.q.trim();
+  var rows = roster.filter(function(s){
+    if(q && !(String(s.name||'').indexOf(q)>=0 || String(s.id||'').indexOf(q)>=0)) return false;
+    var m = anyTrackMet(s);
+    if(state.filter==='met' && !m) return false;
+    if(state.filter==='unmet' && m) return false;
+    return true;
+  });
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">관리자</div>' +
+      '<h2 class="screen-title">전체 학생 이수 현황</h2>' +
+      '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
+      '<div class="summary">' +
+        '<div class="tile"><div class="num">'+total+'</div><div class="lbl">전체 학생</div></div>' +
+        '<div class="tile"><div class="num">'+metCount+'</div><div class="lbl">요건 충족</div></div>' +
+        '<div class="tile t-danger"><div class="num">'+(total-metCount)+'</div><div class="lbl">미충족</div></div>' +
+      '</div>' +
+      '<div class="controls">' +
+        '<input placeholder="이름 또는 학번 검색" value="'+esc(state.q)+'" data-bind="q">' +
+        '<select data-bind="filter">' +
+          '<option value="all" '+(state.filter==='all'?'selected':'')+'>전체</option>' +
+          '<option value="met" '+(state.filter==='met'?'selected':'')+'>충족</option>' +
+          '<option value="unmet" '+(state.filter==='unmet'?'selected':'')+'>미충족</option>' +
+        '</select>' +
+      '</div>' +
+      (rows.length ? '<div class="roster">' + rows.map(function(s){
+        var m = anyTrackMet(s);
+        var b = bestTrack(s);
+        return '<button class="rcard '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
+          '<div class="nm">'+esc(s.name)+'</div>' +
+          '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
+          '<div class="mini"><span class="mono">'+totalCredits(s)+'학점'+(m?'':' · '+esc(b.label)+' 남은 '+b.cvgGap+'학점')+'</span>' +
+            '<span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
+        '</button>';
+      }).join('') + '</div>' : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
+      '<div class="row" style="margin-top:16px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
+        '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function screenAdminDetail(){
+  var s = state.cache.detail;
+  if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
+  var m = anyTrackMet(s);
+  var b = bestTrack(s);
+  return (
+    '<div class="phone">' +
+      '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
+      '<div class="eyebrow">학생 상세</div>' +
+      '<h2 class="screen-title">'+esc(s.name)+' <span class="badge '+(m?'met':'unmet')+'" style="margin-left:6px;">'+(m?esc(b.label)+' 충족':'미충족')+'</span></h2>' +
+      '<p class="screen-sub">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      progressBlock(s) +
+      '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
+        '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
+      courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>제1전공 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
+        '<button class="linklike" data-action="goto-primary-course-form">+ 제1전공 과목 추가</button></div>' +
+      primaryCourseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
+        '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
+      microdegreeListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
+        '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
+      '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+primaryCreditsTotal(s)+'학점' +
+      '</div>' +
+      '<div class="row" style="margin-top:18px; gap:8px;">' +
+        '<button class="btn btn-ghost" data-action="reset-password" style="width:auto; flex:1;">비밀번호 초기화</button>' +
+        '<button class="btn btn-danger" data-action="delete-student" style="width:auto; flex:1;">학생 삭제</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function courseCodeByName(name){
+  var c = COURSE_CATALOG.filter(function(x){ return x.name===name; })[0];
+  return c ? c.code : '';
+}
+function screenAdminSettings(){
+  var code = state.cache.adminCode || '';
+  var curCodes = CORE_COURSES.map(function(c){ return courseCodeByName(c.name); });
+  var slotOptions = function(picked){
+    return '<option value="">미지정</option>' + COURSE_CATALOG.map(function(c){
+      return '<option value="'+esc(c.code)+'" '+(picked===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
+    }).join('');
+  };
+  return (
+    '<div class="phone">' +
+      '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
+      '<div class="eyebrow">관리자 설정</div>' +
+      '<h2 class="screen-title">관리자 등록코드</h2>' +
+      '<p class="screen-sub">새 관리자가 등록할 때 필요한 코드예요. 비워두면 새 관리자 등록이 막혀요.</p>' +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      '<form id="form-admincode" class="stack">' +
+        '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+      '<h2 class="screen-title" style="margin-top:24px;">핵심과목 지정</h2>' +
+      '<p class="screen-sub">제4조② · 편성된 교과목 중 최대 3과목까지 핵심과목으로 지정할 수 있어요. 아직 정하지 않았다면 "미지정"으로 두면 돼요.</p>' +
+      '<form id="form-corecourses" class="stack">' +
+        [0,1,2].map(function(i){
+          return '<div class="field"><label>핵심과목 '+(i+1)+'</label><select id="coreSlot'+i+'">'+slotOptions(curCodes[i]||'')+'</select></div>';
+        }).join('') +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을, 참여학과별 제1전공 교육과정표는 PRIMARY_CATALOGS 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
+    '</div>'
+  );
+}
+async function openDetail(id){
+  state.detailId = id;
+  state.cache.detail = await storeGet('cvg_students', id);
+  state.view='detail'; state.formOk=''; state.formError='';
+  render();
+}
+async function resetStudentPassword(){
+  var tempPw = '000000';
+  var hash = await sha256Hex(tempPw);
+  await storeUpdate('cvg_students', state.detailId, { passwordHash:hash });
+  state.formOk = '비밀번호를 '+tempPw+' 로 초기화했어요. 학생에게 알려주세요.';
+  render();
+}
+async function deleteStudent(){
+  if(!window.confirm('정말 이 학생을 삭제할까요? 되돌릴 수 없어요.')) return;
+  await storeDelete('cvg_students', state.detailId);
+  state.view='list'; state.detailId=null; state.cache.detail=null;
+  await loadRoster();
+  render();
+}
+async function saveAdminCode(code){
+  await storeUpdate('cvg_config', 'app', { adminCode: code.trim() });
+  state.cache.adminCode = code.trim();
+  state.formOk = '등록코드를 저장했어요.';
+  render();
+}
+async function saveCoreCourses(codes){
+  await storeUpdate('cvg_config', 'app', { coreCourseCodes: codes });
+  applyCoreCourseCodes(codes);
+  state.formOk = '핵심과목을 저장했어요.';
+  render();
+}
+
+/* ============ 이용안내 ============ */
+function renderGuide(){
+  var g = state.guideRole;
+  var titles = { student:'학생 사용법 안내', admin:'관리자 사용법 안내' };
+  var subs = {
+    student:'처음 등록부터 과목 입력, 이수정보 설정, 충족 여부 확인까지.',
+    admin:'관리자 등록, 핵심과목 지정, 전체 현황 보기와 학생별 관리까지.'
+  };
+  return (
+    '<div class="page"><div class="guide-shell">' +
+      '<div class="guide-hero">' +
+        '<div class="eyebrow">'+esc(TRACK_NAME)+'</div>' +
+        '<h1>'+titles[g]+'</h1><p>'+subs[g]+'</p>' +
+        '<button class="back" data-action="close-guide">← 현황판으로 돌아가기</button>' +
+      '</div>' +
+      '<div class="guide-tabs">' +
+        '<button class="'+(g==='student'?'active':'')+'" data-action="set-guide-role" data-role="student">학생 안내</button>' +
+        '<button class="'+(g==='admin'?'active':'')+'" data-action="set-guide-role" data-role="admin">관리자 안내</button>' +
+      '</div>' +
+      (g==='student' ? guideStudent() : guideAdmin()) +
+    '</div></div>'
+  );
+}
+function guideStudent(){
+  return (
+    '<div class="step"><div class="step-num">1</div>' +
+      '<h2>처음 등록하고 로그인하기</h2>' +
+      '<p>화면 위쪽에서 <b>학생</b>을 선택해 주세요.</p>' +
+      '<ul>' +
+        '<li>처음이라면 <b>처음이신가요? 비밀번호 설정하기</b>를 눌러 주세요.</li>' +
+        '<li><b>학번, 이름, 6자 이상 비밀번호</b>를 입력하면 등록과 동시에 로그인됩니다. 학과·입학년도는 몰라도 나중에 채울 수 있어요.</li>' +
+        '<li>다음부터는 학번과 비밀번호로 로그인해 주세요.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">2</div>' +
+      '<h2>이수한 과목 추가하기</h2>' +
+      '<p>이수형태(복수전공/부전공)를 미리 고를 필요는 없어요. 홈 화면의 <b>+ 과목 추가</b>를 눌러 이수한 과목만 넣어 주세요.</p>' +
+      '<ul>' +
+        '<li>교육과정표에 있는 과목은 목록에서 고르면 <b>학점이 자동으로 채워집니다.</b></li>' +
+        '<li>목록에 없는 과목(예전 교육과정, 전과 인정과목 등)은 <b>목록에 없는 과목(직접 입력)</b>을 골라 직접 입력하세요.</li>' +
+        '<li>관리자가 지정한 핵심과목을 이수하면 자동으로 <b>핵심과목</b> 표시가 붙습니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">3</div>' +
+      '<h2>제1전공 과목·학기 정보 채우기</h2>' +
+      '<p>홈 화면의 <b>+ 제1전공 과목 추가</b>에서 등록할 때 고른 학과의 교육과정표 과목을 골라 넣으면 학점이 자동으로 채워지고 합산됩니다. 부전공(1개는 54학점, 2개 이상은 42학점 필요)을 계산하는 데 쓰여요.</p>' +
+      '<p><b>이수정보 &gt; 수정</b>에서는 아래 정보를 입력해 주세요.</p>' +
+      '<ul>' +
+        '<li><b>인정학기</b> — 3학기 이상이어야 실제 EDWARD 이수신청 자격이 생깁니다.</li>' +
+        '<li>제1전공 학과의 졸업논문이 필수과목이라면 체크해 주세요. 복수전공 경로에서만 확인합니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">4</div>' +
+      '<h2>마이크로디그리 확인하기</h2>' +
+      '<p>홈 화면의 <b>+ 마이크로디그리 추가</b>에서 준비 중인 과정을 고르고 지금까지 이수한 학점을 입력하세요.</p>' +
+      '<ul>' +
+        '<li>과정별로 필요한 기준 학점과 비교해서 충족 여부를 바로 보여줍니다.</li>' +
+        '<li>여러 과정을 동시에 준비하고 있다면 <b>+ 마이크로디그리 추가</b>를 여러 번 눌러 각각 추가하고 따로 확인할 수 있어요.</li>' +
+        '<li>과목 목록과 마찬가지로 각 항목을 나중에 수정하거나 삭제할 수 있습니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">5</div>' +
+      '<h2>어느 경로가 빠른지 비교해서 보기</h2>' +
+      '<p>홈 화면 위쪽에서 앱이 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 자동으로 계산해서 비교해 줍니다.</p>' +
+      '<ul>' +
+        '<li>아직 아무 경로도 채우지 못했다면 <b>지금 페이스면 가장 빨리 채울 수 있는 경로와 남은 학점</b>을 알려줍니다.</li>' +
+        '<li>경로별 카드에서 <b>융합전공 학점 · 제1전공 학점 · 졸업논문</b> 진행 상황을 각각 확인할 수 있어요.</li>' +
+        '<li>어느 하나라도 충족되면 그 경로 이름으로 "이수 조건 충족"이 표시됩니다.</li>' +
+        '<li>아직 충족하지 못했다면 <b>학사학위취득 유예</b> 신청 안내가 함께 나타납니다.</li>' +
+      '</ul></div>'
+  );
+}
+function guideAdmin(){
+  return (
+    '<div class="step"><div class="step-num">1</div>' +
+      '<h2>관리자로 등록하기</h2>' +
+      '<p>화면 위쪽에서 <b>관리자</b>를 선택하고 <b>처음이신가요? 비밀번호 설정하기</b>를 눌러 주세요.</p>' +
+      '<ul>' +
+        '<li>가장 처음 만드는 관리자는 등록코드 없이 바로 만들 수 있어요.</li>' +
+        '<li>두 번째 관리자부터는 등록코드가 필요합니다. <b>관리자 설정</b>에서 코드를 미리 정해 두세요.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">2</div>' +
+      '<h2>핵심과목 지정하기</h2>' +
+      '<p><b>관리자 설정</b> 화면 아래쪽에서 교육과정표 과목 중 핵심과목(최대 3개)을 고를 수 있어요.</p>' +
+      '<ul>' +
+        '<li>지정하면 학생이 그 과목을 이수했는지 자동으로 인식해서 충족 여부에 반영됩니다.</li>' +
+        '<li>아직 정하지 않았다면 3칸 모두 <b>미지정</b>으로 둬도 괜찮아요. 이 경우 핵심과목 조건 없이 학점만으로 판정합니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">3</div>' +
+      '<h2>전체 학생 현황 보기</h2>' +
+      '<p>관리자 홈 화면에서 <b>전체 학생 · 요건 충족 · 미충족</b> 숫자를 바로 볼 수 있어요.</p>' +
+      '<ul>' +
+        '<li>이름이나 학번으로 검색하고, 충족/미충족으로 걸러 볼 수 있습니다.</li>' +
+        '<li>학생 카드를 누르면 그 학생의 상세 화면으로 들어갑니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">4</div>' +
+      '<h2>학생별로 관리하기</h2>' +
+      '<p>학생 상세 화면에서 학생을 대신해 관리할 수 있어요.</p>' +
+      '<ul>' +
+        '<li>과목, 제1전공 과목, 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
+        '<li>인정학기·제1전공 학점·졸업논문 같은 이수정보도 대신 수정할 수 있습니다.</li>' +
+        '<li><b>비밀번호 초기화</b>는 임시 비밀번호(000000)로 바꿔주니 학생에게 알려주세요.</li>' +
+        '<li><b>학생 삭제</b>는 되돌릴 수 없으니 신중하게 사용해 주세요.</li>' +
+      '</ul></div>'
+  );
+}
+
+/* ============ 이벤트 처리 ============ */
+document.addEventListener('submit', function(e){
+  var f = e.target;
+  if(f.id==='form-login'){
+    e.preventDefault();
+    doLogin(state.role, f.querySelector('#loginId').value.trim(), f.querySelector('#loginPw').value).catch(failWith);
+  }
+  if(f.id==='form-register'){
+    e.preventDefault();
+    doRegisterStudent(
+      f.querySelector('#regId').value.trim(), f.querySelector('#regName').value.trim(),
+      f.querySelector('#regDept').value.trim(), f.querySelector('#regYear').value.trim(),
+      f.querySelector('#regPw').value, f.querySelector('#regPw2').value
+    ).catch(failWith);
+  }
+  if(f.id==='form-register-admin'){
+    e.preventDefault();
+    doRegisterAdmin(
+      f.querySelector('#raId').value.trim(), f.querySelector('#raName').value.trim(),
+      f.querySelector('#raPw').value, f.querySelector('#raPw2').value, f.querySelector('#raCode').value.trim()
+    ).catch(failWith);
+  }
+  if(f.id==='form-course'){
+    e.preventDefault();
+    saveCourse(f).catch(failWith);
+  }
+  if(f.id==='form-primary-course'){
+    e.preventDefault();
+    savePrimaryCourse(f).catch(failWith);
+  }
+  if(f.id==='form-microdegree'){
+    e.preventDefault();
+    saveMicrodegree(f).catch(failWith);
+  }
+  if(f.id==='form-info'){
+    e.preventDefault();
+    saveInfo(f).catch(failWith);
+  }
+  if(f.id==='form-changepw'){
+    e.preventDefault();
+    changePassword(f.querySelector('#pwOld').value, f.querySelector('#pwNew').value, f.querySelector('#pwNew2').value).catch(failWith);
+  }
+  if(f.id==='form-admincode'){
+    e.preventDefault();
+    saveAdminCode(f.querySelector('#adminCode').value).catch(failWith);
+  }
+  if(f.id==='form-corecourses'){
+    e.preventDefault();
+    var codes = [0,1,2].map(function(i){ return f.querySelector('#coreSlot'+i).value; }).filter(function(v){ return v; });
+    codes = codes.filter(function(v, i){ return codes.indexOf(v)===i; });
+    saveCoreCourses(codes).catch(failWith);
+  }
+});
+
+document.addEventListener('input', function(e){
+  var bind = e.target.dataset && e.target.dataset.bind;
+  if(!bind) return;
+  state[bind] = e.target.value;
+  render();
+  var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
+  if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+});
+
+document.addEventListener('change', function(e){
+  if(e.target.id === 'cCourse'){
+    var form = e.target.closest('form');
+    var wrap = form.querySelector('#cCustomWrap');
+    var creditsInput = form.querySelector('#cCredits');
+    if(e.target.value === '__custom__'){
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+      var c = courseInCatalog(e.target.value);
+      if(c) creditsInput.value = c.credits;
+    }
+  }
+  if(e.target.id === 'pCourse'){
+    var pform = e.target.closest('form');
+    var pwrap = pform.querySelector('#pCustomWrap');
+    var pcreditsInput = pform.querySelector('#pCredits');
+    var s = state.role==='admin' ? state.cache.detail : state.cache.me;
+    if(e.target.value === '__custom__'){
+      pwrap.style.display = 'block';
+    } else {
+      pwrap.style.display = 'none';
+      var pc = primaryCourseInCatalog(s.dept||'', e.target.value);
+      if(pc) pcreditsInput.value = pc.credits;
+    }
+  }
+});
+
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-action]');
+  if(!el) return;
+  var act = el.dataset.action;
+  state.formError='';
+  if(act==='open-guide'){ state.mode='guide'; state.guideRole = state.role==='admin'?'admin':'student'; window.scrollTo(0,0); }
+  else if(act==='close-guide'){ state.mode='app'; }
+  else if(act==='set-guide-role'){ state.guideRole = el.dataset.role; window.scrollTo(0,0); }
+  else if(act==='set-role'){ state.role = el.dataset.role; state.view='login'; state.formOk=''; }
+  else if(act==='goto-register'){ state.view='register'; }
+  else if(act==='goto-register-admin'){ state.view='register-admin'; }
+  else if(act==='goto-login'){ state.view='login'; state.formOk=''; }
+  else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
+  else if(act==='goto-list'){
+    state.view='list'; state.formOk='';
+    loadRoster().then(render);
+    render(); return;
+  }
+  else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; state.editingPrimaryCourseId=null; }
+  else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
+  else if(act==='goto-primary-course-form'){ state.editingPrimaryCourseId=null; state.view='primary-course-form'; }
+  else if(act==='goto-microdegree-form'){ state.editingMicrodegreeId=null; state.view='microdegree-form'; }
+  else if(act==='goto-info-form'){ state.view='info-form'; }
+  else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
+  else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
+  else if(act==='edit-primary-course'){ state.editingPrimaryCourseId = el.dataset.id; state.view='primary-course-form'; }
+  else if(act==='delete-primary-course'){ deletePrimaryCourse(el.dataset.id).catch(failWith); return; }
+  else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
+  else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }
+  else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
+  else if(act==='goto-settings'){
+    state.view='settings'; state.formOk='';
+    storeGet('cvg_config','app').then(function(cfg){ state.cache.adminCode = cfg?cfg.adminCode:''; render(); });
+    render(); return;
+  }
+  else if(act==='open-detail'){ openDetail(el.dataset.id).catch(failWith); return; }
+  else if(act==='reset-password'){ resetStudentPassword().catch(failWith); return; }
+  else if(act==='delete-student'){ deleteStudent().catch(failWith); return; }
+  else if(act==='logout'){ setSession(state.role, null); state.view='login'; state.formOk=''; }
+  render();
+});
+
+/* ============ 시작 ============ */
+loadFallback();
+loadSessions();
+if(state.studentSession){ state.role='student'; state.view='home'; }
+else if(state.adminSession){ state.role='admin'; state.view='list'; }
+render();
+
+(async function boot(){
+  try{
+    await loadCoreCourses();
+    if(state.role==='student' && state.studentSession){ await loadMe(); }
+    else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
+  }catch(e){ state.formError = errMsg(e); }
+  render();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
