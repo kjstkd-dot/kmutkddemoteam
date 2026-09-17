@@ -288,7 +288,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 o';
+var APP_VERSION = '2026-09-18 p';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -897,7 +897,7 @@ function extractUnknownMajorCourses(lines, knownMatches, existingNames){
       if(credits===null && /^\d(\.\d)?$/.test(tok)){ credits = Number(tok); return; } // 학점
       nameTokens.push(tok);
     });
-    var name = nameTokens.join('').trim();
+    var name = cleanCourseName(nameTokens.join('').trim());
     if(name.length < 2 || name.length > 30) return;
     var norm = normName(name);
     if(seenNorm.indexOf(norm) >= 0) return;
@@ -935,6 +935,15 @@ function courseNameExists(list, name){
   return list.some(function(c){ return normName(c.name)===norm; });
 }
 function normName(s){ return String(s==null?'':s).replace(/\s+/g,''); }
+// PDF에서 글자 사이 공백이 사라지면 "22042-01태권도기초실기(1)1.004.5성적확정"처럼 과목코드-분반이
+// 앞에, 학점.점수+성적확정이 뒤에 과목명과 그대로 붙어 나올 때가 있다. 앞뒤에 남은 이런 부분을
+// 지워서 순수 과목명만 남긴다. 이미 깨끗한 이름은 그대로 반환한다(변경 없음).
+function cleanCourseName(name){
+  var n = String(name==null?'':name);
+  n = n.replace(/^\d{4,6}-\d{1,3}/, '');
+  n = n.replace(/[0-9A-Za-z.+-]*성적확정$/, '');
+  return n.trim();
+}
 function totalCredits(student){
   return courses(student).filter(courseIsConvergence).reduce(function(s,c){ return s + num(c.credits); }, 0);
 }
@@ -1556,7 +1565,7 @@ function screenStudentHome(){
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<div class="row" style="gap:10px;">' +
-          '<button class="linklike" data-action="dedupe-courses">중복 과목 삭제</button>' +
+          '<button class="linklike" data-action="dedupe-courses">과목 정리</button>' +
           '<button class="linklike" data-action="goto-course-upload-form">📄 PDF로 일괄 추가</button>' +
           '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button>' +
         '</div></div>' +
@@ -1816,16 +1825,20 @@ async function deleteCourse(courseId){
   student.courses = list;
   render();
 }
-// 이름이 같은 과목이 여러 개 등록돼 있으면 먼저 등록한 것만 남기고 나머지를 지운다.
+// PDF로 등록할 때 과목코드·학점·성적확정 같은 글자가 붙어 지저분해진 과목명을 정리하고,
+// (정리한 뒤 이름이 같아진 경우 포함) 이름이 같은 과목이 여러 개면 먼저 등록한 것만 남긴다.
 function dedupeCourseList(list){
-  var seen = {}; var kept = []; var removed = 0;
+  var seen = {}; var kept = []; var removed = 0; var renamed = 0;
   list.forEach(function(c){
-    var key = normName(c.name);
+    var cleaned = cleanCourseName(c.name);
+    var useName = cleaned ? cleaned : c.name; // 정리하면 이름이 통째로 사라지는 경우엔 원래 이름을 그대로 둔다.
+    var key = normName(useName);
     if(seen[key]){ removed++; return; }
     seen[key] = true;
-    kept.push(c);
+    if(useName !== c.name){ renamed++; kept.push(Object.assign({}, c, { name:useName })); }
+    else kept.push(c);
   });
-  return { kept:kept, removed:removed };
+  return { kept:kept, removed:removed, renamed:renamed };
 }
 async function dedupeStudentCourses(){
   var isAdmin = state.role==='admin';
@@ -1833,10 +1846,13 @@ async function dedupeStudentCourses(){
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
   var result = dedupeCourseList(courses(student));
-  if(!result.removed){ state.formOk = '중복된 과목이 없어요.'; render(); return; }
+  if(!result.removed && !result.renamed){ state.formOk = '정리할 과목이 없어요.'; render(); return; }
   await storeUpdate(col, id, { courses: result.kept });
   student.courses = result.kept;
-  state.formOk = '중복 과목 '+result.removed+'개를 정리했어요.';
+  var parts = [];
+  if(result.removed) parts.push('중복 '+result.removed+'개');
+  if(result.renamed) parts.push('과목명 '+result.renamed+'개');
+  state.formOk = parts.join(', ')+' 정리했어요.';
   render();
 }
 async function saveBulkCourses(mids, fallbackSemester){
@@ -2026,7 +2042,7 @@ function screenAdminDetail(){
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<div class="row" style="gap:10px;">' +
-          '<button class="linklike" data-action="dedupe-courses">중복 과목 삭제</button>' +
+          '<button class="linklike" data-action="dedupe-courses">과목 정리</button>' +
           '<button class="linklike" data-action="goto-course-upload-form">📄 PDF로 일괄 추가</button>' +
           '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button>' +
         '</div></div>' +
@@ -2167,7 +2183,7 @@ function guideStudent(){
         '<li>이수학기는 연도(2022년~)와 학기를 골라서 넣습니다.</li>' +
         '<li>과목이 많다면 <b>📄 PDF로 일괄 추가</b>를 눌러 성적표나 수강신청 확인서 PDF를 올려보세요. 글자가 담긴 PDF라면 교육과정표에 있는 과목 이름을 표의 줄 단위로 찾아 후보로 보여주고, 같은 줄에 연도-학기가 있으면 이수학기도 자동으로 채워줘요. 사이트 교육과정표에 없는 <b>전공기초/전공필수/전공선택</b> 과목도 PDF 안의 구분·과목명·학점을 읽어 "새 과목"으로 후보에 함께 올려줘요. 체크된 과목만 골라서 한 번에 추가할 수 있어요(이미 등록한 과목은 후보에서 빠집니다).</li>' +
         '<li>홈 화면의 <b>등록한 과목</b> 박스를 누르면 전공필수/전공선택/전공인정/타전공/교양 등 구분별 과목 수·학점을 보고, 이수한 학기 순으로 정리된 전체 목록을 펼쳐볼 수 있어요.</li>' +
-        '<li>이름이 같은 과목은 중복으로 추가되지 않아요. 예전에 실수로 중복 등록된 과목이 있다면 <b>중복 과목 삭제</b>를 눌러 한 번에 정리할 수 있습니다.</li>' +
+        '<li>이름이 같은 과목은 중복으로 추가되지 않아요. 예전에 실수로 중복 등록된 과목이 있거나, PDF로 등록한 과목명에 과목코드·성적확정 같은 글자가 붙어 지저분하다면 <b>과목 정리</b>를 눌러 한 번에 정리할 수 있습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>인정학기·졸업논문 정보 채우기</h2>' +
