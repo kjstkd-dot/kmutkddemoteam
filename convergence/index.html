@@ -272,7 +272,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 f';
+var APP_VERSION = '2026-09-18 g';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1294,7 +1294,7 @@ function progressBlock(student){
           '<div class="pbar"><i style="width:'+pct(a.primaryCur,a.primaryMin)+'%"></i></div>'
         ) : '') +
         (a.thesisApplies ? '<div class="cm" style="margin-top:8px;">졸업논문(제1전공 필수과목, 학칙 제44조①): '+(a.thesisMet?'이수 완료':'미이수')+'</div>' : '') +
-        '<div class="cm" style="margin-top:8px; color:var(--primary); font-weight:600;">'+(expanded?'과목 목록 접기 ▲':'어떤 과목이 들어있는지 보기 ▼')+'</div>' +
+        '<div class="cm" style="margin-top:8px; color:var(--primary); font-weight:600;">'+(expanded?'과목 목록 접기 ▲':'과목 목록 보기 ▼')+'</div>' +
       '</button>' +
       (expanded ? trackContributingCoursesBlock(student, a.key) : '') +
     '</div>';
@@ -1408,7 +1408,7 @@ function screenStudentHome(){
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<div class="row" style="gap:10px;">' +
-          '<button class="linklike" data-action="dedupe-courses">중복 정리</button>' +
+          '<button class="linklike" data-action="dedupe-courses">중복 과목 삭제</button>' +
           '<button class="linklike" data-action="goto-course-upload-form">📄 PDF로 일괄 추가</button>' +
           '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button>' +
         '</div></div>' +
@@ -1878,7 +1878,7 @@ function screenAdminDetail(){
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<div class="row" style="gap:10px;">' +
-          '<button class="linklike" data-action="dedupe-courses">중복 정리</button>' +
+          '<button class="linklike" data-action="dedupe-courses">중복 과목 삭제</button>' +
           '<button class="linklike" data-action="goto-course-upload-form">📄 PDF로 일괄 추가</button>' +
           '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button>' +
         '</div></div>' +
@@ -2018,7 +2018,7 @@ function guideStudent(){
         '<li>이수학기는 연도(2022년~)와 학기를 골라서 넣습니다.</li>' +
         '<li>과목이 많다면 <b>📄 PDF로 일괄 추가</b>를 눌러 성적표나 수강신청 확인서 PDF를 올려보세요. 글자가 담긴 PDF라면 교육과정표에 있는 과목 이름을 표의 줄 단위로 찾아 후보로 보여주고, 같은 줄에 연도-학기가 있으면 이수학기도 자동으로 채워줘요. 사이트 교육과정표에 없는 <b>전공기초/전공필수/전공선택</b> 과목도 PDF 안의 구분·과목명·학점을 읽어 "새 과목"으로 후보에 함께 올려줘요. 체크된 과목만 골라서 한 번에 추가할 수 있어요(이미 등록한 과목은 후보에서 빠집니다).</li>' +
         '<li>홈 화면의 <b>등록한 과목</b> 박스를 누르면 전공필수/전공선택/전공인정/타전공/교양 등 구분별 과목 수·학점을 보고, 이수한 학기 순으로 정리된 전체 목록을 펼쳐볼 수 있어요.</li>' +
-        '<li>이름이 같은 과목은 중복으로 추가되지 않아요. 예전에 실수로 중복 등록된 과목이 있다면 <b>중복 정리</b>를 눌러 한 번에 정리할 수 있습니다.</li>' +
+        '<li>이름이 같은 과목은 중복으로 추가되지 않아요. 예전에 실수로 중복 등록된 과목이 있다면 <b>중복 과목 삭제</b>를 눌러 한 번에 정리할 수 있습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>인정학기·졸업논문 정보 채우기</h2>' +
