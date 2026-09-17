@@ -272,7 +272,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 l';
+var APP_VERSION = '2026-09-18 m';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -2259,6 +2259,9 @@ document.addEventListener('input', function(e){
   var bind = e.target.dataset && e.target.dataset.bind;
   if(!bind) return;
   state[bind] = e.target.value;
+  // 한글 등 조합 중(e.isComposing)에 화면을 다시 그리면 입력 중인 글자가 깨진다.
+  // 조합이 끝난 뒤(isComposing=false로 다시 오는 input 이벤트)에만 다시 그린다.
+  if(e.isComposing) return;
   render();
   var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
   if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
