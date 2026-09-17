@@ -219,7 +219,7 @@ function uid(){ return Date.now().toString(36) + Math.random().toString(36).slic
 var API_URL = '';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-16 g';
+var APP_VERSION = '2026-09-17 a';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -422,7 +422,6 @@ function pct(cur, min){ return min>0 ? Math.min(100, Math.round(cur/min*100)) : 
 /* ============ 마이크로디그리 (첨단분야 혁신융합대학사업 학사 운영 내규 제5조, 별표1·별표2) ============
    컨소시엄 대학·과정이 바뀌면 이 목록을 고쳐주세요. min은 각 과정의 최소 이수학점입니다. */
 var MICRODEGREE_PROGRAMS = [
-  { key:'', group:'', name:'해당 없음', min:0 },
   { key:'auto_basic', group:'미래자동차', name:'미래자동차공학전공 (초급)', min:9, note:'초·중·고급 지정 과목 중 초급 6학점 포함 9학점' },
   { key:'auto_mid',   group:'미래자동차', name:'미래자동차공학전공 (중급)', min:9, note:'중급 이상 6학점 포함 9학점' },
   { key:'auto_adv',   group:'미래자동차', name:'미래자동차공학전공 (고급)', min:9, note:'고급 과목 6학점 포함 9학점' },
@@ -457,12 +456,15 @@ var MICRODEGREE_PROGRAMS = [
   { key:'virtual_graphic_design', group:'실감미디어', name:'버추얼그래픽디자인 (중급)', min:9 },
   { key:'xr_industry_academy', group:'실감미디어', name:'실감미디어 지산학협력 (중급)', min:9 }
 ];
-function microdegreeProgram(student){
-  return MICRODEGREE_PROGRAMS.filter(function(p){ return p.key === (student && student.microdegreeKey || ''); })[0] || MICRODEGREE_PROGRAMS[0];
-}
-function microdegreeMet(student){
-  var p = microdegreeProgram(student);
-  return p.key ? num(student.microdegreeCredits) >= p.min : false;
+function microdegreeInfo(key){ return MICRODEGREE_PROGRAMS.filter(function(p){ return p.key===key; })[0] || null; }
+function microdegrees(student){ return (student && student.microdegrees) || []; }
+function microdegreeStatus(student){
+  return microdegrees(student).map(function(m){
+    var info = microdegreeInfo(m.key);
+    var cur = num(m.credits);
+    return { id:m.id, key:m.key, name: info?info.name:m.key, min: info?info.min:0, note: info?info.note:'',
+      credits: cur, met: info ? cur >= info.min : false };
+  });
 }
 
 /* ============ state ============ */
@@ -475,6 +477,7 @@ var state = {
   studentSession: null, adminSession: null,
   formError: '', formOk: '',
   editingCourseId: null,
+  editingMicrodegreeId: null,
   detailId: null,
   q: '', filter: 'all',
   cache: { me:null, roster:[] }
@@ -632,7 +635,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   var hash = await sha256Hex(pw);
   var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
     recognizedSemesters:'', primaryMajorCredits:0,
-    microdegreeKey:'', microdegreeCredits:0, thesisRequired:false, thesisDone:false, createdAt:nowIso() };
+    microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
   await storeSet('cvg_students', id, doc);
   setSession('student', { id:id, name:name });
   state.cache.me = Object.assign({id:id}, doc);
@@ -663,6 +666,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
 /* ============ 학생 화면 ============ */
 function renderStudent(){
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
   return screenStudentHome();
@@ -711,16 +715,24 @@ function progressBlock(student){
       (a.thesisApplies ? '<div class="cm" style="margin-top:8px;">졸업논문(제1전공 필수과목, 학칙 제44조①): '+(a.thesisMet?'이수 완료':'미이수')+'</div>' : '') +
     '</div>';
   });
-  var mp = microdegreeProgram(student);
-  if(mp.key){
-    var mCur = num(student.microdegreeCredits), mOk = mCur >= mp.min;
-    html += '<div class="catcard '+(mOk?'met':'')+'" style="margin-top:16px;">' +
-      '<div class="cthead"><b>마이크로디그리 · '+esc(mp.name)+'</b><span>'+mCur+' / '+mp.min+'학점'+(mOk?' 충족':'')+'</span></div>' +
-      '<div class="pbar"><i style="width:'+pct(mCur,mp.min)+'%"></i></div>' +
-      (mp.note ? '<div class="cm" style="margin-top:6px;">'+esc(mp.note)+'</div>' : '') +
-    '</div>';
-  }
   return html;
+}
+function microdegreeListBlock(student, editable){
+  var list = microdegreeStatus(student);
+  if(!list.length) return '<div class="empty-state">아직 등록된 마이크로디그리가 없어요.</div>';
+  return '<div class="courselist">' + list.map(function(m){
+    return '<div class="courserow" style="align-items:flex-start;">' +
+      '<div class="ci">' +
+        '<div class="cn">'+esc(m.name)+(m.met?' <span class="catpill" style="background:var(--success-bg); color:var(--success);">충족</span>':'')+'</div>' +
+        '<div class="cm">'+m.credits+' / '+m.min+'학점'+(m.note?' · '+esc(m.note):'')+'</div>' +
+        '<div class="pbar" style="margin-top:6px; max-width:220px;"><i style="width:'+pct(m.credits,m.min)+'%"></i></div>' +
+      '</div>' +
+      (editable ? '<div class="cact">' +
+        '<button class="icobtn" data-action="edit-microdegree" data-id="'+esc(m.id)+'">수정</button>' +
+        '<button class="icobtn danger" data-action="delete-microdegree" data-id="'+esc(m.id)+'">삭제</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('') + '</div>';
 }
 function courseListBlock(student, editable){
   var list = courses(student);
@@ -752,6 +764,9 @@ function screenStudentHome(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
+        '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
+      microdegreeListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
         '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
       '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' +
@@ -796,6 +811,43 @@ function screenCourseForm(){
     '</div>'
   );
 }
+function microdegreeGroupedOptions(pickedKey){
+  var groups = {}; var order = [];
+  MICRODEGREE_PROGRAMS.forEach(function(p){
+    var g = p.group || '';
+    if(order.indexOf(g)<0){ order.push(g); groups[g]=[]; }
+    groups[g].push(p);
+  });
+  return order.map(function(g){
+    var opts = groups[g].map(function(p){
+      return '<option value="'+esc(p.key)+'" '+(pickedKey===p.key?'selected':'')+'>'+esc(p.name)+'</option>';
+    }).join('');
+    return g ? '<optgroup label="'+esc(g)+'">'+opts+'</optgroup>' : opts;
+  }).join('');
+}
+function screenMicrodegreeForm(){
+  var isAdmin = state.role==='admin';
+  var s = isAdmin ? state.cache.detail : state.cache.me;
+  var editing = state.editingMicrodegreeId ? microdegrees(s).filter(function(m){ return m.id===state.editingMicrodegreeId; })[0] : null;
+  return (
+    '<div class="phone">' +
+      '<div class="eyebrow">'+(editing?'마이크로디그리 수정':'마이크로디그리 추가')+'</div>' +
+      '<h2 class="screen-title">'+(editing?'마이크로디그리 정보 수정':'마이크로디그리 추가')+'</h2>' +
+      '<p class="screen-sub">준비 중인 과정을 골라 지금까지 이수한 학점을 입력하면 과정별 기준 학점과 비교해서 보여드려요. 여러 과정을 동시에 추가할 수 있어요.</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      '<form id="form-microdegree" class="stack">' +
+        '<div class="field"><label>과정</label><select id="mdProgram">' +
+          microdegreeGroupedOptions(editing?editing.key:MICRODEGREE_PROGRAMS[0].key) +
+        '</select></div>' +
+        '<div class="field"><label>이수학점</label><input id="mdCredits" type="number" min="0" value="'+(editing?num(editing.credits):0)+'"></div>' +
+        '<div class="row" style="gap:8px;">' +
+          '<button class="btn btn-ghost" type="button" data-action="'+(isAdmin?'goto-detail':'goto-home')+'" style="width:auto; flex:1;">취소</button>' +
+          '<button class="btn btn-primary" type="submit" style="flex:2;">저장</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>'
+  );
+}
 function screenInfoForm(){
   var isAdmin = state.role==='admin';
   var s = isAdmin ? state.cache.detail : state.cache.me;
@@ -808,23 +860,6 @@ function screenInfoForm(){
       '<form id="form-info" class="stack">' +
         '<div class="field"><label>인정학기 (신청 자격: 3학기 이상)</label><input id="iSem" type="number" min="0" value="'+num(s.recognizedSemesters)+'"></div>' +
         '<div class="field"><label>제1전공 이수학점 (부전공 경로 계산에 필요)</label><input id="iPrimary" type="number" min="0" value="'+num(s.primaryMajorCredits)+'"></div> ' +
-        '<div class="field"><label>마이크로디그리 과정 (해당 시)</label><select id="iMicro">' +
-          (function(){
-            var groups = {}; var order = [];
-            MICRODEGREE_PROGRAMS.forEach(function(p){
-              var g = p.group || '';
-              if(order.indexOf(g)<0){ order.push(g); groups[g]=[]; }
-              groups[g].push(p);
-            });
-            return order.map(function(g){
-              var opts = groups[g].map(function(p){
-                return '<option value="'+esc(p.key)+'" '+((s.microdegreeKey||'')===p.key?'selected':'')+'>'+esc(p.name)+'</option>';
-              }).join('');
-              return g ? '<optgroup label="'+esc(g)+'">'+opts+'</optgroup>' : opts;
-            }).join('');
-          })() +
-        '</select></div>' +
-        '<div class="field"><label>마이크로디그리 이수학점</label><input id="iMicroCredits" type="number" min="0" value="'+num(s.microdegreeCredits)+'"></div>' +
         '<div class="field"><label>졸업논문 (복수전공일 때만 적용, 학칙 제44조①)</label>' +
           '<label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; margin-bottom:4px;">' +
             '<input type="checkbox" id="iThesisReq" '+(s.thesisRequired?'checked':'')+'> 제1전공 학과의 졸업논문이 필수과목이다' +
@@ -899,11 +934,42 @@ async function deleteCourse(courseId){
   student.courses = list;
   render();
 }
+async function saveMicrodegree(form){
+  var key = form.querySelector('#mdProgram').value;
+  var credits = num(form.querySelector('#mdCredits').value);
+
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = microdegrees(student).slice();
+
+  if(state.editingMicrodegreeId){
+    list = list.map(function(m){
+      return m.id===state.editingMicrodegreeId ? { id:m.id, key:key, credits:credits } : m;
+    });
+  } else {
+    list.push({ id:uid(), key:key, credits:credits });
+  }
+  await storeUpdate(col, id, { microdegrees:list });
+  student.microdegrees = list;
+  state.editingMicrodegreeId = null; state.formError='';
+  state.view = isAdmin ? 'detail' : 'home';
+  render();
+}
+async function deleteMicrodegree(mdId){
+  var isAdmin = state.role==='admin';
+  var col = 'cvg_students';
+  var id = isAdmin ? state.detailId : state.studentSession.id;
+  var student = isAdmin ? state.cache.detail : state.cache.me;
+  var list = microdegrees(student).filter(function(m){ return m.id!==mdId; });
+  await storeUpdate(col, id, { microdegrees:list });
+  student.microdegrees = list;
+  render();
+}
 async function saveInfo(form){
   var recognizedSemesters = num(form.querySelector('#iSem').value);
   var primaryMajorCredits = num(form.querySelector('#iPrimary').value);
-  var microdegreeKey = form.querySelector('#iMicro').value;
-  var microdegreeCredits = num(form.querySelector('#iMicroCredits').value);
   var thesisRequired = form.querySelector('#iThesisReq').checked;
   var thesisDone = form.querySelector('#iThesisDone').checked;
 
@@ -912,7 +978,6 @@ async function saveInfo(form){
   var id = isAdmin ? state.detailId : state.studentSession.id;
   var student = isAdmin ? state.cache.detail : state.cache.me;
   var patch = { recognizedSemesters:recognizedSemesters, primaryMajorCredits:primaryMajorCredits,
-    microdegreeKey:microdegreeKey, microdegreeCredits:microdegreeCredits,
     thesisRequired:thesisRequired, thesisDone:thesisDone };
   await storeUpdate(col, id, patch);
   Object.assign(student, patch);
@@ -943,6 +1008,7 @@ async function loadRoster(){
 function renderAdmin(){
   if(state.view==='detail') return screenAdminDetail();
   if(state.view==='course-form') return screenCourseForm();
+  if(state.view==='microdegree-form') return screenMicrodegreeForm();
   if(state.view==='info-form') return screenInfoForm();
   if(state.view==='profile') return screenProfile();
   if(state.view==='settings') return screenAdminSettings();
@@ -1011,6 +1077,9 @@ function screenAdminDetail(){
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목</b>' +
         '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button></div>' +
       courseListBlock(s, true) +
+      '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
+        '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
+      microdegreeListBlock(s, true) +
       '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
         '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
       '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+num(s.primaryMajorCredits)+'학점' +
@@ -1138,9 +1207,16 @@ function guideStudent(){
         '<li><b>인정학기</b> — 3학기 이상이어야 실제 EDWARD 이수신청 자격이 생깁니다.</li>' +
         '<li><b>제1전공 이수학점</b> — 부전공(1개는 54학점, 2개 이상은 42학점 필요)을 계산할 때 쓰입니다.</li>' +
         '<li>제1전공 학과의 졸업논문이 필수과목이라면 체크해 주세요. 복수전공 경로에서만 확인합니다.</li>' +
-        '<li>마이크로디그리를 함께 준비 중이면 과정을 고르고 이수학점을 입력하면 진행률이 따로 표시됩니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">4</div>' +
+      '<h2>마이크로디그리 확인하기</h2>' +
+      '<p>홈 화면의 <b>+ 마이크로디그리 추가</b>에서 준비 중인 과정을 고르고 지금까지 이수한 학점을 입력하세요.</p>' +
+      '<ul>' +
+        '<li>과정별로 필요한 기준 학점과 비교해서 충족 여부를 바로 보여줍니다.</li>' +
+        '<li>여러 과정을 동시에 준비하고 있다면 <b>+ 마이크로디그리 추가</b>를 여러 번 눌러 각각 추가하고 따로 확인할 수 있어요.</li>' +
+        '<li>과목 목록과 마찬가지로 각 항목을 나중에 수정하거나 삭제할 수 있습니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">5</div>' +
       '<h2>어느 경로가 빠른지 비교해서 보기</h2>' +
       '<p>홈 화면 위쪽에서 앱이 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 자동으로 계산해서 비교해 줍니다.</p>' +
       '<ul>' +
@@ -1178,8 +1254,8 @@ function guideAdmin(){
       '<h2>학생별로 관리하기</h2>' +
       '<p>학생 상세 화면에서 학생을 대신해 관리할 수 있어요.</p>' +
       '<ul>' +
-        '<li>과목을 대신 추가·수정·삭제할 수 있습니다.</li>' +
-        '<li>인정학기·제1전공 학점·졸업논문·마이크로디그리 같은 이수정보도 대신 수정할 수 있습니다.</li>' +
+        '<li>과목과 마이크로디그리를 대신 추가·수정·삭제할 수 있습니다.</li>' +
+        '<li>인정학기·제1전공 학점·졸업논문 같은 이수정보도 대신 수정할 수 있습니다.</li>' +
         '<li><b>비밀번호 초기화</b>는 임시 비밀번호(000000)로 바꿔주니 학생에게 알려주세요.</li>' +
         '<li><b>학생 삭제</b>는 되돌릴 수 없으니 신중하게 사용해 주세요.</li>' +
       '</ul></div>'
@@ -1211,6 +1287,10 @@ document.addEventListener('submit', function(e){
   if(f.id==='form-course'){
     e.preventDefault();
     saveCourse(f).catch(failWith);
+  }
+  if(f.id==='form-microdegree'){
+    e.preventDefault();
+    saveMicrodegree(f).catch(failWith);
   }
   if(f.id==='form-info'){
     e.preventDefault();
@@ -1275,9 +1355,12 @@ document.addEventListener('click', function(e){
   }
   else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; }
   else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
+  else if(act==='goto-microdegree-form'){ state.editingMicrodegreeId=null; state.view='microdegree-form'; }
   else if(act==='goto-info-form'){ state.view='info-form'; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
+  else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
+  else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }
   else if(act==='goto-profile'){ state.formOk=''; state.view='profile'; }
   else if(act==='goto-settings'){
     state.view='settings'; state.formOk='';
