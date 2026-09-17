@@ -137,6 +137,7 @@ button{font-family:inherit;}
 .catpill{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--surface-2); color:var(--primary); margin-right:4px;}
 
 /* 이수과목/추천과목 박스 (경로별 비교 펼침) */
+.reco-outer{border:1.5px solid var(--primary); border-radius:var(--radius-l); padding:12px; background:var(--surface);}
 .reco-group{border:1px solid var(--border); border-radius:var(--radius-m); padding:10px 12px; margin-bottom:10px; background:var(--surface-3);}
 .reco-group:last-child{margin-bottom:0;}
 .reco-group .rg-title{font-size:12px; font-weight:800; margin-bottom:8px; color:var(--text);}
@@ -288,7 +289,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 t';
+var APP_VERSION = '2026-09-18 u';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1508,7 +1509,7 @@ function recommendedCoursesHtml(student, key){
   if(!rec.missingCore.length && !rec.selfCourses.length && !rec.otherDeptCourses.length){
     html += '<div class="reco-empty">추천할 과목이 없어요(이미 다 이수했어요).</div>';
   }
-  return html;
+  return '<div class="reco-outer">'+html+'</div>';
 }
 function trackContributingCoursesBlock(student, key){
   var dept = student.dept;
