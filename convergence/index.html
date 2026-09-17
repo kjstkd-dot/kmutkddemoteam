@@ -248,6 +248,16 @@ function semesterFieldHtml(current){
     '<select id="cTerm" style="flex:1;">'+termOpts+'</select>' +
   '</div></div>';
 }
+// 입학년도 선택: 2020년부터 올해까지.
+var ADMISSION_YEAR_MIN = 2020;
+function admissionYearOptions(picked){
+  var yearMax = new Date().getFullYear();
+  var opts = '<option value="">선택 안 함</option>';
+  for(var y=yearMax; y>=ADMISSION_YEAR_MIN; y--){
+    opts += '<option value="'+y+'" '+(String(picked)===String(y)?'selected':'')+'>'+y+'년</option>';
+  }
+  return opts;
+}
 
 /* ============ 저장소 설정 ============
    구글 Apps Script 주소를 아래 따옴표 사이에 붙여넣으면 서버 저장으로 바뀝니다.
@@ -257,7 +267,7 @@ function semesterFieldHtml(current){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxzwdPfapYnKGwxPCGEKTHoGQFgU5z-0a20eX4oJiP9ZLtQfkRLXgy7bjQS4Z-doRydiw/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-17 f';
+var APP_VERSION = '2026-09-17 g';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -977,7 +987,7 @@ function screenRegisterStudent(){
             '<option value="">선택해 주세요</option>' +
             PARTICIPATING_DEPTS.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('') +
           '</select></div>' +
-          '<div class="field"><label>입학년도(선택)</label><input id="regYear" inputmode="numeric" placeholder="예: 2023"></div>' +
+          '<div class="field"><label>입학년도(선택)</label><select id="regYear">'+admissionYearOptions('')+'</select></div>' +
         '</div>' +
         '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
         '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password"></div>' +
