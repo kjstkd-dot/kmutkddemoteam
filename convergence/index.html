@@ -288,7 +288,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 q';
+var APP_VERSION = '2026-09-18 r';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1356,6 +1356,30 @@ function renderStudent(){
 async function loadMe(){
   state.cache.me = await storeGet('cvg_students', state.studentSession.id);
 }
+// 학생이 지금까지 이수한 과목 중 융합전공 인정과목만 모아서 보여준다. 경로를 펼쳐보지 않아도
+// "내가 들은 수업 중 어떤 게 융합전공 교과목인지"를 홈 화면에서 바로 알 수 있게 한다.
+function myConvergenceCoursesBlock(student){
+  var list = sortedBySemester(courses(student).filter(courseIsConvergence));
+  var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
+  var totalCr = list.reduce(function(s,c){ return s+num(c.credits); }, 0);
+  return '<div class="reco-group done" style="margin-top:16px;">' +
+    '<div class="rg-title">✓ 내가 이수한 융합전공 인정과목 ('+list.length+'개 · '+totalCr+'학점)</div>' +
+    (list.length ? '<div class="reco-list">' + list.map(function(c){
+      var isCore = coreNames.indexOf(normName(c.name)) >= 0;
+      return '<div class="reco-item"><span class="ri-name">'+(isCore?'⭐ ':'')+esc(c.name)+'</span>' +
+        '<span class="ri-credit">'+num(c.credits)+'학점'+(c.semester?', '+esc(c.semester):'')+'</span></div>';
+    }).join('') + '</div>' : '<div class="reco-empty">아직 이수한 융합전공 인정과목이 없어요.</div>') +
+  '</div>';
+}
+// 지금 가장 빨리 채울 수 있는 경로를 기준으로, 앞으로 뭘 들으면 되는지 경로 카드를
+// 펼치지 않아도 홈 화면에서 바로 볼 수 있게 한다.
+function nextStepsBlock(student, bestKey){
+  return '<div style="margin-top:16px;">' +
+    '<div class="row-between" style="margin-bottom:8px;"><b style="font-size:13.5px;">앞으로 뭘 들으면 될까요?</b>' +
+      '<span class="cm" style="color:var(--text-faint);">'+esc(TRACK_TYPES[bestKey].label)+' 기준</span></div>' +
+    recommendedCoursesHtml(student, bestKey) +
+  '</div>';
+}
 function progressBlock(student){
   var analyses = trackAnalyses(student);
   var met = anyTrackMet(student);
@@ -1372,6 +1396,10 @@ function progressBlock(student){
   if(!met){
     html += '<div class="notice-box">제1전공 졸업요건은 충족했지만 이 융합전공 요건을 정해진 기간까지 못 채웠다면, ' +
       '학사학위취득 유예를 신청할 수 있어요(최대 2회, 학칙 제69조의1). 신청하지 않으면 제1전공 학위만 수여돼요(학칙 제69조).</div>';
+  }
+  html += myConvergenceCoursesBlock(student);
+  if(!met){
+    html += nextStepsBlock(student, best.key);
   }
   if(core.length){
     html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
@@ -1428,12 +1456,16 @@ function recommendedCourses(student, key){
   return { missingCore:missingCore, selfCourses:selfCourses, otherDeptCourses:otherDeptCourses, creditsNeeded:creditsNeeded };
 }
 // 과목 목록을 작은 박스형 줄(.reco-item)로 보여준다. showSemester가 true면 이수학기도 같이 적는다.
-function courseChipList(list, showSemester){
+function courseChipList(list, showSemester, limit){
   if(!list.length) return '<div class="reco-empty">아직 없어요.</div>';
-  return '<div class="reco-list">' + list.map(function(c){
+  var shown = limit ? list.slice(0, limit) : list;
+  var extra = limit && list.length > limit ? list.length - limit : 0;
+  return '<div class="reco-list">' + shown.map(function(c){
     return '<div class="reco-item"><span class="ri-name">'+esc(c.name)+'</span>' +
       '<span class="ri-credit">'+num(c.credits)+'학점'+(showSemester && c.semester ? ', '+esc(c.semester) : '')+'</span></div>';
-  }).join('') + '</div>';
+  }).join('') +
+  (extra ? '<div class="reco-empty">그 외 '+extra+'개 더 있어요 · "+ 과목 추가"에서 전체 목록을 볼 수 있어요.</div>' : '') +
+  '</div>';
 }
 function recommendedCoursesHtml(student, key){
   var rec = recommendedCourses(student, key);
@@ -1455,7 +1487,7 @@ function recommendedCoursesHtml(student, key){
   if(rec.otherDeptCourses.length){
     html += '<div class="reco-group">' +
       '<div class="rg-title">다른 학과 융합전공 인정과목</div>' +
-      courseChipList(rec.otherDeptCourses) +
+      courseChipList(rec.otherDeptCourses, false, 10) +
     '</div>';
   }
   if(!rec.missingCore.length && !rec.selfCourses.length && !rec.otherDeptCourses.length){
@@ -2221,11 +2253,12 @@ function guideStudent(){
         '<li>과목 목록과 마찬가지로 각 항목을 나중에 수정하거나 삭제할 수 있습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">5</div>' +
-      '<h2>어느 경로가 빠른지 비교해서 보기</h2>' +
-      '<p>홈 화면 위쪽에서 앱이 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 자동으로 계산해서 비교해 줍니다.</p>' +
+      '<h2>내가 뭘 들었고, 앞으로 뭘 들어야 하는지 한눈에 보기</h2>' +
+      '<p>홈 화면 위쪽 상태 배너 바로 아래에서, 클릭 없이 바로 두 가지를 볼 수 있어요.</p>' +
       '<ul>' +
-        '<li>아직 아무 경로도 채우지 못했다면 <b>지금 페이스면 가장 빨리 채울 수 있는 경로와 남은 학점</b>을 알려줍니다.</li>' +
-        '<li>경로별 카드에서 <b>융합전공 학점 · 제1전공 학점 · 졸업논문</b> 진행 상황을 각각 확인할 수 있어요. 카드를 누르면 왼쪽에 그 학점에 실제로 들어간 <b>이수과목</b>, 오른쪽에 앞으로 들으면 남은 학점을 채울 수 있는 <b>추천 과목</b>(안 들은 핵심과목, 융합전공 자체 개설과목, 본인 학과에는 없는 다른 학과의 융합전공 인정과목)이 함께 펼쳐집니다.</li>' +
+        '<li><b>✓ 내가 이수한 융합전공 인정과목</b> — 지금까지 등록한 과목 중 융합전공 학점으로 인정되는 과목만 모아서 보여줘요. 핵심과목은 ⭐ 표시가 붙어요.</li>' +
+        '<li><b>앞으로 뭘 들으면 될까요?</b> — 아직 어떤 경로도 충족하지 못했다면, 지금 가장 빨리 채울 수 있는 경로를 기준으로 <b>꼭 필요한 핵심과목 · 융합전공 자체 개설과목 · 본인 학과에는 없는 다른 학과의 융합전공 인정과목</b> 중 아직 안 들은 것을 추천해 줘요. 이미 충족했다면 이 추천은 나타나지 않아요.</li>' +
+        '<li>그 아래 <b>경로별 비교</b> 카드에서는 앱이 자동으로 계산하는 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 각각 자세히 비교할 수 있어요. 카드를 누르면 그 경로 기준으로 왼쪽에 <b>이수과목</b>, 오른쪽에 <b>추천 과목</b>이 함께 펼쳐집니다.</li>' +
         '<li>어느 하나라도 충족되면 그 경로 이름으로 "이수 조건 충족"이 표시됩니다.</li>' +
         '<li>아직 충족하지 못했다면 <b>학사학위취득 유예</b> 신청 안내가 함께 나타납니다.</li>' +
       '</ul></div>'
