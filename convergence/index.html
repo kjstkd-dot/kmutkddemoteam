@@ -136,6 +136,22 @@ button{font-family:inherit;}
 .icobtn.danger:hover{border-color:var(--danger); color:var(--danger);}
 .catpill{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--surface-2); color:var(--primary); margin-right:4px;}
 
+/* 이수과목/추천과목 박스 (경로별 비교 펼침) */
+.reco-group{border:1px solid var(--border); border-radius:var(--radius-m); padding:10px 12px; margin-bottom:10px; background:var(--surface-3);}
+.reco-group:last-child{margin-bottom:0;}
+.reco-group .rg-title{font-size:12px; font-weight:800; margin-bottom:8px; color:var(--text);}
+.reco-group.done{background:var(--success-bg);}
+.reco-group.done .rg-title{color:var(--success);}
+.reco-group.need{background:var(--amber-bg); border-color:var(--amber-border);}
+.reco-group.need .rg-title{color:var(--amber);}
+.reco-group.self{background:var(--surface-2);}
+.reco-group.self .rg-title{color:var(--primary);}
+.reco-list{display:flex; flex-direction:column; gap:5px;}
+.reco-item{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 9px; font-size:12px; line-height:1.45;}
+.reco-item .ri-name{font-weight:600; color:var(--text); word-break:break-all;}
+.reco-item .ri-credit{color:var(--text-muted); font-size:11px; white-space:nowrap; margin-left:4px;}
+.reco-empty{font-size:12px; color:var(--text-faint); padding:2px;}
+
 /* admin board */
 .summary{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px;}
 .tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow-card);}
@@ -272,7 +288,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 n';
+var APP_VERSION = '2026-09-18 o';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1390,25 +1406,39 @@ function recommendedCourses(student, key){
   var creditsNeeded = Math.max(0, info.convergenceMin - cvgCur);
   return { missingCore:missingCore, selfCourses:selfCourses, otherDeptCourses:otherDeptCourses, creditsNeeded:creditsNeeded };
 }
+// 과목 목록을 작은 박스형 줄(.reco-item)로 보여준다. showSemester가 true면 이수학기도 같이 적는다.
+function courseChipList(list, showSemester){
+  if(!list.length) return '<div class="reco-empty">아직 없어요.</div>';
+  return '<div class="reco-list">' + list.map(function(c){
+    return '<div class="reco-item"><span class="ri-name">'+esc(c.name)+'</span>' +
+      '<span class="ri-credit">'+num(c.credits)+'학점'+(showSemester && c.semester ? ', '+esc(c.semester) : '')+'</span></div>';
+  }).join('') + '</div>';
+}
 function recommendedCoursesHtml(student, key){
   var rec = recommendedCourses(student, key);
-  var line = function(c){ return '<div class="cm">· '+esc(c.name)+' ('+num(c.credits)+'학점)</div>'; };
-  var html = '<div class="cm" style="margin-bottom:6px; font-weight:700; color:var(--primary);">추천 과목' +
-    (rec.creditsNeeded ? ' (앞으로 '+rec.creditsNeeded+'학점 필요)' : '') + '</div>';
+  var html = '<div class="reco-group self">' +
+    '<div class="rg-title">추천 과목'+(rec.creditsNeeded ? ' · 앞으로 '+rec.creditsNeeded+'학점 필요' : '')+'</div>' +
+  '</div>';
   if(rec.missingCore.length){
-    html += '<div class="cm" style="margin-top:4px; font-weight:600; color:var(--danger);">꼭 필요 · 핵심과목</div>' +
-      rec.missingCore.map(line).join('');
+    html += '<div class="reco-group need">' +
+      '<div class="rg-title">꼭 필요 · 핵심과목</div>' +
+      courseChipList(rec.missingCore) +
+    '</div>';
   }
   if(rec.selfCourses.length){
-    html += '<div class="cm" style="margin-top:8px; font-weight:600;">융합전공 자체 개설과목</div>' +
-      rec.selfCourses.map(line).join('');
+    html += '<div class="reco-group self">' +
+      '<div class="rg-title">융합전공 자체 개설과목</div>' +
+      courseChipList(rec.selfCourses) +
+    '</div>';
   }
   if(rec.otherDeptCourses.length){
-    html += '<div class="cm" style="margin-top:8px; font-weight:600;">다른 학과 융합전공 인정과목</div>' +
-      rec.otherDeptCourses.map(line).join('');
+    html += '<div class="reco-group">' +
+      '<div class="rg-title">다른 학과 융합전공 인정과목</div>' +
+      courseChipList(rec.otherDeptCourses) +
+    '</div>';
   }
   if(!rec.missingCore.length && !rec.selfCourses.length && !rec.otherDeptCourses.length){
-    html += '<div class="cm">추천할 과목이 없어요(이미 다 이수했어요).</div>';
+    html += '<div class="reco-empty">추천할 과목이 없어요(이미 다 이수했어요).</div>';
   }
   return html;
 }
@@ -1418,17 +1448,20 @@ function trackContributingCoursesBlock(student, key){
   var cvgList = info.primaryMin
     ? sortedBySemester(minorConvergenceCourses(student, dept, primaryCreditsTotal(student) >= info.primaryMin))
     : sortedBySemester(courses(student).filter(courseIsConvergence));
-  var courseLine = function(c){ return '<div class="cm">· '+esc(c.name)+' ('+num(c.credits)+'학점'+(c.semester?', '+esc(c.semester):'')+')</div>'; };
-  var leftHtml = '<div class="cm" style="margin-bottom:6px; font-weight:700; color:var(--text);">이수과목 · 융합전공 학점 ('+cvgList.length+')</div>' +
-    (cvgList.length ? cvgList.map(courseLine).join('') : '<div class="cm">아직 없어요.</div>');
+  var leftHtml = '<div class="reco-group done">' +
+    '<div class="rg-title">이수과목 · 융합전공 학점 ('+cvgList.length+')</div>' +
+    courseChipList(cvgList, true) +
+  '</div>';
   if(info.primaryMin){
     var priList = sortedBySemester(courses(student).filter(function(c){ return courseIsPrimary(c, dept); }));
-    leftHtml += '<div class="cm" style="margin:10px 0 6px; font-weight:700; color:var(--text);">이수과목 · 제1전공 학점 ('+priList.length+')</div>' +
-      (priList.length ? priList.map(courseLine).join('') : '<div class="cm">아직 없어요.</div>');
+    leftHtml += '<div class="reco-group">' +
+      '<div class="rg-title">이수과목 · 제1전공 학점 ('+priList.length+')</div>' +
+      courseChipList(priList, true) +
+    '</div>';
   }
   var rightHtml = recommendedCoursesHtml(student, key);
   return '<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);">' +
-    '<div class="grid2" style="gap:14px; align-items:start;">' +
+    '<div class="grid2" style="gap:12px; align-items:start;">' +
       '<div>'+leftHtml+'</div>' +
       '<div>'+rightHtml+'</div>' +
     '</div>' +
