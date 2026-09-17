@@ -272,7 +272,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 e';
+var APP_VERSION = '2026-09-18 f';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1795,6 +1795,25 @@ function renderAdmin(){
   if(state.view==='settings') return screenAdminSettings();
   return screenAdminList();
 }
+// 입학년도로 대략적인 학년을 셈한다(휴학 등 정확한 재학학기는 반영 못 함). 4학년을 넘으면 4학년으로 묶는다.
+function studentGradeLevel(s){
+  var y = num(s.year);
+  if(!y) return null;
+  var grade = new Date().getFullYear() - y + 1;
+  if(grade < 1) grade = 1;
+  if(grade > 4) grade = 4;
+  return grade;
+}
+function studentRosterCard(s){
+  var m = anyTrackMet(s);
+  var b = bestTrack(s);
+  return '<button class="rcard '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
+    '<div class="nm">'+esc(s.name)+'</div>' +
+    '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
+    '<div class="mini"><span class="mono">'+totalCredits(s)+'학점'+(m?'':' · '+esc(b.label)+' 남은 '+b.cvgGap+'학점')+'</span>' +
+      '<span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
+  '</button>';
+}
 function screenAdminList(){
   var roster = state.cache.roster || [];
   var total = roster.length;
@@ -1807,6 +1826,17 @@ function screenAdminList(){
     if(state.filter==='unmet' && m) return false;
     return true;
   });
+  var groups = {};
+  rows.forEach(function(s){
+    var g = studentGradeLevel(s);
+    var key = g ? (g+'학년') : '학년 미확인';
+    (groups[key] = groups[key] || []).push(s);
+  });
+  var groupOrder = ['1학년','2학년','3학년','4학년','학년 미확인'].filter(function(k){ return groups[k]; });
+  var rosterHtml = groupOrder.map(function(k){
+    return '<div class="row-between" style="margin-top:14px; margin-bottom:6px;"><b style="font-size:12.5px; color:var(--text-muted);">'+esc(k)+' ('+groups[k].length+'명)</b></div>' +
+      '<div class="roster">' + groups[k].map(studentRosterCard).join('') + '</div>';
+  }).join('');
   return (
     '<div class="phone">' +
       '<div class="eyebrow">관리자</div>' +
@@ -1825,16 +1855,7 @@ function screenAdminList(){
           '<option value="unmet" '+(state.filter==='unmet'?'selected':'')+'>미충족</option>' +
         '</select>' +
       '</div>' +
-      (rows.length ? '<div class="roster">' + rows.map(function(s){
-        var m = anyTrackMet(s);
-        var b = bestTrack(s);
-        return '<button class="rcard '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
-          '<div class="nm">'+esc(s.name)+'</div>' +
-          '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
-          '<div class="mini"><span class="mono">'+totalCredits(s)+'학점'+(m?'':' · '+esc(b.label)+' 남은 '+b.cvgGap+'학점')+'</span>' +
-            '<span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
-        '</button>';
-      }).join('') + '</div>' : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
+      (rows.length ? rosterHtml : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
       '<div class="row" style="margin-top:16px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
         '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>' +
@@ -1880,11 +1901,17 @@ function courseCodeByName(name){
   var c = COURSE_CATALOG.filter(function(x){ return x.name===name; })[0];
   return c ? c.code : '';
 }
+// 융합전공 "자체" 개설과목: COURSE_CATALOG 중 어느 참여학과 교육과정표에도 없는 과목.
+// 핵심과목(제4조②)은 이 자체 개설과목 중에서만 지정할 수 있다.
+function isSelfConvergenceCourse(code){
+  return !!courseInCatalog(code) && !Object.keys(PRIMARY_CATALOGS).some(function(d){ return !!primaryCourseInCatalog(d, code); });
+}
+var SELF_COURSE_CATALOG = COURSE_CATALOG.filter(function(c){ return isSelfConvergenceCourse(c.code); });
 function screenAdminSettings(){
   var code = state.cache.adminCode || '';
   var curCodes = CORE_COURSES.map(function(c){ return courseCodeByName(c.name); });
   var slotOptions = function(picked){
-    return '<option value="">미지정</option>' + sortByName(COURSE_CATALOG).map(function(c){
+    return '<option value="">미지정</option>' + sortByName(SELF_COURSE_CATALOG).map(function(c){
       return '<option value="'+esc(c.code)+'" '+(picked===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
     }).join('');
   };
@@ -1900,7 +1927,7 @@ function screenAdminSettings(){
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
       '<h2 class="screen-title" style="margin-top:24px;">핵심과목 지정</h2>' +
-      '<p class="screen-sub">제4조② · 편성된 교과목 중 최대 3과목까지 핵심과목으로 지정할 수 있어요. 아직 정하지 않았다면 "미지정"으로 두면 돼요.</p>' +
+      '<p class="screen-sub">제4조② · 핵심과목은 융합전공 자체 개설과목(참여학과 교육과정표에는 없는 융합전공 고유 과목) 중에서만 최대 3과목까지 지정할 수 있어요. 아직 정하지 않았다면 "미지정"으로 두면 돼요.</p>' +
       '<form id="form-corecourses" class="stack">' +
         [0,1,2].map(function(i){
           return '<div class="field"><label>핵심과목 '+(i+1)+'</label><select id="coreSlot'+i+'">'+slotOptions(curCodes[i]||'')+'</select></div>';
@@ -2049,10 +2076,10 @@ function guideRules(){
     '</div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>핵심과목(제4조②)</h2>' +
-      '<p>관리자가 융합전공 자체 교과목 중 최대 3과목을 핵심과목으로 지정합니다. 지정된 핵심과목: <b>'+coreNames+'</b></p>' +
+      '<p>관리자가 융합전공 <b>자체 개설과목</b>(참여학과 교육과정표에는 없는 융합전공 고유 과목 6개) 중 최대 3과목을 핵심과목으로 지정합니다. 지정된 핵심과목: <b>'+coreNames+'</b></p>' +
       '<ul>' +
         '<li>핵심과목을 모두 이수해야 어느 경로든 "충족"으로 인정됩니다.</li>' +
-        '<li>핵심과목은 본인 학과 교육과정표에 있는 과목이어도 항상 융합전공 학점으로 인정됩니다.</li>' +
+        '<li>핵심과목은 참여학과 교육과정표에 있는 과목이 아니라서, 부전공 경로의 이중 인정 방지 규칙과 상관없이 항상 융합전공 학점으로 인정됩니다.</li>' +
       '</ul>' +
     '</div>' +
     '<div class="step"><div class="step-num">4</div>' +
@@ -2076,7 +2103,7 @@ function guideAdmin(){
       '</ul></div>' +
     '<div class="step"><div class="step-num">2</div>' +
       '<h2>핵심과목 지정하기</h2>' +
-      '<p><b>관리자 설정</b> 화면 아래쪽에서 교육과정표 과목 중 핵심과목(최대 3개)을 고를 수 있어요.</p>' +
+      '<p><b>관리자 설정</b> 화면 아래쪽에서 융합전공 자체 개설과목 중 핵심과목(최대 3개)을 고를 수 있어요.</p>' +
       '<ul>' +
         '<li>지정하면 학생이 그 과목을 이수했는지 자동으로 인식해서 충족 여부에 반영됩니다.</li>' +
         '<li>아직 정하지 않았다면 3칸 모두 <b>미지정</b>으로 둬도 괜찮아요. 이 경우 핵심과목 조건 없이 학점만으로 판정합니다.</li>' +
@@ -2085,7 +2112,7 @@ function guideAdmin(){
       '<h2>전체 학생 현황 보기</h2>' +
       '<p>관리자 홈 화면에서 <b>전체 학생 · 요건 충족 · 미충족</b> 숫자를 바로 볼 수 있어요.</p>' +
       '<ul>' +
-        '<li>이름이나 학번으로 검색하고, 충족/미충족으로 걸러 볼 수 있습니다.</li>' +
+        '<li>이름이나 학번으로 검색하고, 충족/미충족으로 걸러 볼 수 있습니다. 학생들은 입학년도로 추정한 학년(1~4학년, 미확인)별로 묶여서 보입니다.</li>' +
         '<li>학생 카드를 누르면 그 학생의 상세 화면으로 들어갑니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">4</div>' +
