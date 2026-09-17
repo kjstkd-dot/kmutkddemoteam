@@ -272,7 +272,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 a';
+var APP_VERSION = '2026-09-18 b';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -770,26 +770,58 @@ async function extractPdfText(file){
   if(!window.pdfjsLib) throw new Error('PDF 읽기 기능을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.');
   var buf = await file.arrayBuffer();
   var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  var text = '';
+  var lines = [];
   for(var i=1; i<=pdf.numPages; i++){
     var page = await pdf.getPage(i);
     var content = await page.getTextContent();
-    text += content.items.map(function(it){ return it.str; }).join(' ') + '\n';
+    var rowKeys = [];
+    var rows = {};
+    content.items.forEach(function(it){
+      if(!it.str || !it.str.trim()) return;
+      var y = it.transform[5];
+      var key = null;
+      for(var j=0; j<rowKeys.length; j++){
+        if(Math.abs(rowKeys[j]-y) <= 2){ key = rowKeys[j]; break; }
+      }
+      if(key===null){ key = y; rowKeys.push(key); }
+      (rows[key] = rows[key] || []).push({ x: it.transform[4], str: it.str });
+    });
+    rowKeys.sort(function(a,b){ return b-a; });
+    rowKeys.forEach(function(key){
+      var sorted = rows[key].slice().sort(function(a,b){ return a.x-b.x; });
+      lines.push(sorted.map(function(it){ return it.str; }).join(' '));
+    });
   }
-  return text;
+  return lines;
 }
-function matchCoursesFromText(text, dept, excludeCodes){
-  var norm = normName(text);
+// 한 줄(행) 안에서 "2024-1", "2024 1학기" 같은 연도-학기 표시를 찾는다. 못 찾으면 빈 문자열.
+function extractSemesterFromContext(line){
+  var m = /(?:^|[^0-9])(20\d{2})\s*[-./년]?\s*([12])\s*학?기?(?!\d)/.exec(line);
+  if(!m) return '';
+  return m[1] + '-' + m[2];
+}
+function matchCoursesFromText(lines, dept, excludeCodes){
   var groups = unifiedCatalogGroups(dept, excludeCodes);
   var pool = groups.deptList.concat(groups.extra);
-  var seen = {};
+  // 긴 과목명부터 먼저 찾아서 그 자리를 "소모"시켜 둔다. 그래야 "태권체조" 안에 들어있는
+  // "체조"처럼, 짧은 과목명이 다른 과목명 안에서 우연히 겹쳐 잘못 인식되지 않는다.
+  var byLenDesc = pool.slice().sort(function(a,b){ return b.name.length - a.name.length; });
+  var matchedCodes = {};
   var matches = [];
-  pool.forEach(function(c){
-    if(seen[c.code]) return;
-    if(norm.indexOf(normName(c.name)) >= 0){
-      seen[c.code] = true;
-      matches.push(c);
-    }
+  lines.forEach(function(line){
+    var norm = normName(line);
+    if(!norm) return;
+    var consumed = norm.split('');
+    byLenDesc.forEach(function(c){
+      if(matchedCodes[c.code]) return;
+      var needle = normName(c.name);
+      if(!needle) return;
+      var idx = consumed.join('').indexOf(needle);
+      if(idx < 0) return;
+      for(var k=idx; k<idx+needle.length; k++) consumed[k] = ' ';
+      matchedCodes[c.code] = true;
+      matches.push({ code:c.code, name:c.name, credits:c.credits, semester: extractSemesterFromContext(line) });
+    });
   });
   return sortByName(matches);
 }
@@ -1320,20 +1352,22 @@ function screenCourseUploadForm(){
       '</div>';
   } else {
     body =
-      '<p class="screen-sub">아래에서 찾은 '+pdf.matches.length+'개 과목 중 실제로 이수한 과목만 체크된 상태로 두고 "선택한 과목 추가하기"를 눌러주세요. 이미 등록한 과목은 목록에서 빠져 있어요.</p>' +
+      '<p class="screen-sub">아래에서 찾은 '+pdf.matches.length+'개 과목 중 실제로 이수한 과목만 체크된 상태로 두고 "선택한 과목 추가하기"를 눌러주세요. 이미 등록한 과목은 목록에서 빠져 있어요. PDF에서 이수학기를 같이 찾은 과목은 학기가 표시돼요.</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course-upload" class="stack">' +
         '<div class="courselist">' +
           pdf.matches.map(function(c){
             return '<label class="courserow" style="cursor:pointer;">' +
               '<input type="checkbox" class="pdfMatchChk" value="'+esc(c.code)+'" checked style="width:18px; height:18px; flex:none;">' +
-              '<div class="ci"><div class="cn">'+esc(c.name)+'</div></div>' +
+              '<div class="ci"><div class="cn">'+esc(c.name)+'</div>' +
+                (c.semester ? '<div class="cm">인식된 이수학기: '+esc(c.semester)+'</div>' : '<div class="cm">이수학기를 못 찾았어요 — 아래 공통 학기가 적용돼요</div>') +
+              '</div>' +
               '<div class="cc">'+c.credits+'학점</div>' +
             '</label>';
           }).join('') +
         '</div>' +
         semesterFieldHtml('') +
-        '<div style="font-size:11.5px; color:var(--text-faint); line-height:1.5; margin-top:-6px;">이수학기를 고르면 선택한 과목 모두에 같은 학기가 적용돼요. 과목마다 학기가 다르면 비워두고 나중에 각 과목에서 따로 수정해 주세요.</div>' +
+        '<div style="font-size:11.5px; color:var(--text-faint); line-height:1.5; margin-top:-6px;">PDF에서 이수학기를 찾지 못한 과목에만 여기서 고른 학기가 적용돼요. 비워두면 그런 과목은 학기 없이 추가되고, 나중에 각 과목에서 따로 수정할 수 있어요.</div>' +
         '<div class="row" style="gap:8px; margin-top:8px;">' +
           '<button class="btn btn-ghost" type="button" data-action="'+backAction+'" style="width:auto; flex:1;">취소</button>' +
           '<button class="btn btn-primary" type="submit" style="flex:2;">선택한 과목 추가하기</button>' +
@@ -1472,7 +1506,7 @@ async function deleteCourse(courseId){
   student.courses = list;
   render();
 }
-async function saveBulkCourses(codes, semester){
+async function saveBulkCourses(codes, fallbackSemester){
   var isAdmin = state.role==='admin';
   var col = 'cvg_students';
   var id = isAdmin ? state.detailId : state.studentSession.id;
@@ -1483,7 +1517,8 @@ async function saveBulkCourses(codes, semester){
   codes.forEach(function(code){
     var info = pdfMatches.filter(function(m){ return m.code===code; })[0] || anyCourseInfo(dept, code);
     if(!info) return;
-    list.push({ id:uid(), name:info.name, credits:info.credits, semester:semester||'', courseCode:info.code });
+    var semester = info.semester || fallbackSemester || '';
+    list.push({ id:uid(), name:info.name, credits:info.credits, semester:semester, courseCode:info.code });
   });
   await storeUpdate(col, id, { courses:list });
   student.courses = list;
@@ -1761,7 +1796,7 @@ function guideStudent(){
         '<li>교육과정이 바뀌어 목록에 없는 과목(예전 교육과정, 전과 인정과목 등)은 <b>목록에 없는 과목(직접 입력)</b>을 골라 직접 입력하세요. 이 경우 제1전공 학점으로만 인정됩니다.</li>' +
         '<li>관리자가 지정한 핵심과목을 이수하면 자동으로 <b>핵심과목</b> 표시가 붙습니다.</li>' +
         '<li>이수학기는 연도(2022년~)와 학기를 골라서 넣습니다.</li>' +
-        '<li>과목이 많다면 <b>📄 PDF로 일괄 추가</b>를 눌러 성적표나 수강신청 확인서 PDF를 올려보세요. 글자가 담긴 PDF라면 교육과정표에 있는 과목 이름을 찾아 후보로 보여주고, 체크된 과목만 골라서 한 번에 추가할 수 있어요(이미 등록한 과목은 후보에서 빠집니다).</li>' +
+        '<li>과목이 많다면 <b>📄 PDF로 일괄 추가</b>를 눌러 성적표나 수강신청 확인서 PDF를 올려보세요. 글자가 담긴 PDF라면 교육과정표에 있는 과목 이름을 표의 줄 단위로 찾아 후보로 보여주고, 같은 줄에 연도-학기가 있으면 이수학기도 자동으로 채워줘요. 체크된 과목만 골라서 한 번에 추가할 수 있어요(이미 등록한 과목은 후보에서 빠집니다).</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>인정학기·졸업논문 정보 채우기</h2>' +
