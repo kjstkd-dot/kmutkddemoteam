@@ -300,7 +300,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 z3';
+var APP_VERSION = '2026-09-18 z4';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -370,9 +370,10 @@ async function storeAll(col){
    계명대학교 "융합전공 이수 규정" 제4조·제5조·제7조 기준. */
 var TRACK_NAME = '글로벌K-공연콘텐츠전공';
 var PARTICIPATING_DEPTS = ['태권도학과', '연극뮤지컬과', '무용학과', '영어영문학과'];
-// 핵심과목(제4조②, 최대 3과목)은 코드에 미리 넣지 않고 관리자 설정 화면에서
-// 나중에 고를 수 있게 비워둔다. cvg_config/app 문서의 coreCourseCodes에 저장된다.
-var CORE_COURSES = [];
+// 핵심과목(제4조②) 조건: 특정 과목을 지정하는 게 아니라, 융합전공 자체 개설과목
+// (참여학과 교육과정표에는 없는 융합전공 고유 과목) 중 아무 과목이나 합쳐서
+// 이 학점 이상 이수하면 충족된다.
+var SELF_COURSE_MIN_CREDITS = 3;
 // 2026년도 연계전공(융합전공) 교육과정표에 실린 개설 과목 목록. 편성표가 바뀌면 이 배열을 고쳐주세요.
 var COURSE_CATALOG = [
   { code:'17567', name:'체조', credits:1 },
@@ -944,13 +945,6 @@ function extractUnknownMajorCourses(lines, knownMatches, existingNames){
   });
   return out;
 }
-function applyCoreCourseCodes(codes){
-  CORE_COURSES = (codes||[]).map(courseInCatalog).filter(Boolean).map(function(c){ return { name:c.name, credits:c.credits }; });
-}
-async function loadCoreCourses(){
-  var cfg = await storeGet('cvg_config', 'app');
-  applyCoreCourseCodes(cfg && cfg.coreCourseCodes);
-}
 var DOUBLE_MAJOR_MIN = 33;      // 제7조① 복수전공: 33학점(핵심과목 포함) 이상
 var MINOR_MIN = 15;             // 제7조② 부전공: 15학점(핵심과목 포함) 이상 (단일/2개 이상 동일)
 var MINOR_PRIMARY_SINGLE = 54;  // 제7조② 부전공 1개 이수 시 제1전공 54학점 이상
@@ -997,17 +991,14 @@ function convergenceCourses(student){
 function totalCredits(student){
   return convergenceCourses(student).reduce(function(s,c){ return s + num(c.credits); }, 0);
 }
-function coreStatus(student){
-  var have = courses(student).map(function(c){ return normName(c.name); });
-  return CORE_COURSES.map(function(cc){
-    return { name:cc.name, credits:cc.credits, done: have.indexOf(normName(cc.name)) >= 0 };
-  });
+// 핵심과목(제4조②) 조건: 융합전공 자체 개설과목(참여학과 교육과정표에는 없는 과목)을
+// 합쳐서 SELF_COURSE_MIN_CREDITS학점 이상 이수했는지로 판정한다. 특정 과목을 지정하지 않는다.
+function selfCourseCredits(student){
+  return courses(student).filter(function(c){ return c.courseCode && isSelfConvergenceCourse(c.courseCode); })
+    .reduce(function(s,c){ return s+num(c.credits); }, 0);
 }
-function coreDoneCount(student){ return coreStatus(student).filter(function(x){ return x.done; }).length; }
-function coreMet(student){ return coreDoneCount(student) >= CORE_COURSES.length; }
-function missingCoreCredits(student){
-  return coreStatus(student).filter(function(x){ return !x.done; }).reduce(function(s,x){ return s+num(x.credits); }, 0);
-}
+function coreMet(student){ return selfCourseCredits(student) >= SELF_COURSE_MIN_CREDITS; }
+function missingCoreCredits(student){ return Math.max(0, SELF_COURSE_MIN_CREDITS - selfCourseCredits(student)); }
 // 학칙 제44조①: 복수전공(융합전공 포함)으로 이수하는 경우, 제1전공 학과의 졸업논문이
 // 필수과목이면 반드시 이수해야 한다. 부전공에는 적용되지 않는다.
 function thesisApplies(student, trackKey){ return trackKey==='double' && !!student.thesisRequired; }
@@ -1387,7 +1378,6 @@ async function loadMe(){
 function myConvergenceCoursesBlock(student){
   var dept = student.dept;
   var list = sortedBySemester(convergenceCourses(student));
-  var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
   var totalCr = list.reduce(function(s,c){ return s+num(c.credits); }, 0);
   var pendingCount = courses(student).filter(function(c){
     return courseIsConvergence(c) && courseOverlapsOwnMajor(c, dept) && !c.reclassified;
@@ -1395,8 +1385,8 @@ function myConvergenceCoursesBlock(student){
   return '<div class="reco-group done" style="margin-top:16px;">' +
     '<div class="rg-title">✓ 내가 이수한 융합전공 인정과목 ('+list.length+'개 · '+totalCr+'학점)</div>' +
     (list.length ? '<div class="reco-list">' + list.map(function(c){
-      var isCore = coreNames.indexOf(normName(c.name)) >= 0;
-      return '<div class="reco-item"><span class="ri-name">'+(isCore?'⭐ ':'')+esc(c.name)+'</span>' +
+      var isSelf = c.courseCode && isSelfConvergenceCourse(c.courseCode);
+      return '<div class="reco-item"><span class="ri-name">'+(isSelf?'⭐ ':'')+esc(c.name)+'</span>' +
         '<span class="ri-credit">'+num(c.credits)+'학점'+(c.semester?', '+esc(c.semester):'')+'</span></div>';
     }).join('') + '</div>' : '<div class="reco-empty">아직 이수한 융합전공 인정과목이 없어요.</div>') +
     (pendingCount ? '<div class="reco-empty">그 외 '+pendingCount+'개는 본인 학과 과목이라 아직 인정 안 돼요(이수구분 변경을 신청하면 최대 6학점까지 인정돼요).</div>' : '') +
@@ -1415,8 +1405,7 @@ function progressBlock(student){
   var analyses = trackAnalyses(student);
   var met = anyTrackMet(student);
   var best = bestTrack(student);
-  var core = coreStatus(student);
-  var coreOkCount = core.filter(function(x){ return x.done; }).length;
+  var selfCr = selfCourseCredits(student);
   var html = '';
   html += '<div class="statusband '+(met?'met':'unmet')+'">' +
     '<div class="mark">'+(met?'✓':'!')+'</div>' +
@@ -1432,15 +1421,13 @@ function progressBlock(student){
   if(!met){
     html += nextStepsBlock(student, best.key);
   }
-  if(core.length){
-    html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
-      '<div class="cthead"><b>핵심과목 이수</b><span>'+coreOkCount+' / '+core.length+'과목'+(coreMet(student)?' 충족':'')+'</span></div>' +
-      '<div class="pbar"><i style="width:'+pct(coreOkCount, core.length)+'%"></i></div>' +
-      '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
-        core.map(function(c){ return (c.done?'✓ ':'· ') + esc(c.name); }).join(' &nbsp; ') +
-      '</div>' +
-    '</div>';
-  }
+  html += '<div class="catcard '+(coreMet(student)?'met':'')+'">' +
+    '<div class="cthead"><b>핵심과목(자체개설과목) 이수</b><span>'+selfCr+' / '+SELF_COURSE_MIN_CREDITS+'학점'+(coreMet(student)?' 충족':'')+'</span></div>' +
+    '<div class="pbar"><i style="width:'+pct(selfCr, SELF_COURSE_MIN_CREDITS)+'%"></i></div>' +
+    '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
+      '융합전공 자체 개설과목(참여학과 교육과정표에는 없는 과목) 중 아무거나 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 충족돼요.' +
+    '</div>' +
+  '</div>';
   html += '<div class="row-between" style="margin-top:16px; margin-bottom:2px;">' +
     '<b style="font-size:13.5px;">경로별 비교 (눌러서 과목 보기)</b>' +
     '<button type="button" class="qmark" data-action="toggle-track-info">?</button>' +
@@ -1479,25 +1466,25 @@ function progressBlock(student){
   return html;
 }
 // 이수한 과목만 나열하지 않고, 앞으로 뭘 들으면 이 경로의 융합전공 학점을 채울 수 있는지도
-// 함께 추천한다. 추천 대상은 (1) 아직 안 한 핵심과목(꼭 필요), (2) 융합전공 자체 개설과목 중
-// 안 들은 것, (3) 본인 학과에는 없는 다른 학과의 융합전공 인정과목 중 안 들은 것 — 이 두 묶음은
-// 본인 학과 과목이 아니라서 부전공 경로에서도 이중 인정 방지 규칙과 상관없이 항상 인정된다.
+// 함께 추천한다. 핵심과목 조건(자체개설과목 3학점 이상)을 아직 못 채웠으면 안 들은 자체
+// 개설과목을 "꼭 필요" 묶음으로 올리고, 이미 채웠으면 똑같은 과목들이 접힌 묶음으로 내려간다.
+// 다른 학과의 융합전공 인정과목은 본인 학과 과목이 아니라서 부전공 경로에서도 이중 인정
+// 방지 규칙과 상관없이 항상 인정된다.
 function recommendedCourses(student, key){
   var dept = student.dept || '';
   var have = courses(student).map(function(c){ return normName(c.name); });
-  var missingCore = CORE_COURSES.filter(function(cc){ return have.indexOf(normName(cc.name)) < 0; });
-  var missingCoreNames = missingCore.map(function(cc){ return normName(cc.name); });
   var untaken = COURSE_CATALOG.filter(function(c){ return have.indexOf(normName(c.name)) < 0; });
-  var selfCourses = sortByName(untaken.filter(function(c){
-    return isSelfConvergenceCourse(c.code) && missingCoreNames.indexOf(normName(c.name)) < 0;
-  }));
+  var untakenSelf = sortByName(untaken.filter(function(c){ return isSelfConvergenceCourse(c.code); }));
   var otherDeptCourses = sortByName(untaken.filter(function(c){
     return !isSelfConvergenceCourse(c.code) && !primaryCourseInCatalog(dept, c.code);
   }));
+  var selfNeeded = missingCoreCredits(student);
+  var neededSelfCourses = selfNeeded ? untakenSelf : [];
+  var selfCourses = selfNeeded ? [] : untakenSelf;
   var info = TRACK_TYPES[key];
   var cvgCur = totalCredits(student);
   var creditsNeeded = Math.max(0, info.convergenceMin - cvgCur);
-  return { missingCore:missingCore, selfCourses:selfCourses, otherDeptCourses:otherDeptCourses, creditsNeeded:creditsNeeded };
+  return { neededSelfCourses:neededSelfCourses, selfNeeded:selfNeeded, selfCourses:selfCourses, otherDeptCourses:otherDeptCourses, creditsNeeded:creditsNeeded };
 }
 // 과목 목록을 작은 박스형 줄(.reco-item)로 보여준다. showSemester가 true면 이수학기도 같이 적는다.
 function courseChipList(list, showSemester){
@@ -1528,15 +1515,15 @@ function recommendedCoursesHtml(student, key){
   var html = '<div class="reco-group self">' +
     '<div class="rg-title">추천 과목'+(rec.creditsNeeded ? ' · 앞으로 '+rec.creditsNeeded+'학점 필요' : '')+'</div>' +
   '</div>';
-  if(rec.missingCore.length){
+  if(rec.neededSelfCourses.length){
     html += '<div class="reco-group need">' +
-      '<div class="rg-title">꼭 필요 · 핵심과목</div>' +
-      courseChipList(rec.missingCore) +
+      '<div class="rg-title">꼭 필요 · 자체개설과목(합쳐서 '+rec.selfNeeded+'학점 이상)</div>' +
+      courseChipList(rec.neededSelfCourses) +
     '</div>';
   }
   html += recoCollapsibleGroup('self-'+key, '융합전공 자체 개설과목', rec.selfCourses, 'self');
   html += recoCollapsibleGroup('other-'+key, '다른 학과 융합전공 인정과목', rec.otherDeptCourses, '');
-  if(!rec.missingCore.length && !rec.selfCourses.length && !rec.otherDeptCourses.length){
+  if(!rec.neededSelfCourses.length && !rec.selfCourses.length && !rec.otherDeptCourses.length){
     html += '<div class="reco-empty">추천할 과목이 없어요(이미 다 이수했어요).</div>';
   }
   return '<div class="reco-outer">'+html+'</div>';
@@ -1597,18 +1584,17 @@ function sortedBySemester(list){
 function courseListBlock(student, editable){
   var list = sortedBySemester(courses(student));
   var dept = student && student.dept;
-  var coreNames = CORE_COURSES.map(function(c){ return normName(c.name); });
   if(!list.length) return '<div class="empty-state">아직 등록된 과목이 없어요.</div>';
   return '<div class="courselist">' + list.map(function(c){
-    var isCore = coreNames.indexOf(normName(c.name)) >= 0;
+    var isSelf = c.courseCode && isSelfConvergenceCourse(c.courseCode);
     var isCvg = courseIsConvergence(c);
     var isPri = courseIsPrimary(c, dept);
-    // 본인 학과 과목(핵심과목 제외)이면서 COURSE_CATALOG에도 있으면, 이수구분 변경을
+    // 본인 학과 과목(자체개설과목 제외)이면서 COURSE_CATALOG에도 있으면, 이수구분 변경을
     // 신청하기 전까지는 융합전공 이수 규정 제7조③에 따라 융합전공 학점으로 인정되지 않는다.
-    var overlapsOwn = isCvg && !isCore && courseOverlapsOwnMajor(c, dept);
+    var overlapsOwn = isCvg && !isSelf && courseOverlapsOwnMajor(c, dept);
     var pendingMinor = overlapsOwn && !c.reclassified;
     var tags = '<span class="catpill">'+esc(courseCategory(c, dept))+'</span>';
-    if(isCore) tags += '<span class="catpill">핵심과목</span>';
+    if(isSelf) tags += '<span class="catpill">자체개설과목</span>';
     if(isCvg) tags += '<span class="catpill" style="background:var(--success-bg); color:var(--success);">융합전공 과목</span>';
     if(pendingMinor) tags += '<span class="catpill" style="background:var(--amber-bg); color:var(--amber);">융합전공 미인정</span>' +
       '<button type="button" class="qmark" data-action="toggle-explain" data-id="'+esc(c.id)+'">?</button>';
@@ -1707,8 +1693,7 @@ function screenCourseForm(){
     '<div class="phone">' +
       '<div class="eyebrow">'+(editing?'과목 수정':'과목 추가')+'</div>' +
       '<h2 class="screen-title">'+(editing?'과목 정보 수정':'이수한 과목 추가')+'</h2>' +
-      '<p class="screen-sub">'+esc(dept||'본인 학과')+' 교육과정표에서 고르면 자동으로 제1전공 학점에 들어가요. 그중 융합전공 인정과목이면 융합전공 학점에도 함께 들어가요.' +
-        (CORE_COURSES.length ? ' 핵심과목은 자동으로 인식돼요.<br>핵심과목: '+CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '') +
+      '<p class="screen-sub">'+esc(dept||'본인 학과')+' 교육과정표에서 고르면 자동으로 제1전공 학점에 들어가요. 그중 융합전공 인정과목이면 융합전공 학점에도 함께 들어가요. 융합전공 자체 개설과목을 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 핵심과목 조건도 자동으로 충족돼요.' +
       '</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-course" class="stack">' +
@@ -2194,24 +2179,14 @@ function screenAdminDetail(){
     '</div>'
   );
 }
-function courseCodeByName(name){
-  var c = COURSE_CATALOG.filter(function(x){ return x.name===name; })[0];
-  return c ? c.code : '';
-}
 // 융합전공 "자체" 개설과목: COURSE_CATALOG 중 어느 참여학과 교육과정표에도 없는 과목.
-// 핵심과목(제4조②)은 이 자체 개설과목 중에서만 지정할 수 있다.
+// 핵심과목(제4조②) 조건은 이 자체 개설과목 중 아무거나 합쳐서 SELF_COURSE_MIN_CREDITS학점
+// 이상 이수하면 충족된다(특정 과목을 지정하지 않음).
 function isSelfConvergenceCourse(code){
   return !!courseInCatalog(code) && !Object.keys(PRIMARY_CATALOGS).some(function(d){ return !!primaryCourseInCatalog(d, code); });
 }
-var SELF_COURSE_CATALOG = COURSE_CATALOG.filter(function(c){ return isSelfConvergenceCourse(c.code); });
 function screenAdminSettings(){
   var code = state.cache.adminCode || '';
-  var curCodes = CORE_COURSES.map(function(c){ return courseCodeByName(c.name); });
-  var slotOptions = function(picked){
-    return '<option value="">미지정</option>' + sortByName(SELF_COURSE_CATALOG).map(function(c){
-      return '<option value="'+esc(c.code)+'" '+(picked===c.code?'selected':'')+'>'+esc(c.name)+' ('+c.credits+'학점)</option>';
-    }).join('');
-  };
   return (
     '<div class="phone">' +
       '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
@@ -2221,14 +2196,6 @@ function screenAdminSettings(){
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       '<form id="form-admincode" class="stack">' +
         '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
-        '<button class="btn btn-primary" type="submit">저장</button>' +
-      '</form>' +
-      '<h2 class="screen-title" style="margin-top:24px;">핵심과목 지정</h2>' +
-      '<p class="screen-sub">제4조② · 핵심과목은 융합전공 자체 개설과목(참여학과 교육과정표에는 없는 융합전공 고유 과목) 중에서만 최대 3과목까지 지정할 수 있어요. 아직 정하지 않았다면 "미지정"으로 두면 돼요.</p>' +
-      '<form id="form-corecourses" class="stack">' +
-        [0,1,2].map(function(i){
-          return '<div class="field"><label>핵심과목 '+(i+1)+'</label><select id="coreSlot'+i+'">'+slotOptions(curCodes[i]||'')+'</select></div>';
-        }).join('') +
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
       '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을, 참여학과별 제1전공 교육과정표는 PRIMARY_CATALOGS 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
@@ -2261,12 +2228,6 @@ async function saveAdminCode(code){
   state.formOk = '등록코드를 저장했어요.';
   render();
 }
-async function saveCoreCourses(codes){
-  await storeUpdate('cvg_config', 'app', { coreCourseCodes: codes });
-  applyCoreCourseCodes(codes);
-  state.formOk = '핵심과목을 저장했어요.';
-  render();
-}
 
 /* ============ 이용안내 ============ */
 function renderGuide(){
@@ -2274,7 +2235,7 @@ function renderGuide(){
   var titles = { student:'학생 사용법 안내', admin:'관리자 사용법 안내', rules:'융합전공 이수 규정 요약' };
   var subs = {
     student:'처음 등록부터 과목 입력, 이수정보 설정, 충족 여부 확인까지.',
-    admin:'관리자 등록, 핵심과목 지정, 전체 현황 보기와 학생별 관리까지.',
+    admin:'관리자 등록코드 관리, 전체 현황 보기와 학생별 관리까지.',
     rules:'세 가지 이수 경로와 학점 기준을 한눈에 정리했어요.'
   };
   var bodies = { student:guideStudent, admin:guideAdmin, rules:guideRules };
@@ -2312,7 +2273,7 @@ function guideStudent(){
         '<li>등록할 때 고른 <b>본인 학과의 교육과정표</b> 과목이 목록으로 나와요. 고르면 학점이 자동으로 채워지고, <b>제1전공 학점</b>에 자동으로 들어갑니다.</li>' +
         '<li>그중 융합전공 인정과목이면 <b>융합전공 과목</b> 표시가 붙어요. 다만 본인 학과 교육과정표에도 있는 과목(제1전공과 겹치는 과목)은 원칙적으로 제1전공 학점으로만 인정되고 융합전공 학점에는 안 들어가서, 대신 <b>융합전공 미인정</b> 표시가 붙습니다. 이 경우 "이수구분 변경 신청" 버튼을 누르면(합쳐서 최대 6학점까지) 제1전공 대신 융합전공 학점으로 인정돼요. 본인 학과에 없는 융합전공 자체 개설과목은 목록 아래쪽 <b>융합전공 자체 개설과목</b> 묶음에서 고르면 되고, 이 경우 처음부터 융합전공 학점에만 들어갑니다.</li>' +
         '<li>교육과정이 바뀌어 목록에 없는 과목(예전 교육과정, 전과 인정과목 등)은 <b>목록에 없는 과목(직접 입력)</b>을 골라 과목명·학점과 함께 <b>구분</b>(전공기초/전공필수/전공선택/전공인정/교양필수/교양선택/타전공/기타)을 골라주세요. 전공 계열 구분만 제1전공 학점으로 인정됩니다.</li>' +
-        '<li>관리자가 지정한 핵심과목을 이수하면 자동으로 <b>핵심과목</b> 표시가 붙습니다.</li>' +
+        '<li>융합전공 자체 개설과목에는 <b>자체개설과목</b> 표시가 붙어요. 이 과목들을 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 핵심과목 조건이 자동으로 충족됩니다.</li>' +
         '<li>이수학기는 연도(2022년~)와 학기를 골라서 넣습니다.</li>' +
         '<li>과목이 많다면 <b>📄 PDF로 일괄 추가</b>를 눌러 성적표나 수강신청 확인서 PDF를 올려보세요. 글자가 담긴 PDF라면 교육과정표에 있는 과목 이름을 표의 줄 단위로 찾아 후보로 보여주고, 같은 줄에 연도-학기가 있으면 이수학기도 자동으로 채워줘요. 사이트 교육과정표에 없는 <b>전공기초/전공필수/전공선택</b> 과목도 PDF 안의 구분·과목명·학점을 읽어 "새 과목"으로 후보에 함께 올려줘요. 체크된 과목만 골라서 한 번에 추가할 수 있어요(이미 등록한 과목은 후보에서 빠집니다).</li>' +
         '<li>홈 화면의 <b>등록한 과목</b> 박스를 누르면 전공필수/전공선택/전공인정/타전공/교양 등 구분별 과목 수·학점을 보고, 이수한 학기 순으로 정리된 전체 목록을 펼쳐볼 수 있어요.</li>' +
@@ -2338,8 +2299,8 @@ function guideStudent(){
       '<h2>내가 뭘 들었고, 앞으로 뭘 들어야 하는지 한눈에 보기</h2>' +
       '<p>홈 화면 위쪽 상태 배너 바로 아래에서, 클릭 없이 바로 두 가지를 볼 수 있어요.</p>' +
       '<ul>' +
-        '<li><b>✓ 내가 이수한 융합전공 인정과목</b> — 지금까지 등록한 과목 중 융합전공 학점으로 인정되는 과목만 모아서 보여줘요. 핵심과목은 ⭐ 표시가 붙어요.</li>' +
-        '<li><b>앞으로 뭘 들으면 될까요?</b> — 아직 어떤 경로도 충족하지 못했다면, 지금 가장 빨리 채울 수 있는 경로를 기준으로 <b>꼭 필요한 핵심과목 · 융합전공 자체 개설과목 · 본인 학과에는 없는 다른 학과의 융합전공 인정과목</b> 중 아직 안 들은 것을 추천해 줘요. 이미 충족했다면 이 추천은 나타나지 않아요.</li>' +
+        '<li><b>✓ 내가 이수한 융합전공 인정과목</b> — 지금까지 등록한 과목 중 융합전공 학점으로 인정되는 과목만 모아서 보여줘요. 융합전공 자체 개설과목은 ⭐ 표시가 붙어요.</li>' +
+        '<li><b>앞으로 뭘 들으면 될까요?</b> — 아직 어떤 경로도 충족하지 못했다면, 지금 가장 빨리 채울 수 있는 경로를 기준으로 안 들은 과목을 추천해 줘요. 핵심과목 조건(자체개설과목 '+SELF_COURSE_MIN_CREDITS+'학점 이상)을 아직 못 채웠다면 <b>꼭 필요 · 자체개설과목</b> 묶음이 먼저 보이고, 그 외에 <b>다른 학과의 융합전공 인정과목</b>도 함께 추천됩니다. 이미 충족했다면 이 추천은 나타나지 않아요.</li>' +
         '<li>그 아래 <b>경로별 비교</b> 카드에서는 앱이 자동으로 계산하는 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 각각 자세히 비교할 수 있어요. 카드를 누르면 그 경로 기준으로 왼쪽에 <b>이수과목</b>, 오른쪽에 <b>추천 과목</b>이 함께 펼쳐집니다.</li>' +
         '<li>어느 하나라도 충족되면 그 경로 이름으로 "이수 조건 충족"이 표시됩니다.</li>' +
         '<li>아직 충족하지 못했다면 <b>학사학위취득 유예</b> 신청 안내가 함께 나타납니다.</li>' +
@@ -2369,13 +2330,12 @@ function ruleSummaryTable(){
       '</div>' +
       '<div class="rule-row">' +
         '<div class="rule-label"><span class="rule-dot" style="background:var(--success);"></span>융합전공(공통 규칙)</div>' +
-        '<div class="rule-crit">위 세 경로 모두 <b>핵심과목을 전부 이수</b>해야 충족돼요. 또 본인 학과와 겹치는 과목은 원칙적으로 제1전공 학점으로만 인정되고, "이수구분 변경"을 신청해야(최대 6학점까지) 융합전공 학점으로 바뀌어요.</div>' +
+        '<div class="rule-crit">위 세 경로 모두 <b>핵심과목 조건</b>(자체 개설과목을 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수)을 채워야 충족돼요. 또 본인 학과와 겹치는 과목은 원칙적으로 제1전공 학점으로만 인정되고, "이수구분 변경"을 신청해야(최대 6학점까지) 융합전공 학점으로 바뀌어요.</div>' +
       '</div>' +
     '</div>'
   );
 }
 function guideRules(){
-  var coreNames = CORE_COURSES.length ? CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '아직 지정되지 않음';
   return (
     ruleSummaryTable() +
     '<div class="step"><div class="step-num">1</div>' +
@@ -2400,10 +2360,10 @@ function guideRules(){
     '</div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>핵심과목(제4조②)</h2>' +
-      '<p>관리자가 융합전공 <b>자체 개설과목</b>(참여학과 교육과정표에는 없는 융합전공 고유 과목 6개) 중 최대 3과목을 핵심과목으로 지정합니다. 지정된 핵심과목: <b>'+coreNames+'</b></p>' +
+      '<p>특정 과목을 지정하는 게 아니라, 융합전공 <b>자체 개설과목</b>(참여학과 교육과정표에는 없는 융합전공 고유 과목) 중 아무 과목이나 합쳐서 <b>'+SELF_COURSE_MIN_CREDITS+'학점</b> 이상 이수하면 충족됩니다.</p>' +
       '<ul>' +
-        '<li>핵심과목을 모두 이수해야 어느 경로든 "충족"으로 인정됩니다.</li>' +
-        '<li>핵심과목은 참여학과 교육과정표에 있는 과목이 아니라서, 부전공 경로의 이중 인정 방지 규칙과 상관없이 항상 융합전공 학점으로 인정됩니다.</li>' +
+        '<li>이 조건을 채워야 어느 경로든 "충족"으로 인정됩니다.</li>' +
+        '<li>자체 개설과목은 참여학과 교육과정표에 있는 과목이 아니라서, 부전공 경로의 이중 인정 방지 규칙과 상관없이 항상 융합전공 학점으로 인정됩니다.</li>' +
       '</ul>' +
     '</div>' +
     '<div class="step"><div class="step-num">4</div>' +
@@ -2426,20 +2386,13 @@ function guideAdmin(){
         '<li>두 번째 관리자부터는 등록코드가 필요합니다. <b>관리자 설정</b>에서 코드를 미리 정해 두세요.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">2</div>' +
-      '<h2>핵심과목 지정하기</h2>' +
-      '<p><b>관리자 설정</b> 화면 아래쪽에서 융합전공 자체 개설과목 중 핵심과목(최대 3개)을 고를 수 있어요.</p>' +
-      '<ul>' +
-        '<li>지정하면 학생이 그 과목을 이수했는지 자동으로 인식해서 충족 여부에 반영됩니다.</li>' +
-        '<li>아직 정하지 않았다면 3칸 모두 <b>미지정</b>으로 둬도 괜찮아요. 이 경우 핵심과목 조건 없이 학점만으로 판정합니다.</li>' +
-      '</ul></div>' +
-    '<div class="step"><div class="step-num">3</div>' +
       '<h2>전체 학생 현황 보기</h2>' +
       '<p>관리자 홈 화면에서 <b>전체 학생 · 요건 충족 · 미충족</b> 숫자를 바로 볼 수 있어요.</p>' +
       '<ul>' +
         '<li>이름이나 학번으로 검색하고, 충족/미충족으로 걸러 볼 수 있습니다. 학생들은 입학년도로 추정한 학년(1~4학년, 미확인)별로 묶여서 보입니다.</li>' +
         '<li>학생 카드를 누르면 그 학생의 상세 화면으로 들어갑니다.</li>' +
       '</ul></div>' +
-    '<div class="step"><div class="step-num">4</div>' +
+    '<div class="step"><div class="step-num">3</div>' +
       '<h2>학생별로 관리하기</h2>' +
       '<p>학생 상세 화면에서 학생을 대신해 관리할 수 있어요.</p>' +
       '<ul>' +
@@ -2503,12 +2456,6 @@ document.addEventListener('submit', function(e){
   if(f.id==='form-admincode'){
     e.preventDefault();
     saveAdminCode(f.querySelector('#adminCode').value).catch(failWith);
-  }
-  if(f.id==='form-corecourses'){
-    e.preventDefault();
-    var codes = [0,1,2].map(function(i){ return f.querySelector('#coreSlot'+i).value; }).filter(function(v){ return v; });
-    codes = codes.filter(function(v, i){ return codes.indexOf(v)===i; });
-    saveCoreCourses(codes).catch(failWith);
   }
 });
 
@@ -2666,7 +2613,6 @@ render();
 
 (async function boot(){
   try{
-    await loadCoreCourses();
     if(state.role==='student' && state.studentSession){ await loadMe(); }
     else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
   }catch(e){ state.formError = errMsg(e); }
