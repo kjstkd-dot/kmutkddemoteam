@@ -294,7 +294,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 z';
+var APP_VERSION = '2026-09-18 z2';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1098,6 +1098,7 @@ var state = {
   view: 'login',             // login | register | register-admin | home | course-form | profile | list | detail | settings
   studentSession: null, adminSession: null,
   formError: '', formOk: '', shareToast: '',
+  showMinorMulti: false, showTrackInfo: false,
   editingCourseId: null,
   editingMicrodegreeId: null,
   detailId: null,
@@ -1434,9 +1435,23 @@ function progressBlock(student){
       '</div>' +
     '</div>';
   }
-  html += '<div class="row-between" style="margin-top:16px; margin-bottom:2px;"><b style="font-size:13.5px;">경로별 비교 (눌러서 과목 보기)</b></div>';
+  html += '<div class="row-between" style="margin-top:16px; margin-bottom:2px;">' +
+    '<b style="font-size:13.5px;">경로별 비교 (눌러서 과목 보기)</b>' +
+    '<button type="button" class="qmark" data-action="toggle-track-info">?</button>' +
+  '</div>' +
+  (state.showTrackInfo ? '<div class="notice-box" style="margin-bottom:8px;">' +
+    '<b>복수전공</b>은 융합전공 33학점 이상(핵심과목 포함)만 채우면 돼요.<br>' +
+    '<b>부전공(1개)</b>은 이 융합전공만 부전공으로 하는 경우로, 융합전공 15학점 + 제1전공 54학점 이상을 채워야 해요.<br>' +
+    '<b>부전공(2개 이상 동시이수)</b>는 이 융합전공을 포함해서 다른 부전공도 함께 하는 경우로, 융합전공 학점 기준(15학점)은 같지만 제1전공은 각각 42학점 이상만 채우면 돼요.' +
+  '</div>' : '');
   analyses.forEach(function(a){
     var isBest = !met && a.key===best.key;
+    if(a.key==='minor_multi' && !state.showMinorMulti){
+      html += '<div class="catcard" style="text-align:center;">' +
+        '<button type="button" class="linklike" data-action="toggle-minor-multi">부전공을 2개 이상 동시에 하시나요? 조건 보기 ▼</button>' +
+      '</div>';
+      return;
+    }
     var expanded = state.expandedTrack === a.key;
     html += '<div class="catcard '+(a.met?'met':'')+'" style="'+(isBest?'border-color:var(--primary);border-width:1.5px;':'')+'">' +
       '<button type="button" data-action="toggle-track-detail" data-key="'+a.key+'" style="all:unset; display:block; width:100%; cursor:pointer;">' +
@@ -1452,6 +1467,7 @@ function progressBlock(student){
         '<div class="cm" style="margin-top:8px; color:var(--primary); font-weight:600;">'+(expanded?'과목 목록 접기 ▲':'과목 목록 보기 ▼')+'</div>' +
       '</button>' +
       (expanded ? trackContributingCoursesBlock(student, a.key) : '') +
+      (a.key==='minor_multi' ? '<button type="button" class="linklike" data-action="toggle-minor-multi" style="margin-top:8px; font-size:11.5px;">이 경로 접기 ▲</button>' : '') +
     '</div>';
   });
   return html;
@@ -2547,6 +2563,8 @@ document.addEventListener('click', function(e){
   else if(act==='close-install'){ state.showInstallModal = false; }
   else if(act==='toggle-course-detail'){ state.showCourseDetail = !state.showCourseDetail; }
   else if(act==='toggle-track-detail'){ state.expandedTrack = (state.expandedTrack===el.dataset.key) ? null : el.dataset.key; }
+  else if(act==='toggle-minor-multi'){ state.showMinorMulti = !state.showMinorMulti; }
+  else if(act==='toggle-track-info'){ state.showTrackInfo = !state.showTrackInfo; }
   else if(act==='toggle-rec-group'){ var rk=el.dataset.key; state.expandedRecGroups[rk] = !state.expandedRecGroups[rk]; }
   else if(act==='toggle-explain'){ var eid=el.dataset.id; state.expandedExplain[eid] = !state.expandedExplain[eid]; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
