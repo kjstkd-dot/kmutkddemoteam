@@ -207,6 +207,12 @@ button{font-family:inherit;}
 .step h2{font-size:18px; margin-bottom:9px;}
 .step p{font-size:13.5px; line-height:1.7; margin:0 0 9px;}
 .step ul{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px;}
+.rule-row{display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--border);}
+.rule-row:first-child{border-top:none; padding-top:0;}
+.rule-label{flex:0 0 108px; display:flex; align-items:flex-start; gap:7px; font-weight:800; font-size:13px; color:var(--text); line-height:1.4;}
+.rule-dot{width:9px; height:9px; border-radius:50%; flex:none; margin-top:4px;}
+.rule-crit{flex:1; font-size:12.5px; color:var(--text-muted); line-height:1.65;}
+.rule-crit b{color:var(--text);}
 .step li{font-size:13.5px; line-height:1.6;}
 .plat-title{font-size:13px; font-weight:800; margin:14px 0 8px; display:flex; align-items:center; gap:6px;}
 .plat-title:first-of-type{margin-top:2px;}
@@ -294,7 +300,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-18 z2';
+var APP_VERSION = '2026-09-18 z3';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -2340,9 +2346,38 @@ function guideStudent(){
       '</ul></div>'
   );
 }
+function ruleSummaryTable(){
+  return (
+    '<div class="step">' +
+      '<h2>📋 기준 자료 — 제1전공·복수전공·부전공·융합전공 이수기준</h2>' +
+      '<p>이수형태별로 채워야 하는 학점 기준을 한눈에 비교했어요. 자세한 계산 방식은 아래 내용을 참고해 주세요.</p>' +
+      '<div class="rule-row">' +
+        '<div class="rule-label"><span class="rule-dot" style="background:var(--text-faint);"></span>제1전공</div>' +
+        '<div class="rule-crit">정규 졸업요건은 학과 규정에 따라요(이 앱에서 별도로 관리하지 않음). 다만 <b>제1전공 학점</b>은 본인 학과 교육과정표 과목을 등록할 때마다 자동으로 합산되고, 이 학점이 아래 부전공 기준(54학점/42학점)을 채우는 데 쓰여요.</div>' +
+      '</div>' +
+      '<div class="rule-row">' +
+        '<div class="rule-label"><span class="rule-dot" style="background:var(--primary);"></span>복수전공</div>' +
+        '<div class="rule-crit">융합전공 <b>'+DOUBLE_MAJOR_MIN+'학점</b> 이상(핵심과목 포함). 제1전공은 정규 졸업학점만 채우면 되고 별도 기준은 없어요. 다만 제1전공 학과의 졸업논문이 필수과목이면 반드시 이수해야 해요.</div>' +
+      '</div>' +
+      '<div class="rule-row">' +
+        '<div class="rule-label"><span class="rule-dot" style="background:var(--amber);"></span>부전공(1개)</div>' +
+        '<div class="rule-crit">융합전공 <b>'+MINOR_MIN+'학점</b> 이상(핵심과목 포함) + 제1전공 <b>'+MINOR_PRIMARY_SINGLE+'학점</b> 이상. 이 융합전공만 부전공으로 하는 경우예요.</div>' +
+      '</div>' +
+      '<div class="rule-row">' +
+        '<div class="rule-label"><span class="rule-dot" style="background:var(--amber);"></span>부전공(2개 이상)</div>' +
+        '<div class="rule-crit">융합전공 <b>'+MINOR_MIN+'학점</b> 이상(핵심과목 포함) + 제1전공 <b>각 '+MINOR_PRIMARY_MULTI+'학점</b> 이상. 이 융합전공을 포함해서 다른 부전공도 동시에 하는 경우, 제1전공 기준이 낮아져요.</div>' +
+      '</div>' +
+      '<div class="rule-row">' +
+        '<div class="rule-label"><span class="rule-dot" style="background:var(--success);"></span>융합전공(공통 규칙)</div>' +
+        '<div class="rule-crit">위 세 경로 모두 <b>핵심과목을 전부 이수</b>해야 충족돼요. 또 본인 학과와 겹치는 과목은 원칙적으로 제1전공 학점으로만 인정되고, "이수구분 변경"을 신청해야(최대 6학점까지) 융합전공 학점으로 바뀌어요.</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
 function guideRules(){
   var coreNames = CORE_COURSES.length ? CORE_COURSES.map(function(c){ return esc(c.name); }).join(', ') : '아직 지정되지 않음';
   return (
+    ruleSummaryTable() +
     '<div class="step"><div class="step-num">1</div>' +
       '<h2>세 가지 이수 경로</h2>' +
       '<p>이수형태를 미리 고를 필요 없이, 과목을 입력하면 아래 세 경로 중 가장 빨리 채워지는 경로를 앱이 자동으로 계산해서 알려줍니다. 하나라도 충족하면 이수 조건을 충족한 것으로 인정됩니다.</p>' +
