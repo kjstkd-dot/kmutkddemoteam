@@ -254,7 +254,7 @@ button{font-family:inherit;}
 .tag{font-size:11px; color:var(--text-muted); background:var(--track); border-radius:5px; padding:2px 7px;}
 .pending{font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:999px; padding:2px 8px;}
 
-/* 단원 넘기기 */
+/* 학생 넘기기 */
 .pager{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
 .pgbtn{flex:1; border:1px solid var(--border); background:var(--surface-3); color:var(--primary); font-weight:700; font-size:13px; padding:9px 8px; border-radius:var(--radius-s); cursor:pointer;}
 .pgbtn:hover:not([disabled]){border-color:var(--primary);}
@@ -341,7 +341,7 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
 .nx-desc{font-size:10.5px; font-weight:500; opacity:.92; line-height:1.45; word-break:keep-all; margin-top:2px;}
 .pyr-foot{font-size:11.5px; color:var(--text-muted); line-height:1.5; text-align:center; padding:2px 0 4px;}
 
-/* 단원 화면의 인증 절차 안내 */
+/* 학생 화면의 인증 절차 안내 */
 .procbox{border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface-3); margin-bottom:14px;}
 .procbox>summary{cursor:pointer; list-style:none; padding:12px 14px; font-size:13px; font-weight:800; color:var(--primary); display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; position:relative;}
 
@@ -424,7 +424,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-17 z';
+var APP_VERSION = '2026-09-19 a';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1119,11 +1119,11 @@ function renderApp(){
       '</div>' +
       (sess ? '' :
       '<div class="roletabs">' +
-        '<button class="roletab '+(state.role==='student'?'active':'')+'" data-action="set-role" data-role="student">단원(학생)</button>' +
+        '<button class="roletab '+(state.role==='student'?'active':'')+'" data-action="set-role" data-role="student">학생</button>' +
         '<button class="roletab '+(state.role==='admin'?'active':'')+'" data-action="set-role" data-role="admin">관리자</button>' +
       '</div>') +
       '<div class="phone">' + body + modalHtml() + '</div>' +
-      (state.previewMode ? '<div class="notice-box" style="max-width:460px;border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);"><b>미리보기 화면입니다.</b><br>실제 단원 자료는 앱 주소(kmutkddemoteam.vercel.app)에 있습니다. 여기서 고친 내용은 학생들에게 반영되지 않습니다.</div>' : '') +
+      (state.previewMode ? '<div class="notice-box" style="max-width:460px;border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);"><b>미리보기 화면입니다.</b><br>실제 학생 자료는 앱 주소(kmutkddemoteam.vercel.app)에 있습니다. 여기서 고친 내용은 학생들에게 반영되지 않습니다.</div>' : '') +
       (state.apiError ? '<div class="notice-box" style="max-width:460px;border-color:var(--danger-border);background:var(--danger-bg);color:var(--danger);"><b>자료 서버에 연결하지 못했습니다.</b><br>' + esc(state.apiError) + '</div>' : '') +
       (fallbackMode ? '<div class="notice-box" style="max-width:460px;">지금은 서버에 연결되지 않아 <b>이 기기에만</b> 저장되는 임시 모드로 동작합니다. 실제 운영에서는 서버 연결이 필요합니다.</div>' : '') +
     '</div>'
@@ -1147,7 +1147,7 @@ function screenLogin(){
   var isStudent = state.role==='student';
   var idLabel = isStudent ? '학번' : '관리자 번호';
   return (
-    '<div class="eyebrow">K-STAR 현황판 · '+(isStudent?'단원용':'관리자용')+'</div>' +
+    '<div class="eyebrow">K-STAR 현황판 · '+(isStudent?'학생용':'관리자용')+'</div>' +
     '<h2 class="screen-title">내 역량 현황 보기</h2>' +
     '<div class="screen-sub">'+idLabel+'과 비밀번호로 로그인하세요.</div>' +
     (state.formError ? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
@@ -1159,7 +1159,7 @@ function screenLogin(){
     '</form>' +
     '<div style="height:8px;"></div>' +
     '<button class="btn btn-ghost" data-action="goto-register">처음 이용하시나요? 비밀번호 설정하기</button>' +
-    '<div class="notice-box" style="margin-top:14px; margin-bottom:0;">비밀번호는 복원할 수 없는 방식으로 보호되며, 다른 단원의 기록은 볼 수 없습니다.</div>'
+    '<div class="notice-box" style="margin-top:14px; margin-bottom:0;">비밀번호는 복원할 수 없는 방식으로 보호되며, 다른 학생의 기록은 볼 수 없습니다.</div>'
   );
 }
 
@@ -1184,8 +1184,8 @@ function screenRegister(){
     );
   }
   return (
-    '<div class="eyebrow">K-STAR 현황판 · 단원용</div>' +
-    '<h2 class="screen-title">단원 등록</h2>' +
+    '<div class="eyebrow">K-STAR 현황판 · 학생용</div>' +
+    '<h2 class="screen-title">학생 등록</h2>' +
     '<div class="screen-sub">학번, 이름, 학과, 학년과 6자 이상 비밀번호를 입력해 주세요.</div>' +
     (state.formError ? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
     '<form id="form-register" class="stack">' +
@@ -1200,7 +1200,7 @@ function screenRegister(){
       field('regPw','비밀번호 (6자 이상)','password',{required:true, min:6}) +
       field('regPw2','비밀번호 확인','password',{required:true, min:6}) +
       '<button type="submit" class="btn btn-primary"'+(state.regBusy?' disabled':'')+'>' +
-        (state.regBusy ? '등록하는 중이에요… 잠시만요' : '단원 등록 완료') + '</button>' +
+        (state.regBusy ? '등록하는 중이에요… 잠시만요' : '학생 등록 완료') + '</button>' +
     '</form>' +
     '<div style="height:8px;"></div>' +
     '<button class="btn btn-line" data-action="goto-login">← 로그인으로 돌아가기</button>'
@@ -1237,7 +1237,7 @@ document.addEventListener('click', function(e){
   var mb = sm.querySelector('.must');     if(mb) mb.remove();
 });
 
-/* 단원이 자기 화면에서 바로 읽는 인증 절차 안내 (개조식) */
+/* 학생이 자기 화면에서 바로 읽는 인증 절차 안내 (개조식) */
 function procHtml(){
   return (
     '<details class="procbox'+(procSeen()?'':' call')+'">' +
@@ -1490,14 +1490,14 @@ function screenImport(){
   return (
     '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 전체 현황으로</button>' +
     '<h2 class="screen-title">붙여넣기로 일괄 입력</h2>' +
-    '<div class="screen-sub">캡쳐를 읽어 정리한 내용을 그대로 붙여넣고 적용하면, 해당 단원들의 점수가 한꺼번에 갱신됩니다.</div>' +
+    '<div class="screen-sub">캡쳐를 읽어 정리한 내용을 그대로 붙여넣고 적용하면, 해당 학생들의 점수가 한꺼번에 갱신됩니다.</div>' +
     (state.formError ? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
     (state.importResult ? '<div class="okbox" style="font-weight:500;line-height:1.6;">'+state.importResult+'</div>' : '') +
     '<div class="field"><textarea id="importText" placeholder=\'[{"name":"홍길동","F":100,"A":196,"C":90,"E":245}]\'></textarea></div>' +
     '<button class="btn btn-primary" data-action="do-import"'+(state.importBusy?' disabled':'')+'>' +
       (state.importBusy ? esc(state.importProgress||'반영하는 중…') : '적용하기') + '</button>' +
     '<div class="notice-box" style="margin-top:14px;margin-bottom:0;">' +
-      '이름으로 찾아서 점수를 바꿉니다. 명단에 없는 이름은 새 단원으로 추가됩니다.<br>' +
+      '이름으로 찾아서 점수를 바꿉니다. 명단에 없는 이름은 새 학생으로 추가됩니다.<br>' +
       '적어 보낸 항목만 바뀌고, 없는 항목은 원래 값이 그대로 남습니다.' +
     '</div>'
   );
@@ -1605,7 +1605,7 @@ function screenBoard(){
   return (
     '<div class="row-between" style="flex-wrap:wrap; gap:8px 14px;">' +
       '<div style="flex:0 0 auto;"><div class="eyebrow" style="white-space:nowrap;">관리자 · '+esc(sess.name)+'</div>' +
-      '<h2 class="screen-title" style="white-space:nowrap;">전체 단원 현황</h2></div>' +
+      '<h2 class="screen-title" style="white-space:nowrap;">전체 학생 현황</h2></div>' +
       '<div class="row" style="gap:12px; flex-wrap:wrap; margin-left:auto;">' +
         '<button class="linklike" data-action="goto-import">일괄 입력</button>' +
         '<button class="linklike" data-action="copy-notice">공지문 복사</button>' +
@@ -1616,7 +1616,7 @@ function screenBoard(){
       '</div>' +
     '</div>' +
     '<div class="summary">' +
-      [ ['',      't-indigo', '등록 단원',      total,  '앱 가입 '+joined+'명 포함'],
+      [ ['',      't-indigo', '등록 학생',      total,  '앱 가입 '+joined+'명 포함'],
         ['R',     't-red',    'R단계 이수',     rCount, 'R까지만 인증 (A·T 없음)'],
         ['A',     't-teal',   'A단계 이수',     aCount, 'A까지 인증 (T 없음)'],
         ['T',     't-purple', 'T단계 이수',     tCount, 'T까지 인증'],
@@ -1628,8 +1628,8 @@ function screenBoard(){
           '<div class="band">'+t[2]+'</div>' +
           '<div class="body"><div class="num mono">'+t[3]+'</div>' +
           '<div class="lbl">'+t[4]+'</div>' +
-          '<span class="pick">'+(on ? (t[0] ? '✓ 이 단원들만 보는 중' : '✓ 전체를 보는 중')
-                                  : (t[0] ? '눌러서 이 단원만 보기' : '눌러서 전체 보기'))+'</span>' +
+          '<span class="pick">'+(on ? (t[0] ? '✓ 이 학생들만 보는 중' : '✓ 전체를 보는 중')
+                                  : (t[0] ? '눌러서 이 학생만 보기' : '눌러서 전체 보기'))+'</span>' +
           '</div></button>';
       }).join('') +
     '</div>' +
@@ -1650,12 +1650,12 @@ function screenBoard(){
     '</div>' +
     (staleCount ?
       '<div class="notice-box" style="border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;gap:10px;">' +
-        '<span>이번 달 점수를 아직 안 올린 단원 <b>'+staleCount+'명</b>입니다.</span>' +
+        '<span>이번 달 점수를 아직 안 올린 학생 <b>'+staleCount+'명</b>입니다.</span>' +
         '<button class="linklike" data-action="copy-notice" style="margin-left:auto;color:var(--amber);">공지문 복사</button>' +
       '</div>' : '') +
     (state.tileFilter ?
       '<div class="notice-box" style="display:flex;align-items:center;gap:10px;border-color:var(--primary);">' +
-        '<span><b>'+esc(TILE_LABEL[state.tileFilter])+'</b> 단원만 보는 중입니다.</span>' +
+        '<span><b>'+esc(TILE_LABEL[state.tileFilter])+'</b> 학생만 보는 중입니다.</span>' +
         '<button class="linklike" data-action="clear-tile" style="margin-left:auto;">전체 보기</button>' +
       '</div>' : '') +
     '<div class="controls">' +
@@ -1720,7 +1720,7 @@ function screenDetail(){
       '<span class="pgpos mono">'+(idx>-1?(idx+1)+' / '+ids.length:'')+'</span>' +
       '<button class="pgbtn" data-action="sib-next"'+(hasNext?'':' disabled')+'>다음 →</button>' +
     '</div>' +
-    (swipeHintSeen() ? '' : '<div class="swipe-hint">좌우로 밀어서 다른 단원을 볼 수 있어요</div>') +
+    (swipeHintSeen() ? '' : '<div class="swipe-hint">좌우로 밀어서 다른 학생을 볼 수 있어요</div>') +
     '<div class="detail-wrap'+slide+'">' +
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년' +
@@ -1757,7 +1757,7 @@ function screenDetail(){
       '<button type="submit" class="btn btn-primary">수정 저장</button>' +
     '</form>' +
     '<div style="height:10px;"></div>' +
-    '<button class="btn btn-danger" data-action="del-member" data-id="'+esc(s.id)+'">이 단원 명단에서 삭제</button>' +
+    '<button class="btn btn-danger" data-action="del-member" data-id="'+esc(s.id)+'">이 학생 명단에서 삭제</button>' +
     ((s.shots && s.shots.length) ?
       '<div style="height:14px;"></div>' +
       '<label style="font-size:12.5px;font-weight:600;color:var(--text-muted);">학생이 올린 캡쳐 '+s.shots.length+'장</label>' +
@@ -1769,9 +1769,9 @@ function screenDetail(){
       '</div>' : '') +
     (s.claimedBy ?
       '<div style="height:10px;"></div>' +
-      '<button class="btn btn-danger" data-action="reset-pw" data-id="'+esc(s.id)+'">이 단원 비밀번호 초기화</button>' +
-      '<div class="notice-box" style="margin-top:10px; margin-bottom:0;">초기화하면 이 단원은 "비밀번호 설정하기"로 다시 등록해야 합니다.</div>'
-      : '<div class="notice-box" style="margin-top:12px; margin-bottom:0;">아직 앱에 가입하지 않은 단원입니다. 학생이 같은 이름으로 등록하면 이 기록을 자동으로 이어받습니다.</div>') +
+      '<button class="btn btn-danger" data-action="reset-pw" data-id="'+esc(s.id)+'">이 학생 비밀번호 초기화</button>' +
+      '<div class="notice-box" style="margin-top:10px; margin-bottom:0;">초기화하면 이 학생은 "비밀번호 설정하기"로 다시 등록해야 합니다.</div>'
+      : '<div class="notice-box" style="margin-top:12px; margin-bottom:0;">아직 앱에 가입하지 않은 학생입니다. 학생이 같은 이름으로 등록하면 이 기록을 자동으로 이어받습니다.</div>') +
     '</div>'
   );
 }
@@ -1838,9 +1838,9 @@ function modalHtml(){
   if(m.type==='confirmDelete'){
     var d = cache.roster.find(function(x){ return x.id===m.id; }) || {};
     return '<div class="overlay" data-action="overlay-bg"><div class="modal">' +
-      '<h3>이 단원을 명단에서 지울까요?</h3>' +
+      '<h3>이 학생을 명단에서 지울까요?</h3>' +
       '<div class="modal-sub"><b>'+esc(d.name||'')+'</b> 님의 점수와 기록이 모두 사라집니다. 되돌릴 수 없습니다.</div>' +
-      (d.claimedBy ? '<div class="errbox">이 단원은 앱에 가입되어 있습니다. 지우면 로그인도 함께 사라집니다.</div>' : '') +
+      (d.claimedBy ? '<div class="errbox">이 학생은 앱에 가입되어 있습니다. 지우면 로그인도 함께 사라집니다.</div>' : '') +
       '<div class="modal-actions">' +
         '<button class="btn btn-ghost" data-action="close-modal">취소</button>' +
         '<button class="btn btn-danger" data-action="confirm-delete" data-id="'+esc(m.id)+'">삭제</button>' +
@@ -1849,7 +1849,7 @@ function modalHtml(){
   if(m.type==='confirmReset'){
     return '<div class="overlay" data-action="overlay-bg"><div class="modal">' +
       '<h3>비밀번호를 초기화할까요?</h3>' +
-      '<div class="modal-sub">이 단원의 로그인 정보가 지워집니다. 점수 기록은 그대로 남습니다.</div>' +
+      '<div class="modal-sub">이 학생의 로그인 정보가 지워집니다. 점수 기록은 그대로 남습니다.</div>' +
       '<div class="modal-actions">' +
         '<button class="btn btn-ghost" data-action="close-modal">취소</button>' +
         '<button class="btn btn-danger" data-action="confirm-reset" data-id="'+esc(m.id)+'">초기화</button>' +
@@ -1863,7 +1863,7 @@ function guideStudent(){
   return (
     '<div class="step"><div class="step-num">1</div>' +
       '<h2>처음 등록하고 로그인하기</h2>' +
-      '<p>카카오톡으로 받은 링크를 열고, 화면 위쪽의 <b>단원(학생)</b>을 선택해 주세요.</p>' +
+      '<p>카카오톡으로 받은 링크를 열고, 화면 위쪽의 <b>학생</b>을 선택해 주세요.</p>' +
       '<ul>' +
         '<li>처음이라면 <b>비밀번호 설정하기</b>를 눌러 주세요.</li>' +
         '<li><b>학번, 이름, 학과, 학년, 6자 이상 비밀번호</b>를 입력해 등록을 완료해 주세요.</li>' +
@@ -1909,24 +1909,24 @@ function guideAdmin(){
       '</ul></div>' +
     '<div class="step"><div class="step-num">2</div>' +
       '<h2>전체 현황 보기</h2>' +
-      '<p>단원들이 <b>S · T · A · R</b> 네 칸으로 나뉘어 표시됩니다.</p>' +
+      '<p>학생들이 <b>S · T · A · R</b> 네 칸으로 나뉘어 표시됩니다.</p>' +
       '<ul>' +
         '<li><b>칸은 “지금 도전할 수 있는 다음 단계”</b>로 나눈 것입니다. 이미 인증받은 단계가 아닙니다. ' +
           'S칸에 있어도 S단계 인증을 받은 것이 아니라, <b>R단계를 마치고 FACE 1개 영역을 채워 바로 신청할 수 있는 상태</b>라는 뜻입니다.</li>' +
         '<li><b>실제로 인증받은 단계는 이름 옆 배지</b>에 “현재 S단계”처럼 표시됩니다. 아직 없으면 “인증 전”입니다.</li>' +
         '<li>각 칸 안에서는 <b>다음 단계에 가까운 순서</b>로 정렬됩니다.</li>' +
         '<li>카드 아래 4색 막대는 F·A·C·E 달성률입니다.</li>' +
-        '<li><b>미가입</b> 표시는 아직 앱에 등록하지 않은 단원입니다.</li>' +
-        '<li>S칸에 있어도 <b>단원이 따로 신청할 일은 없습니다.</b> 1차는 학교가 자동으로 뽑습니다. ' +
+        '<li><b>미가입</b> 표시는 아직 앱에 등록하지 않은 학생입니다.</li>' +
+        '<li>S칸에 있어도 <b>학생이 따로 신청할 일은 없습니다.</b> 1차는 학교가 자동으로 뽑습니다. ' +
           '다만 1차 합격 뒤 <b>2차 MY포트폴리오 심사는 본인이 기한 내에 신청</b>해야 하니, 4월·10월 발표를 챙겨 주세요.</li>' +
         '<li>이름 검색과 학년 필터로 좁혀 볼 수 있고, <b>엑셀 저장</b>으로 전체 명단을 내려받을 수 있습니다.</li>' +
       '</ul></div>' +
     '<div class="step"><div class="step-num">3</div>' +
-      '<h2>단원별 확인과 수정</h2>' +
-      '<p>카드를 누르면 그 단원의 전체 분석과 수정 화면이 열립니다.</p>' +
+      '<h2>학생별 확인과 수정</h2>' +
+      '<p>카드를 누르면 그 학생의 전체 분석과 수정 화면이 열립니다.</p>' +
       '<ul>' +
         '<li>학생이 잘못 입력한 점수를 관리자가 직접 고칠 수 있습니다.</li>' +
-        '<li>비밀번호를 잊은 단원은 <b>비밀번호 초기화</b>를 눌러 주세요. 점수 기록은 지워지지 않습니다.</li>' +
+        '<li>비밀번호를 잊은 학생은 <b>비밀번호 초기화</b>를 눌러 주세요. 점수 기록은 지워지지 않습니다.</li>' +
       '</ul>' +
       '<div class="disclaimer">엑셀 자료에는 학번과 점수가 들어 있습니다. 외부에 공유하기 전에 개인정보를 가려 주세요.</div>' +
     '</div>'
@@ -1963,7 +1963,7 @@ function guideCerts(){
     '<div class="step">' +
       deadlineBox(false) +
       '<h2>내 자격증은 몇 점일까</h2>' +
-      '<p>계명대 COMpass K에 <b>등록되어 있는 자격증과 배점</b>입니다(2026. 9. 1. 기준 공식 자료). 시범단 단원에게 해당될 만한 항목만 추렸습니다.</p>' +
+      '<p>계명대 COMpass K에 <b>등록되어 있는 자격증과 배점</b>입니다(2026. 9. 1. 기준 공식 자료). 시범단 학생에게 해당될 만한 항목만 추렸습니다.</p>' +
       '<div class="controls" style="margin:12px 0 4px;"><input id="certSearch" placeholder="자격증 이름으로 검색 (예: 격투기, 컴퓨터, 운전)" value="'+esc(q)+'"></div>' +
       '<div id="certWrap">' + certListHtml() + '</div>' +
       '<h2 style="margin-top:24px;">EDWARD 입력 요령</h2>' +
@@ -2054,10 +2054,10 @@ function guideReference(){
 
 function renderGuide(){
   var g = state.guideRole;
-  var titles = { student:'단원 사용법 안내', admin:'관리자 사용법 안내', ref:'K-STAR 기준 자료', cert:'자격증 점수 찾기' };
+  var titles = { student:'학생 사용법 안내', admin:'관리자 사용법 안내', ref:'K-STAR 기준 자료', cert:'자격증 점수 찾기' };
   var subs = {
     student:'처음 등록부터 점수 입력, 분석 결과 확인까지.',
-    admin:'관리자 등록, 전체 현황 보기, 단원별 확인과 수정까지.',
+    admin:'관리자 등록, 전체 현황 보기, 학생별 확인과 수정까지.',
     ref:'단계별 기준과 혜택, FACE 영역별 평가요소, 시범단 활동 매핑.',
     cert:'내 자격증이 COMpass K에서 몇 점인지, 어떻게 입력하는지.'
   };
@@ -2069,7 +2069,7 @@ function renderGuide(){
         '<button class="back" data-action="close-guide">← K-STAR 현황판으로 돌아가기</button>' +
       '</div>' +
       '<div class="guide-tabs">' +
-        '<button class="'+(g==='student'?'active':'')+'" data-action="set-guide-role" data-role="student">단원 안내</button>' +
+        '<button class="'+(g==='student'?'active':'')+'" data-action="set-guide-role" data-role="student">학생 안내</button>' +
         '<button class="'+(g==='admin'?'active':'')+'" data-action="set-guide-role" data-role="admin">관리자 안내</button>' +
         '<button class="'+(g==='ref'?'active':'')+'" data-action="set-guide-role" data-role="ref">기준 자료</button>' +
         '<button class="'+(g==='cert'?'active':'')+'" data-action="set-guide-role" data-role="cert">자격증 점수</button>' +
@@ -2537,7 +2537,7 @@ document.addEventListener('click', function(e){
   }
 });
 
-/* ---- 좌우 스와이프로 단원 넘기기 ---- */
+/* ---- 좌우 스와이프로 학생 넘기기 ---- */
 function onDetailScreen(){
   return state.mode==='app' && state.role==='admin' && state.view==='detail' && !state.modal;
 }
@@ -2556,7 +2556,7 @@ document.addEventListener('touchend', function(e){
   swipeX = null;
   if(Math.abs(dx) < 60) return;                 // 너무 짧은 움직임은 무시
   if(Math.abs(dx) < Math.abs(dy) * 1.5) return; // 위아래로 스크롤한 것은 무시
-  gotoSibling(dx < 0 ? 1 : -1);                 // 왼쪽으로 밀면 다음 단원
+  gotoSibling(dx < 0 ? 1 : -1);                 // 왼쪽으로 밀면 다음 학생
 }, {passive:true});
 document.addEventListener('keydown', function(e){
   if(!onDetailScreen()) return;
