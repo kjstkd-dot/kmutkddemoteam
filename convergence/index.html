@@ -312,7 +312,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-19 b';
+var APP_VERSION = '2026-09-19 c';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1451,6 +1451,7 @@ function kcloudCertBlock(student){
   var stages = kcloudCertAnalysis(student);
   var current = kcloudCurrentStage(student);
   var next = kcloudNextStage(student);
+  var selfCr = selfCourseCredits(student);
   var stepsHtml = stages.map(function(s, i){
     var cls = s.met ? 'done' : (next && s.key===next.key ? 'next' : '');
     return '<div class="kc-step '+cls+'">' +
@@ -1472,6 +1473,13 @@ function kcloudCertBlock(student){
     '<div class="kc-steps">' + stepsHtml + '</div>' +
     '<div class="cm" style="margin-top:10px;">'+statusText+'</div>' +
     '<div class="cm" style="margin-top:4px; color:var(--primary); font-weight:600;">'+nextText+'</div>' +
+    '<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">' +
+      '<div class="cthead"><b>융합전공 자체교과목 이수</b><span>'+selfCr+' / '+SELF_COURSE_MIN_CREDITS+'학점'+(coreMet(student)?' 충족':'')+'</span></div>' +
+      '<div class="pbar"><i style="width:'+pct(selfCr, SELF_COURSE_MIN_CREDITS)+'%"></i></div>' +
+      '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
+        '융합전공 자체 개설과목(참여학과 교육과정표에는 없는 과목) 중 아무거나 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 충족돼요.' +
+      '</div>' +
+    '</div>' +
     (state.showKcloudInfo ? kcloudInfoHtml() : '') +
   '</div>';
 }
@@ -1500,7 +1508,6 @@ function progressBlock(student){
   var analyses = trackAnalyses(student);
   var met = anyTrackMet(student);
   var best = bestTrack(student);
-  var selfCr = selfCourseCredits(student);
   var html = '';
   html += '<div class="statusband '+(met?'met':'unmet')+'">' +
     '<div class="mark">'+(met?'✓':'!')+'</div>' +
@@ -1513,13 +1520,6 @@ function progressBlock(student){
       '학사학위취득 유예를 신청할 수 있어요(최대 2회, 학칙 시행세칙 제69조의1). 신청하지 않으면 제1전공 학위만 수여돼요(학칙 시행세칙 제69조).</div>';
   }
   html += myConvergenceCoursesBlock(student);
-  html += '<div class="catcard '+(coreMet(student)?'met':'')+'" style="margin-top:16px;">' +
-    '<div class="cthead"><b>핵심과목(자체개설과목) 이수</b><span>'+selfCr+' / '+SELF_COURSE_MIN_CREDITS+'학점'+(coreMet(student)?' 충족':'')+'</span></div>' +
-    '<div class="pbar"><i style="width:'+pct(selfCr, SELF_COURSE_MIN_CREDITS)+'%"></i></div>' +
-    '<div class="cm" style="margin-top:8px; font-size:11.5px; color:var(--text-muted);">' +
-      '융합전공 자체 개설과목(참여학과 교육과정표에는 없는 과목) 중 아무거나 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 충족돼요.' +
-    '</div>' +
-  '</div>';
   html += kcloudCertBlock(student);
   if(!met){
     html += nextStepsBlock(student, best.key);
