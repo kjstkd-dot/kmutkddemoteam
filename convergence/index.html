@@ -121,6 +121,18 @@ button{font-family:inherit;}
 .pbar{height:9px; border-radius:5px; background:var(--track); overflow:hidden; position:relative;}
 .pbar i{position:absolute; left:0; top:0; bottom:0; border-radius:5px; background:var(--primary);}
 .catcard.met .pbar i{background:var(--success);}
+.kcloud-card{border-color:var(--primary); border-width:1.5px;}
+.kc-steps{display:flex; align-items:flex-start; margin-top:6px;}
+.kc-step{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0;}
+.kc-dot{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:12px; background:var(--surface); color:var(--text-faint); border:2px solid var(--border); flex:none;}
+.kc-step.done .kc-dot{background:var(--success); color:#fff; border-color:var(--success);}
+.kc-step.next .kc-dot{background:var(--surface); color:var(--primary); border-color:var(--primary);}
+.kc-label{font-size:10.5px; font-weight:700; color:var(--text); text-align:center; line-height:1.3;}
+.kc-amt{font-size:10px; color:var(--text-muted);}
+.kc-step.done .kc-amt{color:var(--success); font-weight:700;}
+.kc-line{flex:0 0 16px; height:2px; background:var(--border); margin-top:13px;}
+.kc-step.done + .kc-line{background:var(--success);}
 .totalline{font-size:13px; color:var(--text-muted); margin:14px 0 4px; display:flex; justify-content:space-between; align-items:baseline;}
 .totalline b{color:var(--text); font-size:15px;}
 
@@ -300,7 +312,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-19 a';
+var APP_VERSION = '2026-09-19 b';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1002,6 +1014,43 @@ function selfCourseCredits(student){
 }
 function coreMet(student){ return selfCourseCredits(student) >= SELF_COURSE_MIN_CREDITS; }
 function missingCoreCredits(student){ return Math.max(0, SELF_COURSE_MIN_CREDITS - selfCourseCredits(student)); }
+// 자체 개설과목을 몇 "과목" 들었는지(학점이 아니라 개수). K-Cloud 융합 성장 인증제 조건에 쓰인다.
+function selfCourseCount(student){
+  return courses(student).filter(function(c){ return c.courseCode && isSelfConvergenceCourse(c.courseCode); }).length;
+}
+/* ============ K-Cloud 융합 성장 인증제 (이수 규정과 별개의 장학금 제도) ============
+   융합전공 교과목을 단계별로 이수 + 융합 성장 스토리 제출 + 페스타 참여를 마치면
+   K-Cloud College 학장 명의 인증서와 장학금(등록금 범위 외)을 받는다. 이 융합전공
+   (글로벌K-공연콘텐츠전공)은 인증제 적용 대상 융합전공 18개 중 하나다. */
+var KCLOUD_CERT_STAGES = [
+  { key:'md',     label:'1단계 · 융합MD형',     creditMin:9,  selfCourseMin:1, allowReclassify:false, scholarship:200000 },
+  { key:'minor',  label:'2단계 · 융합부전공형', creditMin:15, selfCourseMin:1, allowReclassify:true,  scholarship:500000 },
+  { key:'double', label:'3단계 · 융합복수전공형', creditMin:33, selfCourseMin:2, allowReclassify:true, scholarship:1000000 }
+];
+function kcloudCertAnalysis(student){
+  var cvgTotal = totalCredits(student);
+  var cvgNoReclass = cvgTotal - reclassifiedCredits(student);
+  var selfCnt = selfCourseCount(student);
+  return KCLOUD_CERT_STAGES.map(function(st){
+    var credits = st.allowReclassify ? cvgTotal : cvgNoReclass;
+    var creditGap = Math.max(0, st.creditMin - credits);
+    var selfGap = Math.max(0, st.selfCourseMin - selfCnt);
+    return {
+      key:st.key, label:st.label, scholarship:st.scholarship, creditMin:st.creditMin, selfCourseMin:st.selfCourseMin,
+      credits:credits, selfCount:selfCnt, creditGap:creditGap, selfGap:selfGap,
+      met: creditGap===0 && selfGap===0
+    };
+  });
+}
+// 지금까지 충족한 단계 중 가장 높은 단계(없으면 null).
+function kcloudCurrentStage(student){
+  var met = kcloudCertAnalysis(student).filter(function(s){ return s.met; });
+  return met.length ? met[met.length-1] : null;
+}
+// 아직 못 채운 단계 중 가장 낮은 단계(다음 목표, 모두 충족했으면 null).
+function kcloudNextStage(student){
+  return kcloudCertAnalysis(student).filter(function(s){ return !s.met; })[0] || null;
+}
 // 학칙 제44조①: 복수전공(융합전공 포함)으로 이수하는 경우, 제1전공 학과의 졸업논문이
 // 필수과목이면 반드시 이수해야 한다. 부전공에는 적용되지 않는다.
 function thesisApplies(student, trackKey){ return trackKey==='double' && !!student.thesisRequired; }
@@ -1098,7 +1147,7 @@ var state = {
   view: 'login',             // login | register | register-admin | home | course-form | profile | list | detail | settings
   studentSession: null, adminSession: null,
   formError: '', formOk: '', shareToast: '',
-  showMinorMulti: false, showTrackInfo: false,
+  showMinorMulti: false, showTrackInfo: false, showKcloudInfo: false,
   editingCourseId: null,
   editingMicrodegreeId: null,
   detailId: null,
@@ -1395,6 +1444,49 @@ function myConvergenceCoursesBlock(student){
     (pendingCount ? '<div class="reco-empty">그 외 '+pendingCount+'개는 본인 학과 과목이라 아직 인정 안 돼요(이수구분 변경을 신청하면 최대 6학점까지 인정돼요).</div>' : '') +
   '</div>';
 }
+// K-Cloud 융합 성장 인증제: 이수 조건과 별개로, 단계별(9/15/33학점)로 이수하고 성장
+// 스토리·페스타까지 마치면 장학금을 주는 제도. 3단계 스텝을 한눈에 보여주고, 다음 단계까지
+// 뭐가 더 필요한지 알려준다.
+function kcloudCertBlock(student){
+  var stages = kcloudCertAnalysis(student);
+  var current = kcloudCurrentStage(student);
+  var next = kcloudNextStage(student);
+  var stepsHtml = stages.map(function(s, i){
+    var cls = s.met ? 'done' : (next && s.key===next.key ? 'next' : '');
+    return '<div class="kc-step '+cls+'">' +
+      '<div class="kc-dot">'+(s.met?'✓':(i+1))+'</div>' +
+      '<div class="kc-label">'+esc(s.label.replace(/^\d단계\s*·\s*/,''))+'</div>' +
+      '<div class="kc-amt">'+num(s.scholarship/10000)+'만원</div>' +
+    '</div>';
+  }).join('<div class="kc-line"></div>');
+  var statusText = current ?
+    ('지금 <b>'+esc(current.label)+'</b> 조건을 충족했어요 (장학금 '+num(current.scholarship/10000)+'만원).') :
+    '아직 1단계 조건도 충족하지 못했어요.';
+  var nextText = next ?
+    ('<b>'+esc(next.label)+'</b>까지 앞으로 융합전공 '+next.creditGap+'학점'+(next.selfGap?' · 자체개설과목 '+next.selfGap+'개':'')+' 더 필요해요. 충족하면 장학금 '+num(next.scholarship/10000)+'만원'+(current?'(이미 받은 금액 제외 차액만 지급)':'')+'.') :
+    '모든 단계를 충족했어요! 3단계 장학금 100만원까지 신청할 수 있어요.';
+  return '<div class="catcard kcloud-card" style="margin-top:16px;">' +
+    '<div class="cthead"><b>💰 K-Cloud 융합 성장 인증제</b>' +
+      '<button type="button" class="qmark" data-action="toggle-kcloud-info">?</button>' +
+    '</div>' +
+    '<div class="kc-steps">' + stepsHtml + '</div>' +
+    '<div class="cm" style="margin-top:10px;">'+statusText+'</div>' +
+    '<div class="cm" style="margin-top:4px; color:var(--primary); font-weight:600;">'+nextText+'</div>' +
+    (state.showKcloudInfo ? kcloudInfoHtml() : '') +
+  '</div>';
+}
+function kcloudInfoHtml(){
+  return '<div class="cm" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); line-height:1.7;">' +
+    '<b>신청 방법</b>: STORY+ 시스템 ▶ K-Cloud 메뉴 ▶ K-Cloud 융합교육 ▶ 신청 (인증 희망하는 융합전공 1개 선택)<br>' +
+    '<b>시기</b>: 인증제 신청 1학기 3~4월 · 2학기 9~10월 / 융합 성장 스토리(에세이) 제출 1학기 5~6월 · 2학기 11~12월 / 융합 성장 페스타 참여 1학기 6~7월 · 2학기 12~1월 (정확한 기간은 학기마다 새로 공지돼요)<br>' +
+    '<b>유의사항</b><br>' +
+    '· 각 단계 학점 중 최소 1개(3단계는 2개)는 융합전공 자체 개설과목이어야 해요.<br>' +
+    '· 1단계는 본인 학과와 겹치는 과목(이수구분 변경한 과목 포함)은 인정 안 되고, 2·3단계는 이수구분 변경한 과목도 최대 6학점까지 인정돼요.<br>' +
+    '· 인증제 시행 전에 이미 들은 과목도 그 학년도 교육과정에 편성돼 있었다면 소급 인정돼요.<br>' +
+    '· 장학금은 등록금 범위 외로 지급되고, 하위 단계 인증 후 상위 단계를 인증하면 차액만 지급돼요(최대 100만원).<br>' +
+    '· 학점 조건을 채웠어도 융합 성장 스토리 제출과 페스타 참여까지 마쳐야 장학금을 받을 수 있어요. 문의: K-Cloud College 행정팀 580-6730' +
+  '</div>';
+}
 // 지금 가장 빨리 채울 수 있는 경로를 기준으로, 앞으로 뭘 들으면 되는지 경로 카드를
 // 펼치지 않아도 홈 화면에서 바로 볼 수 있게 한다.
 function nextStepsBlock(student, bestKey){
@@ -1428,6 +1520,7 @@ function progressBlock(student){
       '융합전공 자체 개설과목(참여학과 교육과정표에는 없는 과목) 중 아무거나 합쳐서 '+SELF_COURSE_MIN_CREDITS+'학점 이상 이수하면 충족돼요.' +
     '</div>' +
   '</div>';
+  html += kcloudCertBlock(student);
   if(!met){
     html += nextStepsBlock(student, best.key);
   }
@@ -2307,6 +2400,16 @@ function guideStudent(){
         '<li>그 아래 <b>경로별 비교</b> 카드에서는 앱이 자동으로 계산하는 <b>복수전공·부전공(1개)·부전공(2개 이상)</b> 세 경로를 각각 자세히 비교할 수 있어요. 카드를 누르면 그 경로 기준으로 왼쪽에 <b>이수과목</b>, 오른쪽에 <b>추천 과목</b>이 함께 펼쳐집니다.</li>' +
         '<li>어느 하나라도 충족되면 그 경로 이름으로 "이수 조건 충족"이 표시됩니다.</li>' +
         '<li>아직 충족하지 못했다면 <b>학사학위취득 유예</b> 신청 안내가 함께 나타납니다.</li>' +
+      '</ul></div>' +
+    '<div class="step"><div class="step-num">6</div>' +
+      '<h2>💰 K-Cloud 융합 성장 인증제 — 장학금 받기</h2>' +
+      '<p>졸업 요건과는 별개로, 융합전공 학점을 단계별로 채우고 인증을 신청하면 장학금을 받을 수 있는 제도예요. 홈 화면의 <b>💰 K-Cloud 융합 성장 인증제</b> 카드에서 지금 어느 단계까지 왔는지 바로 볼 수 있습니다.</p>' +
+      '<ul>' +
+        '<li><b>1단계 융합MD형</b> — 융합전공 9학점(자체개설과목 1개 포함, 본인 학과와 겹치는 과목·이수구분 변경 과목은 불인정) → 장학금 20만원</li>' +
+        '<li><b>2단계 융합부전공형</b> — 융합전공 15학점(자체개설과목 1개 포함, 이수구분 변경 과목도 6학점까지 인정) → 장학금 50만원</li>' +
+        '<li><b>3단계 융합복수전공형</b> — 융합전공 33학점(자체개설과목 2개 포함, 이수구분 변경 과목도 6학점까지 인정) → 장학금 100만원</li>' +
+        '<li>장학금은 등록금 범위 외로 지급되고, 이미 낮은 단계 장학금을 받았다면 다음에는 그 차액만 지급돼요(최대 100만원).</li>' +
+        '<li>학점만으로는 부족하고, <b>STORY+ 시스템</b>(K-Cloud 메뉴 &gt; K-Cloud 융합교육 &gt; 신청)에서 인증을 신청한 뒤 <b>융합 성장 스토리(에세이) 제출</b>과 <b>융합 성장 페스타 참여</b>까지 마쳐야 장학금이 지급됩니다. 카드의 물음표(？)를 누르면 신청 시기·방법을 자세히 볼 수 있어요.</li>' +
       '</ul></div>'
   );
 }
@@ -2561,6 +2664,7 @@ document.addEventListener('click', function(e){
   else if(act==='toggle-track-detail'){ state.expandedTrack = (state.expandedTrack===el.dataset.key) ? null : el.dataset.key; }
   else if(act==='toggle-minor-multi'){ state.showMinorMulti = !state.showMinorMulti; }
   else if(act==='toggle-track-info'){ state.showTrackInfo = !state.showTrackInfo; }
+  else if(act==='toggle-kcloud-info'){ state.showKcloudInfo = !state.showKcloudInfo; }
   else if(act==='toggle-rec-group'){ var rk=el.dataset.key; state.expandedRecGroups[rk] = !state.expandedRecGroups[rk]; }
   else if(act==='toggle-explain'){ var eid=el.dataset.id; state.expandedExplain[eid] = !state.expandedExplain[eid]; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
