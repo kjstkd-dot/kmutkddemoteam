@@ -424,7 +424,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-19 a';
+var APP_VERSION = '2026-09-19 b';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -759,6 +759,14 @@ function bestGapArea(a){
   AREAS.forEach(function(x){ if(a.gaps[x] < bv){ bv = a.gaps[x]; best = x; } });
   return { area:best, gap:bv };
 }
+/* S단계 장학금은 최대 2개 영역까지만 나온다. 그 뒤로는 채워도 금액이 늘지 않는다. */
+var S_MAX_AREAS = 2;
+// 아직 기준을 못 넘긴 영역 중 가장 가까운 것 (이미 달성한 영역은 제외)
+function bestUnmetArea(a){
+  var un = AREAS.filter(function(x){ return !a.achieved[x]; })
+                .sort(function(x,y){ return a.gaps[x]-a.gaps[y]; });
+  return un.length ? { area:un[0], gap:a.gaps[un[0]] } : null;
+}
 function pickSuggestions(area){
   return FACE_GROUPS[area].rows.filter(function(r){ return r[1] !== '성적'; })
     .slice().sort(function(a,b){ return b[3]-a[3]; }).slice(0,2);
@@ -799,10 +807,30 @@ function recommendation(s, a){
   var year = num(s.year)||1;
   if(a.achievedCount>=1){
     var done = AREAS.filter(function(x){ return a.achieved[x]; }).join(', ');
+    var left = S_MAX_AREAS - a.achievedCount;     // 장학금이 더 늘어날 수 있는 영역 수
+    var nx = bestUnmetArea(a);
+    var moreHtml = '';
+    if(left >= 1 && nx){
+      var nLines = actionLines(nx.area, nx.gap).map(function(l){ return '<li>'+l+'</li>'; }).join('');
+      moreHtml =
+        '<span class="rsub">한 영역만 더 — 250만원이 더 붙습니다</span><ul>' +
+        '<li><b>'+nx.area+'영역</b>을 <b>'+nx.gap+'점</b>만 더 채우면 <b>2개 영역</b>' +
+          ' — 합계 <b>500만원</b>(S단계 최대)</li>' +
+        '<li>지금 '+done+'영역 하나로는 250만원입니다</li>' +
+        '</ul>' +
+        '<span class="rsub">'+nx.area+'영역을 채우는 방법</span><ul>'+nLines+'</ul>';
+    } else {
+      moreHtml =
+        '<span class="rsub">영역은 여기까지</span><ul>' +
+        '<li><b>2개 영역 달성</b> — S단계 장학금 최대치입니다</li>' +
+        '<li>영역을 더 채워도 장학금은 늘지 않습니다. 이제 <b>포트폴리오와 면접</b>에 집중하세요</li>' +
+        '</ul>';
+    }
     return { target:'S', ok:true, html:
       '<span class="rhead">S단계 도전 가능!</span><ul>' +
       '<li><b>'+done+'영역</b> 기준 통과 완료</li>' +
       '<li>A·T단계 안 거쳐도 바로 도전 가능</li></ul>' +
+      moreHtml +
       '<span class="rsub">지금부터 할 일</span><ul>' +
       '<li>STORY+ &gt; MY포트폴리오에서 이력서·자기소개서·학업계획서 작성</li>' +
       '<li>1차 합격자 발표 후, 2차 포트폴리오 심사 <b>직접 신청</b>(자동 아님, 기한 확인 필수)</li>' +
@@ -930,7 +958,11 @@ function analysisHtml(s, o){
   var a = analyze(s), reco = recommendation(s,a);
   var certs = [['S',!!s.certS],['T',!!s.certT],['A',!!s.certA],['R',a.rDone]];
   var ranked = AREAS.filter(function(x){ return !a.achieved[x]; }).sort(function(x,y){ return a.gaps[x]-a.gaps[y]; });
-  var r1 = ranked[0]||null, r2 = ranked[1]||null;
+  // 장학금이 나오는 영역은 최대 2개. 이미 채운 만큼 빼고 남은 자리만 짚어 준다.
+  var slots = Math.max(0, S_MAX_AREAS - a.achievedCount);
+  var r1 = slots>=1 ? (ranked[0]||null) : null;
+  var r2 = slots>=2 ? (ranked[1]||null) : null;
+  var oneMore = a.achievedCount===1 && r1;   // 한 영역만 더 채우면 최대치
   return (
     ((o && o.noCerts) ? '' :
       '<div class="certrow"><span class="clabel">현재 인증 단계</span><div class="certbadges">' +
@@ -957,14 +989,25 @@ function analysisHtml(s, o){
             '<div class="num">'+score+'/'+th+'</div>' +
             '<div class="gap '+(met?'met':'')+'">'+(met ? '달성 ✓' : a.gaps[x]+'점 남음')+'</div>' +
           '</div>' +
-          (x===r1 ? '<div class="closest rank1">🥇 1순위로 가까움</div>' : '') +
+          (x===r1 ? '<div class="closest rank1">' +
+              (oneMore ? '🥇 여기만 채우면 2개 영역 — 500만원' : '🥇 1순위로 가까움') + '</div>' : '') +
           (x===r2 ? '<div class="closest rank2">🥈 2순위로 가까움</div>' : '') +
         '</div>';
       }).join('') +
     '</div>' +
+    (a.achievedCount>=S_MAX_AREAS ?
+      '<div class="notice-box" style="margin:-2px 0 12px;border-color:var(--gold);background:var(--gold-soft);color:var(--gold);">' +
+      '<b>2개 영역 달성 — S단계 장학금 최대치입니다.</b><br>' +
+      '영역을 더 채워도 장학금은 늘지 않습니다. 이제 포트폴리오와 면접에 집중하세요.</div>' : '') +
     '<div class="schol">' +
       '<div class="schol-row"><span class="emo">🎓</span><div>' +
-        '<div class="amt">'+SCHOLARSHIP.S.amount+'</div><div class="snote">'+SCHOLARSHIP.S.note+'</div></div></div>' +
+        (a.achievedCount>=S_MAX_AREAS
+          ? '<div class="amt">5,000,000원</div><div class="snote">2개 영역 달성 — S단계 인증 시 받을 수 있는 최대 금액</div>'
+          : oneMore
+            ? '<div class="amt">2,500,000원 → 5,000,000원</div>' +
+              '<div class="snote">지금 1개 영역 · <b>'+r1+'영역</b>을 '+a.gaps[r1]+'점 더 채우면 2배</div>'
+            : '<div class="amt">'+SCHOLARSHIP.S.amount+'</div><div class="snote">'+SCHOLARSHIP.S.note+'</div>') +
+        '</div></div>' +
       ((reco.target==='A'||reco.target==='T') ?
         '<div class="schol-row cmp"><span class="emo">📎</span><div>' +
         '<div class="amt">'+SCHOLARSHIP[reco.target].amount+'</div>' +
