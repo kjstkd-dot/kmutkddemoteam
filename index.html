@@ -424,7 +424,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-19 b';
+var APP_VERSION = '2026-09-20 c';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1428,8 +1428,11 @@ function screenScoreForm(){
     '<input id="shotInput" type="file" accept="image/*" style="display:none;">' +
     (state.shotMsg ? '<div class="okbox" style="margin-top:10px;font-weight:500;">'+esc(state.shotMsg)+'</div>' : '') +
     '<div class="notice-box" style="margin-top:10px;margin-bottom:0;">' +
-      'STORY+ 역량 대시보드 화면을 캡쳐해서 올리면, 점수를 읽어 위 칸에 자동으로 채워 넣습니다. ' +
-      '채워진 숫자가 맞는지 확인한 뒤 <b>저장하고 분석 보기</b>를 눌러 주세요.' +
+      'STORY+ <b>역량 대시보드</b>에서 F·A·C·E 네 칸이 모두 보이게 캡쳐해 올리면, ' +
+      '점수를 읽어 위 칸에 자동으로 채워 넣습니다. 채워진 숫자가 맞는지 확인한 뒤 ' +
+      '<b>저장하고 분석 보기</b>를 눌러 주세요.<br>' +
+      '<span style="color:var(--text-faint);">사진은 휴대폰 안에서만 읽습니다. ' +
+      '처음 한 번은 글자인식기를 내려받느라 조금 걸립니다(약 6MB).</span>' +
       (shots.length ? '<br>지금까지 올린 캡쳐 <b>'+shots.length+'장</b>' : '') +
     '</div>'
   );
@@ -2251,9 +2254,19 @@ async function exportCsv(){
 }
 
 
-/* ---- 캡쳐 첨부하기 ---- */
-// 사진이 너무 크면 전송이 느리니 가로 1400px 이하로 줄여서 보낸다.
-function shrinkImage(file){
+/* ---- 캡쳐 첨부하기 ----
+   글자 읽기는 학생 휴대폰 안에서 끝납니다. 사진이 서버로 나가지 않습니다.
+   (Tesseract 글자인식기를 처음 한 번만 내려받아 쓰고, 그 뒤로는 저장돼 있어 바로 동작합니다) */
+
+var TESS = {
+  js:     'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  core:   'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/',
+  lang:   'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'
+};
+
+// 글자를 또렷하게 읽으려면 가로 1200px 안팎이 가장 낫다. 작으면 키우고 크면 줄인다.
+function scaleImage(file, targetW){
   return new Promise(function(resolve, reject){
     var reader = new FileReader();
     reader.onerror = function(){ reject(new Error('이미지를 읽지 못했습니다.')); };
@@ -2261,18 +2274,110 @@ function shrinkImage(file){
       var img = new Image();
       img.onerror = function(){ reject(new Error('이미지를 열지 못했습니다.')); };
       img.onload = function(){
-        var max = 1400;
         var w = img.width, h = img.height;
-        if(w > max){ h = Math.round(h * max / w); w = max; }
+        if(w && w !== targetW){ h = Math.round(h * targetW / w); w = targetW; }
         var cv = document.createElement('canvas');
         cv.width = w; cv.height = h;
-        cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(cv.toDataURL('image/jpeg', 0.85));
+        var ctx = cv.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.9));
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+}
+
+function loadScriptOnce(src){
+  if(window.Tesseract) return Promise.resolve();
+  if(loadScriptOnce._p) return loadScriptOnce._p;
+  loadScriptOnce._p = new Promise(function(resolve, reject){
+    var el = document.createElement('script');
+    el.src = src;
+    el.onload = function(){ resolve(); };
+    el.onerror = function(){
+      loadScriptOnce._p = null;
+      reject(new Error('글자인식기를 내려받지 못했습니다. 인터넷 연결을 확인해 주세요.'));
+    };
+    document.head.appendChild(el);
+  });
+  return loadScriptOnce._p;
+}
+
+// 만들어 둔 인식기는 다시 쓴다 (두 번째부터는 곧바로 읽는다)
+var tessWorker = null;
+async function getTessWorker(onNote){
+  if(tessWorker) return tessWorker;
+  onNote('글자인식기를 준비하는 중입니다… 처음 한 번만 약 6MB를 내려받습니다.');
+  await loadScriptOnce(TESS.js);
+  tessWorker = await window.Tesseract.createWorker('eng', 1, {
+    workerPath: TESS.worker, corePath: TESS.core, langPath: TESS.lang, gzip: true,
+    logger: function(m){
+      if(m && m.status === 'recognizing text'){
+        onNote('점수를 읽는 중입니다… ' + Math.round((m.progress||0)*100) + '%');
+      }
+    }
+  });
+  await tessWorker.setParameters({
+    tessedit_char_whitelist: '0123456789-+',
+    tessedit_pageseg_mode: '11'        // 흩어진 글자 모드 — 표 칸을 따로따로 읽는다
+  });
+  return tessWorker;
+}
+
+/* STORY+ 역량 대시보드는 영역마다 [기준점수, 나의 점수, 점수차] 가 이 순서로 나온다.
+   점수차 = 나의 점수 − 기준점수 이므로, 이 관계가 맞는 묶음만 믿는다.
+   (빼기 기호가 흐리게 찍혀 안 읽힐 때가 있어 부호는 빼고 크기만 본다) */
+var SHOT_BASES = [['F',350],['A',200],['C',280],['E',720]];
+function tripleOk(base, mine, diff){
+  return mine >= 0 && Math.abs(diff) === Math.abs(mine - base);
+}
+function readDashboard(nums){
+  var got = {}, found = 0;
+  SHOT_BASES.forEach(function(t){
+    for(var i=0; i+2<nums.length; i++){
+      if(nums[i] === t[1] && tripleOk(nums[i], nums[i+1], nums[i+2])){
+        got[t[0]] = nums[i+1]; found++; return;
+      }
+    }
+  });
+  if(found === 4) return got;
+
+  // 학과가 달라 기준점수가 다를 수 있으니, 관계가 맞는 묶음을 순서대로 F·A·C·E 에 넣는다
+  var trips = [];
+  for(var j=0; j+2<nums.length; j++){
+    if(nums[j] >= 50 && tripleOk(nums[j], nums[j+1], nums[j+2])){ trips.push(nums[j+1]); j += 2; }
+  }
+  if(trips.length === 4) return { F:trips[0], A:trips[1], C:trips[2], E:trips[3] };
+
+  return found ? got : null;     // 넷을 다 못 찾으면 찾은 것만이라도 돌려준다
+}
+
+// 인식 결과에서 숫자만 순서대로 뽑는다
+function numbersFrom(data){
+  var words = [];
+  (data.blocks || []).forEach(function(b){
+    (b.paragraphs || []).forEach(function(p){
+      (p.lines || []).forEach(function(l){
+        (l.words || []).forEach(function(w){ words.push(w.text); });
+      });
+    });
+  });
+  var text = words.length ? words.join(' ') : (data.text || '');
+  var out = [], re = /[+-]?\d+/g, m;
+  while((m = re.exec(text))){
+    var v = parseInt(m[0], 10);
+    if(!isNaN(v)) out.push(v);
+  }
+  return out;
+}
+
+async function ocrShot(dataUrl, onNote){
+  var worker = await getTessWorker(onNote);
+  onNote('점수를 읽는 중입니다…');
+  var res = await worker.recognize(dataUrl, {}, { blocks:true });
+  return readDashboard(numbersFrom(res.data));
 }
 
 function fillScoreForm(v){
@@ -2294,48 +2399,42 @@ function fillScoreForm(v){
   return filled;
 }
 
+// 캡쳐 원본은 서버가 받아 줄 때만 보관한다. 못 받아도 학생 화면은 그대로 동작한다.
+function archiveShot(dataUrl){
+  if(!apiMode || !state.studentSession) return;
+  apiCall('analyze', { dataUrl: dataUrl, name: (cache.me && cache.me.name) || 'capture' })
+    .then(function(out){
+      if(!out || !out.fileId) return;
+      var shots = ((cache.me && cache.me.shots) || []).concat([{ fileId: out.fileId, at: nowIso() }]);
+      return storeUpdate('roster', state.studentSession.rosterId, { shots: shots }).then(loadMe);
+    })
+    .catch(function(){ /* 보관은 덤이라 실패해도 알리지 않는다 */ });
+}
+
 async function handleShot(file){
   if(!file || state.shotBusy) return;
-  if(!apiMode){
-    state.shotMsg = '서버에 연결되어 있지 않아 캡쳐를 올릴 수 없습니다.';
-    render(); return;
-  }
   state.shotBusy = true;
-  state.shotMsg = '캡쳐를 올리는 중입니다…';
-  render();
+  var note = function(msg){ state.shotMsg = msg; render(); };
+  note('캡쳐를 준비하는 중입니다…');
   try{
-    var dataUrl = await shrinkImage(file);
-    state.shotMsg = '캡쳐를 읽는 중입니다… (10초쯤 걸릴 수 있어요)';
-    render();
-    var out = await apiCall('analyze', { dataUrl: dataUrl, name: (cache.me && cache.me.name) || 'capture' });
+    var dataUrl = await scaleImage(file, 1200);
+    var values = await ocrShot(dataUrl, note);
 
-    var shots = (cache.me && cache.me.shots) || [];
-    shots = shots.concat([{ fileId: out.fileId, at: nowIso() }]);
-    await storeUpdate('roster', state.studentSession.rosterId, { shots: shots, updatedAt: nowIso() });
-    await loadMe();
-
-    if(out.values){
-      var filled = fillScoreForm(out.values);
+    if(values){
+      var filled = fillScoreForm(values);
       state.shotMsg = filled.length
         ? '캡쳐에서 ' + filled.join(', ') + ' 을(를) 읽어 채웠습니다. 맞는지 확인하고 저장해 주세요.'
-        : '캡쳐는 올렸지만 숫자를 찾지 못했습니다. 직접 입력해 주세요.';
-      var keep = state.shotMsg;
+        : '캡쳐는 읽었지만 채울 숫자를 찾지 못했습니다. 직접 입력해 주세요.';
       render();
-      fillScoreForm(out.values);   // 다시 그린 뒤에도 값이 남도록
-      state.shotMsg = keep;
-    } else if(out.skipped){
-      state.shotMsg = '캡쳐를 올렸습니다. (자동 읽기는 꺼져 있어 점수는 직접 입력해 주세요)';
-      render();
-    } else {
-      state.shotMsg = '캡쳐는 올렸습니다. ' + (out.readError || '자동 읽기에 실패했습니다.') + ' 점수는 직접 입력해 주세요.';
+      fillScoreForm(values);          // 다시 그린 뒤에도 값이 남도록
+    }else{
+      state.shotMsg = '점수를 찾지 못했습니다. ' +
+        'STORY+ 역량 대시보드에서 F·A·C·E 네 칸이 모두 보이게 캡쳐해 주시거나, 직접 입력해 주세요.';
       render();
     }
+    archiveShot(dataUrl);
   }catch(e){
-    var msg = errMsg(e);
-    // 서버(Apps Script)가 아직 캡쳐 읽기를 못 하는 옛 버전일 때
-    state.shotMsg = /알 수 없는 요청/.test(msg)
-      ? '지금은 캡쳐 자동 읽기를 쓸 수 없습니다. 점수는 위 칸에 직접 입력해 주세요. (관리자에게 알려 주세요)'
-      : msg;
+    state.shotMsg = errMsg(e);
     render();
   }finally{
     state.shotBusy = false;
