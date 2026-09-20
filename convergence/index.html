@@ -318,7 +318,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-20 c';
+var APP_VERSION = '2026-09-20 d';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -331,6 +331,20 @@ function loadFallback(){
 function saveFallback(){
   try{ localStorage.setItem('cvg_store', JSON.stringify(fallbackData)); }catch(e){}
 }
+// 서버가 돌려주는 오류 코드를 화면에 보여줄 한국어 문장으로 바꾼다. 서버(apps-script.gs)는
+// 개인정보 보호를 위해 "누가 요청했는지" 자체를 검사하므로, 예전에는 클라이언트에서만
+// 만들던 오류 메시지 상당수가 이제 서버에서 코드로 내려온다.
+var SERVER_ERROR_MESSAGES = {
+  SESSION_EXPIRED: '세션이 만료됐어요. 다시 로그인해 주세요.',
+  WEAK_PASSWORD: '비밀번호는 6자 이상이어야 해요.',
+  MISSING_FIELDS: '필요한 정보를 모두 입력해 주세요.',
+  MISSING_DEPT: '학과(제1전공)를 선택해 주세요.',
+  FORBIDDEN: '접근 권한이 없어요.',
+  NOT_FOUND: '요청한 자료를 찾을 수 없어요.',
+  UNKNOWN_ACTION: '알 수 없는 요청이에요.'
+};
+function serverErrorMessage(code, fallback){ return SERVER_ERROR_MESSAGES[code] || fallback || code; }
+function currentToken(){ var s = session(); return (s && s.token) || ''; }
 async function apiCall(action, body){
   var res;
   var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -355,31 +369,35 @@ async function apiCall(action, body){
   var out;
   try{ out = JSON.parse(text); }
   catch(e){ throw new Error('자료 서버가 예상과 다른 답을 보냈습니다.'); }
-  if(out && out.error) throw new Error(out.error);
+  if(out && out.error){
+    // 세션이 끊긴 상태로 다른 요청이 실패한 거라면, 화면도 로그인 화면으로 되돌린다.
+    if(out.error === 'SESSION_EXPIRED' && session()){ setSession(state.role, null); state.view='login'; }
+    throw new Error(serverErrorMessage(out.error));
+  }
   return out;
 }
 async function storeGet(col, id){
-  if(apiMode){ var r = await apiCall('get', {collection:col, id:id}); return r.doc || null; }
+  if(apiMode){ var r = await apiCall('get', {collection:col, id:id, token:currentToken()}); return r.doc || null; }
   var d = (fallbackData[col]||{})[id];
   return d ? Object.assign({id:id}, d) : null;
 }
 async function storeSet(col, id, data){
-  if(apiMode){ await apiCall('set', {collection:col, id:id, data:data}); return; }
+  if(apiMode){ await apiCall('set', {collection:col, id:id, data:data, token:currentToken()}); return; }
   fallbackData[col] = fallbackData[col]||{}; fallbackData[col][id] = data; saveFallback();
 }
 async function storeUpdate(col, id, data){
-  if(apiMode){ await apiCall('update', {collection:col, id:id, data:data}); return; }
+  if(apiMode){ await apiCall('update', {collection:col, id:id, data:data, token:currentToken()}); return; }
   fallbackData[col] = fallbackData[col]||{};
   fallbackData[col][id] = Object.assign({}, fallbackData[col][id]||{}, data);
   saveFallback();
 }
 async function storeDelete(col, id){
-  if(apiMode){ await apiCall('delete', {collection:col, id:id}); return; }
+  if(apiMode){ await apiCall('delete', {collection:col, id:id, token:currentToken()}); return; }
   if(fallbackData[col]) delete fallbackData[col][id];
   saveFallback();
 }
 async function storeAll(col){
-  if(apiMode){ var r = await apiCall('all', {collection:col}); return r.docs || []; }
+  if(apiMode){ var r = await apiCall('all', {collection:col, token:currentToken()}); return r.docs || []; }
   var all = fallbackData[col]||{};
   return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); });
 }
@@ -1440,6 +1458,7 @@ function screenRegisterStudent(){
         '</div>' +
         '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
         '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password"></div>' +
+        privacyNoticeHtml() +
         '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
       '</form>' +
       '<div class="row" style="justify-content:center; margin-top:14px;">' +
@@ -1447,6 +1466,15 @@ function screenRegisterStudent(){
       '</div>' +
     '</div>'
   );
+}
+// 회원가입 화면에 넣는 개인정보 수집·이용 안내. 법적 검토를 거친 정식 개인정보처리방침은
+// 아니고, 어떤 정보를 왜 모으는지 최소한으로 알려주는 문구다.
+function privacyNoticeHtml(){
+  return '<div class="notice-box" style="font-size:11.5px; line-height:1.6;">' +
+    '<b>수집하는 개인정보</b>: 학번(또는 관리자 번호)·이름·학과·입학년도·이수과목·마이크로디그리 이수 내역 등 이 화면에서 입력하는 정보<br>' +
+    '<b>이용 목적</b>: 융합전공 이수 조건 충족 여부를 계산해서 보여주고, 담당교수님이 이수 현황을 확인·관리할 수 있도록 하기 위함<br>' +
+    '<b>보관·삭제</b>: 별도로 정한 기간 없이 계정이 있는 동안 보관하며, 본인 또는 담당교수님(관리자)에게 요청하면 삭제할 수 있어요. 이 정보는 담당교수님(관리자)만 볼 수 있고, 그 외에는 제공하지 않아요.' +
+  '</div>';
 }
 function screenRegisterAdmin(){
   return (
@@ -1461,6 +1489,7 @@ function screenRegisterAdmin(){
         '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password"></div>' +
         '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password"></div>' +
         '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode"></div>' +
+        privacyNoticeHtml() +
         '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
       '</form>' +
       '<div class="row" style="justify-content:center; margin-top:14px;">' +
@@ -1470,25 +1499,47 @@ function screenRegisterAdmin(){
   );
 }
 
+// 로그인/회원가입/비밀번호는 서버(apps-script.gs)가 직접 확인한다(비밀번호를 클라이언트가
+// 대신 비교하지 않는다). 서버는 확인 결과로 세션 토큰을 내려주고, 그 토큰이 있어야만
+// 이후 학생·관리자 데이터를 읽거나 고칠 수 있다. API_URL이 비어 있는 기기 저장(오프라인
+// 시험용) 모드에서는 서버가 없으므로 예전처럼 클라이언트에서 비밀번호를 해시해 비교한다.
 async function doLogin(role, id, pw){
-  var col = role==='student' ? 'cvg_students' : 'cvg_admins';
-  var doc = await storeGet(col, id);
   var label = role==='student' ? '학번' : '관리자 번호';
-  if(!doc){ state.formError = '등록되지 않은 '+label+'이에요. 처음이시라면 비밀번호 설정하기를 눌러주세요.'; render(); return; }
-  var hash = await sha256Hex(pw);
-  if(hash !== doc.passwordHash){ state.formError = label+' 또는 비밀번호가 올바르지 않아요.'; render(); return; }
+  if(!apiMode){
+    var col = role==='student' ? 'cvg_students' : 'cvg_admins';
+    var doc = await storeGet(col, id);
+    if(!doc){ state.formError = '등록되지 않은 '+label+'이에요. 처음이시라면 비밀번호 설정하기를 눌러주세요.'; render(); return; }
+    var hash = await sha256Hex(pw);
+    if(hash !== doc.passwordHash){ state.formError = label+' 또는 비밀번호가 올바르지 않아요.'; render(); return; }
+    var docMajorId0 = doc.majorId || DEFAULT_MAJOR_ID;
+    if(docMajorId0 !== state.majorId){ await switchMajor(docMajorId0); }
+    state.formError=''; state.formOk='';
+    if(role==='student'){ setSession('student', { id:id, name:doc.name, majorId:docMajorId0 }); state.cache.me = doc; state.view='home'; }
+    else { setSession('admin', { id:id, name:doc.name, majorId:docMajorId0 }); state.view='list'; await loadRoster(); }
+    render();
+    return;
+  }
+  var result;
+  try{
+    result = await apiCall('login', { collection: role==='student'?'cvg_students':'cvg_admins', id:id, password:pw });
+  }catch(e){
+    var msg = errMsg(e);
+    if(msg==='NOT_REGISTERED') msg = '등록되지 않은 '+label+'이에요. 처음이시라면 비밀번호 설정하기를 눌러주세요.';
+    else if(msg==='INVALID_CREDENTIALS') msg = label+' 또는 비밀번호가 올바르지 않아요.';
+    state.formError = msg; render(); return;
+  }
+  var doc = result.doc;
   state.formError=''; state.formOk='';
-  // 이 계정이 지금 화면 위쪽에서 고른 융합전공이 아니라 다른 융합전공 소속이면,
-  // 로그인 화면에서 매번 융합전공을 직접 맞춰 고르게 하지 않고 그 계정의
-  // 융합전공으로 자동으로 바꿔준다(예전 데이터는 majorId가 없어서 기본 융합전공으로 본다).
   var docMajorId = doc.majorId || DEFAULT_MAJOR_ID;
   if(docMajorId !== state.majorId){ await switchMajor(docMajorId); }
   if(role==='student'){
-    setSession('student', { id:id, name:doc.name, majorId:docMajorId });
+    setSession('student', { id:id, name:doc.name, majorId:docMajorId, token:result.token });
     state.cache.me = doc;
-    state.view='home';
+    // 관리자가 비밀번호를 초기화했다면 새 비밀번호를 설정할 때까지 안내 화면으로 보낸다.
+    state.view = doc.mustChangePassword ? 'profile' : 'home';
+    if(doc.mustChangePassword) state.formOk = '관리자가 비밀번호를 초기화했어요. 새 비밀번호를 설정해 주세요.';
   } else {
-    setSession('admin', { id:id, name:doc.name, majorId:docMajorId });
+    setSession('admin', { id:id, name:doc.name, majorId:docMajorId, token:result.token });
     state.view='list';
     await loadRoster();
   }
@@ -1499,15 +1550,30 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   if(!dept){ state.formError='학과(제1전공)를 선택해 주세요.'; render(); return; }
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
-  var existing = await storeGet('cvg_students', id);
-  if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
-  var hash = await sha256Hex(pw);
-  var doc = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
-    recognizedSemesters:'', majorId: state.majorId,
-    microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
-  await storeSet('cvg_students', id, doc);
-  setSession('student', { id:id, name:name, majorId: state.majorId });
-  state.cache.me = Object.assign({id:id}, doc);
+  if(!apiMode){
+    var existing = await storeGet('cvg_students', id);
+    if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
+    var hash = await sha256Hex(pw);
+    var doc0 = { name:name, dept:dept||'', year:year||'', passwordHash:hash, courses:[],
+      recognizedSemesters:'', majorId: state.majorId,
+      microdegrees:[], thesisRequired:false, thesisDone:false, createdAt:nowIso() };
+    await storeSet('cvg_students', id, doc0);
+    setSession('student', { id:id, name:name, majorId: state.majorId });
+    state.cache.me = Object.assign({id:id}, doc0);
+    state.formError=''; state.view='home';
+    render();
+    return;
+  }
+  var result;
+  try{
+    result = await apiCall('registerStudent', { id:id, name:name, dept:dept, year:year, password:pw, majorId: state.majorId });
+  }catch(e){
+    var msg = errMsg(e);
+    if(msg==='DUPLICATE_ID') msg = '이미 등록된 학번이에요. 로그인해 주세요.';
+    state.formError = msg; render(); return;
+  }
+  setSession('student', { id:id, name:name, majorId: state.majorId, token: result.token });
+  state.cache.me = result.doc;
   state.formError=''; state.view='home';
   render();
 }
@@ -1515,21 +1581,37 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
   if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
-  // "첫 관리자는 등록코드 없이"는 전체가 아니라 지금 고른 융합전공 기준이다.
-  // 그래야 새 융합전공을 처음 맡은 교수님도 코드 없이 첫 관리자로 등록할 수 있다.
-  var admins = await storeAll('cvg_admins');
-  var sameMajorAdmins = admins.filter(function(a){ return (a.majorId||DEFAULT_MAJOR_ID) === state.majorId; });
-  if(sameMajorAdmins.length>0){
-    var cfg = await storeGet('cvg_config', configDocId(state.majorId));
-    var required = cfg && cfg.adminCode ? cfg.adminCode : '';
-    if(!required){ state.formError='관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.'; render(); return; }
-    if(code !== required){ state.formError='관리자 등록코드가 올바르지 않아요.'; render(); return; }
+  if(!apiMode){
+    // "첫 관리자는 등록코드 없이"는 전체가 아니라 지금 고른 융합전공 기준이다.
+    var admins = await storeAll('cvg_admins');
+    var sameMajorAdmins0 = admins.filter(function(a){ return (a.majorId||DEFAULT_MAJOR_ID) === state.majorId; });
+    if(sameMajorAdmins0.length>0){
+      var cfg0 = await storeGet('cvg_config', configDocId(state.majorId));
+      var required0 = cfg0 && cfg0.adminCode ? cfg0.adminCode : '';
+      if(!required0){ state.formError='관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.'; render(); return; }
+      if(code !== required0){ state.formError='관리자 등록코드가 올바르지 않아요.'; render(); return; }
+    }
+    var existing = await storeGet('cvg_admins', id);
+    if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
+    var hash = await sha256Hex(pw);
+    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: state.majorId, createdAt:nowIso() });
+    setSession('admin', { id:id, name:name, majorId: state.majorId });
+    state.formError=''; state.view='list';
+    await loadRoster();
+    render();
+    return;
   }
-  var existing = await storeGet('cvg_admins', id);
-  if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
-  var hash = await sha256Hex(pw);
-  await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: state.majorId, createdAt:nowIso() });
-  setSession('admin', { id:id, name:name, majorId: state.majorId });
+  var result;
+  try{
+    result = await apiCall('registerAdmin', { id:id, name:name, password:pw, code:code, majorId: state.majorId });
+  }catch(e){
+    var msg = errMsg(e);
+    if(msg==='ADMIN_CODE_LOCKED') msg = '관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.';
+    else if(msg==='ADMIN_CODE_INVALID') msg = '관리자 등록코드가 올바르지 않아요.';
+    else if(msg==='DUPLICATE_ID') msg = '이미 등록된 관리자 번호예요.';
+    state.formError = msg; render(); return;
+  }
+  setSession('admin', { id:id, name:name, majorId: state.majorId, token: result.token });
   state.formError=''; state.view='list';
   await loadRoster();
   render();
@@ -1871,6 +1953,7 @@ function screenStudentHome(){
       '<p class="screen-sub">'+esc(TRACK_NAME)+' · 참여학과: '+PARTICIPATING_DEPTS.map(esc).join(', ')+'</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      (s.mustChangePassword ? '<div class="errbox">관리자가 초기화한 임시 비밀번호를 쓰고 있어요. <button type="button" class="linklike" data-action="goto-profile" style="font-size:inherit;">지금 새 비밀번호로 바꾸기</button></div>' : '') +
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
         '<div class="row" style="gap:10px;">' +
@@ -2275,11 +2358,25 @@ async function changePassword(oldPw, newPw, newPw2){
   var isAdmin = state.role==='admin';
   var col = isAdmin ? 'cvg_admins' : 'cvg_students';
   var id = isAdmin ? state.adminSession.id : state.studentSession.id;
-  var doc = await storeGet(col, id);
-  var oldHash = await sha256Hex(oldPw);
-  if(oldHash !== doc.passwordHash){ state.formError='현재 비밀번호가 올바르지 않아요.'; render(); return; }
-  var newHash = await sha256Hex(newPw);
-  await storeUpdate(col, id, { passwordHash:newHash });
+  if(!apiMode){
+    var doc = await storeGet(col, id);
+    var oldHash = await sha256Hex(oldPw);
+    if(oldHash !== doc.passwordHash){ state.formError='현재 비밀번호가 올바르지 않아요.'; render(); return; }
+    var newHash = await sha256Hex(newPw);
+    await storeUpdate(col, id, { passwordHash:newHash });
+    state.formError=''; state.formOk='비밀번호를 바꿨어요.';
+    state.view = isAdmin ? 'list' : 'home';
+    render();
+    return;
+  }
+  try{
+    await apiCall('changePassword', { token: currentToken(), oldPassword: oldPw, newPassword: newPw });
+  }catch(e){
+    var msg = errMsg(e);
+    if(msg==='INVALID_CREDENTIALS') msg = '현재 비밀번호가 올바르지 않아요.';
+    state.formError = msg; render(); return;
+  }
+  if(!isAdmin && state.cache.me) state.cache.me.mustChangePassword = false;
   state.formError=''; state.formOk='비밀번호를 바꿨어요.';
   state.view = isAdmin ? 'list' : 'home';
   render();
@@ -2486,10 +2583,18 @@ async function openDetail(id){
   render();
 }
 async function resetStudentPassword(){
-  var tempPw = '000000';
-  var hash = await sha256Hex(tempPw);
-  await storeUpdate('cvg_students', state.detailId, { passwordHash:hash });
-  state.formOk = '비밀번호를 '+tempPw+' 로 초기화했어요. 학생에게 알려주세요.';
+  if(!apiMode){
+    var tempPw0 = '000000';
+    var hash = await sha256Hex(tempPw0);
+    await storeUpdate('cvg_students', state.detailId, { passwordHash:hash });
+    state.formOk = '비밀번호를 '+tempPw0+' 로 초기화했어요. 학생에게 알려주세요.';
+    render();
+    return;
+  }
+  // 고정값(예: 000000)이 아니라 매번 새로운 임시 비밀번호를 만들고, 학생이 다음 로그인
+  // 때 반드시 새 비밀번호로 바꾸도록 강제한다(mustChangePassword).
+  var result = await apiCall('resetPassword', { token: currentToken(), studentId: state.detailId });
+  state.formOk = '비밀번호를 '+result.tempPassword+' 로 초기화했어요. 학생에게 알려주세요(다음 로그인 때 새 비밀번호로 바꾸도록 안내돼요).';
   render();
 }
 async function deleteStudent(){
@@ -2881,7 +2986,10 @@ document.addEventListener('change', async function(e){
     if(newMajorId === state.majorId) return;
     // 로그인된 상태에서 다른 융합전공으로 바꾸면 지금 세션과 안 맞을 수 있으니
     // 로그아웃부터 하고, 새 융합전공의 로그인 화면으로 보낸다.
-    if(session()){ setSession(state.role, null); state.view='login'; state.mode='app'; }
+    if(session()){
+      if(apiMode && currentToken()) apiCall('logout', { token: currentToken() }).catch(function(){});
+      setSession(state.role, null); state.view='login'; state.mode='app';
+    }
     await switchMajor(newMajorId);
     render();
     return;
@@ -2979,7 +3087,10 @@ document.addEventListener('click', function(e){
   else if(act==='open-detail'){ openDetail(el.dataset.id).catch(failWith); return; }
   else if(act==='reset-password'){ resetStudentPassword().catch(failWith); return; }
   else if(act==='delete-student'){ deleteStudent().catch(failWith); return; }
-  else if(act==='logout'){ setSession(state.role, null); state.view='login'; state.formOk=''; }
+  else if(act==='logout'){
+    if(apiMode && currentToken()) apiCall('logout', { token: currentToken() }).catch(function(){});
+    setSession(state.role, null); state.view='login'; state.formOk='';
+  }
   render();
 });
 
