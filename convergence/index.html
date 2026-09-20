@@ -312,7 +312,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbxOuHvtluAmQS-BCUT3gQq_SyMbv0etxD0m-Z4KK8ajKx-9CY3lbSFcLEUnktNTtVPNMA/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-19 d';
+var APP_VERSION = '2026-09-20 a';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -968,11 +968,16 @@ var CURRENT_APPLY_WINDOW = '2026. 9. 21.(월) 11:00 ~ 10. 23.(금) 23:59';
 
 // 학생에게 이수형태를 먼저 고르라고 하지 않는다. 과목만 입력하면 세 경로
 // (복수전공/부전공 1개/부전공 2개 이상)를 전부 계산해서 비교해 준다.
-var TRACK_TYPES = {
-  double:      { label:'복수전공', convergenceMin: DOUBLE_MAJOR_MIN },
-  minor_single:{ label:'부전공(1개)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_SINGLE },
-  minor_multi: { label:'부전공(2개 이상 동시이수)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_MULTI }
-};
+// 관리자가 설정에서 학점 기준을 바꾸면 rebuildTrackTypes()로 다시 만든다.
+var TRACK_TYPES = null;
+function rebuildTrackTypes(){
+  TRACK_TYPES = {
+    double:      { label:'복수전공', convergenceMin: DOUBLE_MAJOR_MIN },
+    minor_single:{ label:'부전공(1개)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_SINGLE },
+    minor_multi: { label:'부전공(2개 이상 동시이수)', convergenceMin: MINOR_MIN, primaryMin: MINOR_PRIMARY_MULTI }
+  };
+}
+rebuildTrackTypes();
 var TRACK_ORDER = ['double', 'minor_single', 'minor_multi'];
 function courses(student){ return (student && student.courses) || []; }
 // 이름이 같은 과목이 이미 목록에 있는지 본다(중복 등록 방지용).
@@ -2290,11 +2295,59 @@ function screenAdminSettings(){
       '<h2 class="screen-title">관리자 등록코드</h2>' +
       '<p class="screen-sub">새 관리자가 등록할 때 필요한 코드예요. 비워두면 새 관리자 등록이 막혀요.</p>' +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-admincode" class="stack">' +
         '<div class="field"><label>등록코드</label><input id="adminCode" value="'+esc(code)+'"></div>' +
         '<button class="btn btn-primary" type="submit">저장</button>' +
       '</form>' +
-      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을, 참여학과별 제1전공 교육과정표는 PRIMARY_CATALOGS 값을 고쳐서 바꿀 수 있어요. 33/15/54/42학점 등 이수학점 기준은 학교 규정에 정해진 값이라 그대로 두면 돼요.</div>' +
+
+      '<h2 class="screen-title" style="margin-top:24px;">학점 기준</h2>' +
+      '<p class="screen-sub">학칙·융합전공 이수 규정에 정해진 값이에요. 이 융합전공에 맞게 학교 규정이 다르다면 여기서 고칠 수 있어요.</p>' +
+      '<form id="form-creditrules" class="stack">' +
+        '<div class="grid2">' +
+          '<div class="field"><label>복수전공(융합전공 학점)</label><input id="crDouble" type="number" min="0" value="'+DOUBLE_MAJOR_MIN+'"></div>' +
+          '<div class="field"><label>부전공(융합전공 학점)</label><input id="crMinor" type="number" min="0" value="'+MINOR_MIN+'"></div>' +
+          '<div class="field"><label>부전공(1개) 제1전공 학점</label><input id="crMinorSingle" type="number" min="0" value="'+MINOR_PRIMARY_SINGLE+'"></div>' +
+          '<div class="field"><label>부전공(2개 이상) 제1전공 학점</label><input id="crMinorMulti" type="number" min="0" value="'+MINOR_PRIMARY_MULTI+'"></div>' +
+          '<div class="field"><label>이수신청 자격(인정학기)</label><input id="crApplySem" type="number" min="0" value="'+APPLY_MIN_SEMESTERS+'"></div>' +
+          '<div class="field"><label>이수구분 변경 최대 학점</label><input id="crReclassify" type="number" min="0" value="'+RECLASSIFY_MAX_CREDITS+'"></div>' +
+          '<div class="field"><label>핵심과목(자체교과목) 최소 학점</label><input id="crSelfCourse" type="number" min="0" value="'+SELF_COURSE_MIN_CREDITS+'"></div>' +
+        '</div>' +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+
+      '<h2 class="screen-title" style="margin-top:24px;">신청 기간·공지 문구</h2>' +
+      '<p class="screen-sub">이용안내(이수 규정 요약)에 그대로 보여줘요. 학기가 바뀌면 여기서 새 신청 기간으로 고쳐 주세요. 비워두면 안내 문구가 아예 안 보여요.</p>' +
+      '<form id="form-applywindow" class="stack">' +
+        '<div class="field"><label>이번 학기 신청 기간</label><input id="applyWindow" value="'+esc(CURRENT_APPLY_WINDOW)+'" placeholder="예: 2026. 9. 21.(월) 11:00 ~ 10. 23.(금) 23:59"></div>' +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+
+      '<h2 class="screen-title" style="margin-top:24px;">마이크로디그리 과정 목록</h2>' +
+      '<p class="screen-sub">한 줄에 과정 하나씩, <b>그룹 | 과정명 | 최소학점 | 비고</b> 형식으로 적어주세요(비고는 생략 가능). 이 융합전공에서 실제로 신청 가능한 과정으로 통째로 바꿔주세요.</p>' +
+      '<form id="form-microdegreelist" class="stack">' +
+        '<div class="field"><textarea id="mdListText" rows="8" style="font-family:var(--font-mono); font-size:12.5px;" placeholder="미래자동차 | 미래자동차공학전공 (초급) | 9 | 초급 6학점 포함 9학점">'+esc(microdegreeListToText(MICRODEGREE_PROGRAMS))+'</textarea></div>' +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+
+      '<h2 class="screen-title" style="margin-top:24px;">K-Cloud 융합 성장 인증제 단계</h2>' +
+      '<p class="screen-sub">단계별 학점·자체교과목 개수 조건과 장학금 금액을 고칠 수 있어요. 이 융합전공이 인증제 대상이 아니라면 단계 이름에 안내만 남기고 학점을 0으로 두면 돼요.</p>' +
+      '<form id="form-kcloudstages" class="stack">' +
+        KCLOUD_CERT_STAGES.map(function(st, i){
+          return '<div class="notice-box" style="margin-bottom:10px;">' +
+            '<div class="field"><label>'+(i+1)+'단계 이름</label><input id="kcLabel'+i+'" value="'+esc(st.label)+'"></div>' +
+            '<div class="grid2">' +
+              '<div class="field"><label>필요 학점</label><input id="kcCredit'+i+'" type="number" min="0" value="'+st.creditMin+'"></div>' +
+              '<div class="field"><label>자체교과목 최소 개수</label><input id="kcSelf'+i+'" type="number" min="0" value="'+st.selfCourseMin+'"></div>' +
+              '<div class="field"><label>장학금(원)</label><input id="kcAmt'+i+'" type="number" min="0" step="10000" value="'+st.scholarship+'"></div>' +
+              '<div class="field" style="display:flex; align-items:center; gap:6px;"><label style="margin:0;"><input id="kcReclassify'+i+'" type="checkbox" '+(st.allowReclassify?'checked':'')+' style="width:auto; vertical-align:middle;"> 이수구분 변경 과목 인정</label></div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '<button class="btn btn-primary" type="submit">저장</button>' +
+      '</form>' +
+
+      '<div class="notice-box" style="margin-top:16px;">융합전공명·참여학과·교육과정표는 index.html의 TRACK_NAME / PARTICIPATING_DEPTS / COURSE_CATALOG 값을, 참여학과별 제1전공 교육과정표는 PRIMARY_CATALOGS 값을 고쳐야 바꿀 수 있어요(다음 업데이트에서 여기 설정 화면으로 옮길 예정이에요).</div>' +
     '</div>'
   );
 }
@@ -2322,6 +2375,93 @@ async function saveAdminCode(code){
   await storeUpdate('cvg_config', 'app', { adminCode: code.trim() });
   state.cache.adminCode = code.trim();
   state.formOk = '등록코드를 저장했어요.';
+  render();
+}
+/* ============ 관리자가 UI에서 바꿀 수 있는 설정값 ============
+   index.html의 하드코딩 값은 "이 앱을 처음 설치했을 때의 기본값"일 뿐이고,
+   실제 운영 중에는 cvg_config/app 문서에 저장된 값이 있으면 그걸 덮어써서 쓴다.
+   그래야 담당교수님이 코드를 안 고치고도 관리자 설정 화면에서 바꿀 수 있다. */
+async function loadRuntimeConfig(){
+  var cfg = await storeGet('cvg_config', 'app');
+  if(!cfg) return;
+  if(cfg.creditRules){
+    var r = cfg.creditRules;
+    if(r.doubleMajorMin!=null) DOUBLE_MAJOR_MIN = num(r.doubleMajorMin);
+    if(r.minorMin!=null) MINOR_MIN = num(r.minorMin);
+    if(r.minorPrimarySingle!=null) MINOR_PRIMARY_SINGLE = num(r.minorPrimarySingle);
+    if(r.minorPrimaryMulti!=null) MINOR_PRIMARY_MULTI = num(r.minorPrimaryMulti);
+    if(r.applyMinSemesters!=null) APPLY_MIN_SEMESTERS = num(r.applyMinSemesters);
+    if(r.reclassifyMaxCredits!=null) RECLASSIFY_MAX_CREDITS = num(r.reclassifyMaxCredits);
+    if(r.selfCourseMinCredits!=null) SELF_COURSE_MIN_CREDITS = num(r.selfCourseMinCredits);
+    rebuildTrackTypes();
+  }
+  if(cfg.applyWindow != null) CURRENT_APPLY_WINDOW = cfg.applyWindow;
+  if(cfg.microdegreePrograms && cfg.microdegreePrograms.length) MICRODEGREE_PROGRAMS = cfg.microdegreePrograms;
+  if(cfg.kcloudStages && cfg.kcloudStages.length) KCLOUD_CERT_STAGES = cfg.kcloudStages;
+}
+async function saveCreditRules(form){
+  var r = {
+    doubleMajorMin: num(form.querySelector('#crDouble').value),
+    minorMin: num(form.querySelector('#crMinor').value),
+    minorPrimarySingle: num(form.querySelector('#crMinorSingle').value),
+    minorPrimaryMulti: num(form.querySelector('#crMinorMulti').value),
+    applyMinSemesters: num(form.querySelector('#crApplySem').value),
+    reclassifyMaxCredits: num(form.querySelector('#crReclassify').value),
+    selfCourseMinCredits: num(form.querySelector('#crSelfCourse').value)
+  };
+  await storeUpdate('cvg_config', 'app', { creditRules: r });
+  DOUBLE_MAJOR_MIN=r.doubleMajorMin; MINOR_MIN=r.minorMin; MINOR_PRIMARY_SINGLE=r.minorPrimarySingle;
+  MINOR_PRIMARY_MULTI=r.minorPrimaryMulti; APPLY_MIN_SEMESTERS=r.applyMinSemesters;
+  RECLASSIFY_MAX_CREDITS=r.reclassifyMaxCredits; SELF_COURSE_MIN_CREDITS=r.selfCourseMinCredits;
+  rebuildTrackTypes();
+  state.formOk = '학점 기준을 저장했어요.';
+  render();
+}
+async function saveApplyWindow(text){
+  await storeUpdate('cvg_config', 'app', { applyWindow: text });
+  CURRENT_APPLY_WINDOW = text;
+  state.formOk = '신청 기간·공지 문구를 저장했어요.';
+  render();
+}
+// 마이크로디그리 목록을 한 줄에 하나씩, "그룹|과정명|최소학점|비고" 형식의 텍스트로 통째로 편집한다.
+// 과정이 수십 개라 개별 항목을 하나씩 추가/수정하게 하면 번거로워서 붙여넣기 방식으로 만들었다.
+function microdegreeListToText(list){
+  return list.map(function(p){
+    return [p.group||'', p.name||'', p.min!=null?p.min:'', p.note||''].join(' | ');
+  }).join('\n');
+}
+function parseMicrodegreeListText(text){
+  var out = [];
+  String(text||'').split('\n').forEach(function(line, i){
+    var parts = line.split('|').map(function(s){ return s.trim(); });
+    if(!parts[0] && !parts[1]) return;
+    var group = parts[0]||'', name = parts[1]||'', min = num(parts[2]), note = parts[3]||'';
+    if(!name) return;
+    out.push({ key:'md'+i+'_'+normName(name), group:group, name:name, min:min||9, note:note||undefined });
+  });
+  return out;
+}
+async function saveMicrodegreeList(text){
+  var list = parseMicrodegreeListText(text);
+  await storeUpdate('cvg_config', 'app', { microdegreePrograms: list });
+  MICRODEGREE_PROGRAMS = list;
+  state.formOk = '마이크로디그리 목록을 저장했어요('+list.length+'개).';
+  render();
+}
+async function saveKcloudStages(form){
+  var stages = [0,1,2].map(function(i){
+    return {
+      key: KCLOUD_CERT_STAGES[i] ? KCLOUD_CERT_STAGES[i].key : ('stage'+(i+1)),
+      label: form.querySelector('#kcLabel'+i).value.trim(),
+      creditMin: num(form.querySelector('#kcCredit'+i).value),
+      selfCourseMin: num(form.querySelector('#kcSelf'+i).value),
+      allowReclassify: form.querySelector('#kcReclassify'+i).checked,
+      scholarship: num(form.querySelector('#kcAmt'+i).value)
+    };
+  });
+  await storeUpdate('cvg_config', 'app', { kcloudStages: stages });
+  KCLOUD_CERT_STAGES = stages;
+  state.formOk = 'K-Cloud 인증제 단계를 저장했어요.';
   render();
 }
 
@@ -2574,6 +2714,22 @@ document.addEventListener('submit', function(e){
     e.preventDefault();
     saveAdminCode(f.querySelector('#adminCode').value).catch(failWith);
   }
+  if(f.id==='form-creditrules'){
+    e.preventDefault();
+    saveCreditRules(f).catch(failWith);
+  }
+  if(f.id==='form-applywindow'){
+    e.preventDefault();
+    saveApplyWindow(f.querySelector('#applyWindow').value).catch(failWith);
+  }
+  if(f.id==='form-microdegreelist'){
+    e.preventDefault();
+    saveMicrodegreeList(f.querySelector('#mdListText').value).catch(failWith);
+  }
+  if(f.id==='form-kcloudstages'){
+    e.preventDefault();
+    saveKcloudStages(f).catch(failWith);
+  }
 });
 
 document.addEventListener('input', function(e){
@@ -2731,6 +2887,7 @@ render();
 
 (async function boot(){
   try{
+    await loadRuntimeConfig();
     if(state.role==='student' && state.studentSession){ await loadMe(); }
     else if(state.role==='admin' && state.adminSession){ await loadRoster(); }
   }catch(e){ state.formError = errMsg(e); }
