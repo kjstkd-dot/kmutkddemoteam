@@ -424,11 +424,36 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-20 c';
+var APP_VERSION = '2026-09-20 d';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
 var apiMode = false;
+
+/* 서버가 돌려주는 짧은 코드를 학생이 읽을 수 있는 말로 바꾼다 */
+var ERR_TEXT = {
+  SESSION_EXPIRED:    '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+  INVALID_CREDENTIALS:'아이디 또는 비밀번호가 올바르지 않아요.',
+  NOT_REGISTERED:     '등록되지 않은 번호예요. 처음이시라면 "비밀번호 설정하기"를 눌러주세요.',
+  DUPLICATE_ID:       '이미 등록된 번호예요. 로그인해 주세요.',
+  WEAK_PASSWORD:      '비밀번호는 6자 이상이어야 해요.',
+  ADMIN_CODE_LOCKED:  '관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.',
+  ADMIN_CODE_INVALID: '관리자 등록코드가 올바르지 않아요.',
+  FORBIDDEN:          '이 자료를 볼 권한이 없습니다.',
+  NOT_FOUND:          '기록을 찾을 수 없어요.',
+  MISSING_FIELDS:     '빠진 항목이 있어요. 모두 채워 주세요.',
+  BAD_IMAGE:          '이미지를 알아보지 못했습니다.',
+  UNKNOWN_ACTION:     '앱이 서버보다 새 버전입니다. 관리자에게 알려 주세요.'
+};
+
+// 로그인이 풀렸으면 로그인 화면으로 돌려보낸다
+function dropSession(){
+  setSession(state.role, null);
+  cache.me = null; cache.roster = [];
+  state.view = 'login';
+  state.sessionLost = true;          // 서버 오류가 아니라 그냥 다시 로그인하면 되는 상황
+  state.formOk = '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+}
 
 async function apiCall(action, body){
   var res;
@@ -438,7 +463,7 @@ async function apiCall(action, body){
     res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 미리요청(preflight) 없이 보내기 위함
-      body: JSON.stringify(Object.assign({ action: action }, body || {})),
+      body: JSON.stringify(Object.assign({ action: action, token: authToken() }, body || {})),
       signal: ctrl ? ctrl.signal : undefined
     });
   }catch(e){
@@ -456,7 +481,14 @@ async function apiCall(action, body){
   catch(e){
     throw new Error('자료 서버가 예상과 다른 답을 보냈습니다. 배포 설정이 "모든 사용자"인지 확인해 주세요.');
   }
-  if(out && out.error) throw new Error(out.error);
+  if(out && out.error){
+    if(out.error === 'SESSION_EXPIRED') dropSession();
+    // 서버(Apps Script)가 아직 옛 버전이면 앱이 보내는 요청을 못 알아듣는다
+    if(/^알 수 없는 요청/.test(out.error)){
+      throw new Error('서버 업데이트가 필요합니다. 관리자(김종수)에게 알려 주세요.');
+    }
+    throw new Error(ERR_TEXT[out.error] || out.error);
+  }
   return out;
 }
 function errMsg(e){ return e && e.message ? e.message : String(e); }
@@ -1023,11 +1055,12 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:''
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false
 };
 var cache = { roster:[], me:null };
 
 function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
+function authToken(){ var s = session(); return (s && s.token) || ''; }
 function setSession(role, sess){
   if(role==='student') state.studentSession = sess; else state.adminSession = sess;
   try{ localStorage.setItem('kstar_sess_'+role, sess ? JSON.stringify(sess) : ''); }catch(e){}
@@ -2134,7 +2167,7 @@ async function loadMe(){
   var sess = state.studentSession;
   if(!sess) return;
   var me = sess.rosterId ? await storeGet('roster', sess.rosterId) : null;
-  if(!me){
+  if(!me && !apiMode){
     // 가리키던 기록이 사라졌거나 잘못 연결된 경우, 학번·이름으로 다시 찾아 이어붙인다
     var roster = await storeAll('roster');
     var fix = roster.find(function(r){ return r.claimedBy === sess.id; })
@@ -2152,6 +2185,21 @@ async function loadMe(){
 
 /* ============ auth actions ============ */
 async function doLogin(role, id, pw){
+  if(apiMode){
+    // 비밀번호 확인은 서버가 한다. 앱은 비밀번호 해시를 내려받지 않는다.
+    var r = await apiCall('login', { role:role, id:id, password:pw });
+    state.formError=''; state.formOk=''; state.view='list';
+    if(role==='student'){
+      setSession('student', { id:id, name:r.name, rosterId:r.rosterId, token:r.token });
+      await loadMe();
+    } else {
+      setSession('admin', { id:id, name:r.name, token:r.token });
+      await loadRoster();
+    }
+    navReset();
+    return;
+  }
+  // 서버 없이 이 기기에만 저장하는 모드(미리보기)
   var col = role==='student' ? 'students' : 'admins';
   var doc = await storeGet(col, id);
   var label = role==='student' ? '학번' : '관리자 번호';
@@ -2175,6 +2223,18 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
   state.regBusy = true; state.formError=''; render();
   try{
+  if(apiMode){
+    // 명단에서 같은 이름 찾아 이어붙이는 일까지 서버가 한 번에 처리한다
+    // (단추를 여러 번 눌러도 기록이 하나만 생긴다)
+    var r = await apiCall('registerStudent', {
+      id:id, name:name, dept:dept, year:num(year), password:pw
+    });
+    setSession('student', { id:id, name:name, rosterId:r.rosterId, token:r.token });
+    state.formError=''; state.view='list';
+    await loadMe();
+    navReset();
+    return;
+  }
   var existing = await storeGet('students', id);
   if(existing){ state.formError='이미 등록된 학번이에요. 로그인해 주세요.'; render(); return; }
 
@@ -2207,6 +2267,14 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
 async function doRegisterAdmin(id, name, pw, pw2, code){
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
+  if(apiMode){
+    var r = await apiCall('registerAdmin', { id:id, name:name, password:pw, code:code });
+    setSession('admin', { id:id, name:name, token:r.token });
+    state.formError=''; state.view='list';
+    await loadRoster();
+    navReset();
+    return;
+  }
   var admins = await storeAll('admins');
   if(admins.length>0){
     var cfg = await storeGet('config','app');
@@ -2490,6 +2558,23 @@ document.addEventListener('submit', function(e){
       var isStudent = state.role==='student';
       var col = isStudent ? 'students' : 'admins';
       var sess = session();
+      if(apiMode){
+        // 현재 비밀번호 확인과 저장을 서버가 한 번에 한다
+        var nm = f.querySelector('#pName').value.trim();
+        var np = f.querySelector('#pNewPw').value;
+        if(np && np.length<6){ state.formError='새 비밀번호는 6자 이상이어야 해요.'; render(); return; }
+        await apiCall('saveProfile', {
+          curPassword: f.querySelector('#pCurPw').value,
+          newPassword: np || '',
+          name: nm,
+          major: isStudent ? f.querySelector('#pDept').value.trim() : '',
+          year:  isStudent ? num(f.querySelector('#pYear').value) : 0
+        });
+        setSession(state.role, Object.assign({}, sess, { name:nm }));
+        if(isStudent) await loadMe();
+        navBack(function(){ state.view='list'; state.formError=''; });
+        return;
+      }
       var doc = await storeGet(col, sess.id);
       var curHash = await sha256Hex(f.querySelector('#pCurPw').value);
       if(curHash !== doc.passwordHash){ state.formError='현재 비밀번호가 올바르지 않아요.'; render(); return; }
@@ -2566,7 +2651,11 @@ document.addEventListener('click', function(e){
   else if(act==='goto-list'){ navBack(function(){ state.view='list'; state.formError=''; }); }
   else if(act==='goto-scores'){ navGo(function(){ state.view='scores'; }); }
   else if(act==='goto-profile'){ navGo(function(){ state.view='profile'; }); }
-  else if(act==='logout'){ setSession(state.role, null); state.view='login'; cache.me=null; navReset(); }
+  else if(act==='logout'){
+    if(apiMode && authToken()) apiCall('logout', {}).catch(function(){});
+    setSession(state.role, null); state.view='login';
+    cache.me=null; cache.roster=[]; navReset();
+  }
   else if(act==='open-guide'){ navGo(function(){ state.mode='guide'; state.guideRole = state.role==='admin'?'admin':'student'; }); }
   else if(act==='open-certs'){ navGo(function(){ state.mode='guide'; state.guideRole='cert'; }); window.scrollTo(0,0); }
   else if(act==='close-guide'){ navBack(function(){ state.mode='app'; }); }
@@ -2650,9 +2739,13 @@ document.addEventListener('click', function(e){
   else if(act==='confirm-delete'){
     (async function(){
       var id = el.dataset.id;
-      var s = cache.roster.find(function(x){ return x.id===id; });
-      if(s && s.claimedBy) await storeDelete('students', s.claimedBy);
-      await storeDelete('roster', id);
+      if(apiMode){
+        await apiCall('deleteMember', { id:id });
+      }else{
+        var s = cache.roster.find(function(x){ return x.id===id; });
+        if(s && s.claimedBy) await storeDelete('students', s.claimedBy);
+        await storeDelete('roster', id);
+      }
       await loadRoster();
       state.modal = null;
       navBack(function(){ state.view='list'; state.detailId=null; });
@@ -2668,11 +2761,16 @@ document.addEventListener('click', function(e){
   else if(act==='confirm-reset'){
     (async function(){
       var id = el.dataset.id;
-      var s = cache.roster.find(function(x){ return x.id===id; });
-      if(s && s.claimedBy){
-        await storeDelete('students', s.claimedBy);
-        await storeUpdate('roster', id, { claimedBy:null, updatedAt:nowIso() });
+      if(apiMode){
+        await apiCall('resetStudent', { id:id });
         await loadRoster();
+      }else{
+        var s = cache.roster.find(function(x){ return x.id===id; });
+        if(s && s.claimedBy){
+          await storeDelete('students', s.claimedBy);
+          await storeUpdate('roster', id, { claimedBy:null, updatedAt:nowIso() });
+          await loadRoster();
+        }
       }
       navBack(function(){ state.modal=null; });
     })().catch(failWith);
@@ -2755,10 +2853,11 @@ document.addEventListener('keydown', function(e){
   try{
     await loadAll();
   }catch(e){
-    // 바깥 서버에 닿지 못하는 자리(예: Claude 아티팩트 안)에서는
-    // Claude 자체 저장소로 되돌아가 화면만이라도 볼 수 있게 한다.
-    var recovered = false;
-    if(apiMode && window.claude && window.claude.use){
+    // 로그인만 풀린 것이면 로그인 화면을 보여주면 된다. 서버 문제가 아니다.
+    var recovered = state.sessionLost;
+    if(!recovered && apiMode && window.claude && window.claude.use){
+      // 바깥 서버에 닿지 못하는 자리(예: Claude 아티팩트 안)에서는
+      // Claude 자체 저장소로 되돌아가 화면만이라도 볼 수 있게 한다.
       try{
         db = await window.claude.use('db');
         if(db){
