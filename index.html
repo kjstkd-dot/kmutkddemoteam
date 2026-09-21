@@ -328,6 +328,11 @@ details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6
 .monthly b{display:block; font-size:14.5px; font-weight:800; margin-bottom:5px;}
 .monthly span{display:block; font-size:12.5px; line-height:1.6; opacity:.95;}
 .monthly .last{display:block; font-size:11.5px; margin-top:6px; opacity:.8;}
+.updbar{position:fixed; left:0; right:0; bottom:0; z-index:60; display:flex; align-items:center;
+  gap:10px; flex-wrap:wrap; padding:12px 16px; background:var(--primary); color:#fff;
+  font-size:13px; font-weight:600; box-shadow:0 -4px 18px rgba(34,48,63,.18);}
+.updbar button{border:none; border-radius:var(--radius-s); padding:8px 14px; font-size:13px;
+  font-weight:800; cursor:pointer; background:#fff; color:var(--primary); margin-left:auto;}
 .monthly button{margin-top:11px; width:100%; border:none; border-radius:var(--radius-s);
   background:var(--amber); color:#fff; font-weight:800; font-size:14px; padding:11px; cursor:pointer;}
 
@@ -435,7 +440,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-21 i';
+var APP_VERSION = '2026-09-21 j';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1113,7 +1118,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, updFilter:''
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, updFilter:'', newVersion:''
 };
 var cache = { roster:[], me:null };
 
@@ -1133,7 +1138,9 @@ function restoreSessions(){
 }
 
 var root = document.getElementById('app');
-function render(){ root.innerHTML = state.mode==='guide' ? renderGuide() : renderApp(); }
+function render(){
+  root.innerHTML = (state.mode==='guide' ? renderGuide() : renderApp()) + updateBar();
+}
 
 /* ---- 홈 화면 앱으로 설치 ---- */
 var installPrompt = null;
@@ -1193,6 +1200,37 @@ function openInBrowser(){
 function doInstall(){
   if(installPrompt){ installNow(); return; }
   navGo(function(){ state.modal = { type:'install' }; state.installMsg = ''; });
+}
+
+/* ---- 새 버전 확인 ----
+   앱을 홈 화면에 설치해 두면 기기가 옛 화면을 계속 들고 있는 경우가 있다.
+   서버에 올라온 판 번호를 직접 확인해서, 다르면 새로고침 띠를 띄운다. */
+async function checkForUpdate(){
+  try{
+    var res = await fetch('index.html?_=' + Date.now(), { cache:'no-store' });
+    if(!res.ok) return;
+    var text = await res.text();
+    var m = text.match(/var APP_VERSION = '([^']*)'/);
+    if(m && m[1] && m[1] !== APP_VERSION && state.newVersion !== m[1]){
+      state.newVersion = m[1];
+      render();
+    }
+  }catch(e){ /* 인터넷이 없으면 그냥 넘어간다 */ }
+}
+function reloadForUpdate(){
+  // 주소를 살짝 바꿔서 저장해 둔 화면 대신 새로 받아오게 한다
+  try{
+    var u = new URL(location.href);
+    u.searchParams.set('v', Date.now());
+    location.replace(u.toString());
+  }catch(e){ location.reload(); }
+}
+function updateBar(){
+  if(!state.newVersion) return '';
+  return '<div class="updbar">' +
+    '<span>새 버전이 나왔습니다 (' + esc(state.newVersion) + ')</span>' +
+    '<button data-action="do-update">지금 새로고침</button>' +
+  '</div>';
 }
 
 /* ---- 뒤로가기(안드로이드 back) 처리 ----
@@ -2832,6 +2870,7 @@ document.addEventListener('click', function(e){
   else if(act==='close-guide'){ navBack(function(){ state.mode='app'; }); }
   else if(act==='set-guide-role'){ navReplace(function(){ state.guideRole = el.dataset.role; }); window.scrollTo(0,0); }
   else if(act==='open-detail'){ navGo(function(){ state.detailId = el.dataset.id; state.view='detail'; }); }
+  else if(act==='do-update'){ reloadForUpdate(); }
   else if(act==='install'){ doInstall(); }
   else if(act==='do-install'){ installNow(); }
   else if(act==='open-browser'){ openInBrowser(); }
@@ -3005,6 +3044,11 @@ document.addEventListener('keydown', function(e){
         });
       }).catch(function(){});
     }
+    // 판 번호를 직접 확인한다 — 기기가 옛 화면을 들고 있어도 알아챌 수 있도록
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') checkForUpdate();
+    });
+    checkForUpdate();
   }catch(e){}
   restoreSessions();
   if(!state.studentSession && state.adminSession) state.role = 'admin';
