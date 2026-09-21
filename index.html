@@ -76,7 +76,10 @@ button{font-family:inherit;}
 .topbar{width:100%; max-width:460px; display:flex; align-items:center; justify-content:space-between;
   gap:16px; flex-wrap:wrap; padding:20px 22px; border-radius:16px; color:#fff;
   background:linear-gradient(100deg, var(--grad-1), var(--grad-2)); box-shadow:var(--shadow-card);}
-.topbar-actions{display:flex; gap:6px; margin-left:auto;}
+.topbar-actions{display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end;}
+.share-toast{width:100%; max-width:460px; text-align:right; font-size:12px; font-weight:700;
+  color:var(--success); margin-top:-10px;}
+.page.wide .share-toast{max-width:1000px;}
 .install-steps{counter-reset:step; display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none;}
 .install-steps li{position:relative; padding-left:30px; font-size:13px; line-height:1.6;}
 .install-steps li::before{counter-increment:step; content:counter(step); position:absolute; left:0; top:1px;
@@ -440,7 +443,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-21 j';
+var APP_VERSION = '2026-09-21 k';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1118,7 +1121,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, updFilter:'', newVersion:''
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, updFilter:'', newVersion:'', shareToast:''
 };
 var cache = { roster:[], me:null };
 
@@ -1179,6 +1182,39 @@ function installNow(){
   var done = function(){ state.modal = null; state.installMsg = ''; render(); };
   if(p.userChoice && p.userChoice.then) p.userChoice.then(done, done); else done();
 }
+/* ---- 링크 공유 ----
+   휴대폰에서는 카카오톡 등으로 바로 보내고, 그게 안 되면 주소를 복사한다. */
+var shareToastTimer = null;
+function showShareToast(msg){
+  state.shareToast = msg;
+  render();
+  if(shareToastTimer) clearTimeout(shareToastTimer);
+  shareToastTimer = setTimeout(function(){ state.shareToast = ''; render(); }, 3000);
+}
+function shareLink(){
+  // 새로고침용으로 붙은 표시(?v=...)는 빼고 깔끔한 주소만 보낸다
+  var url;
+  try{ url = location.origin + location.pathname; }catch(e){ url = location.href; }
+
+  if(navigator.share){
+    navigator.share({
+      title: 'K-STAR 현황판',
+      text: '계명대학교 태권도 시범단 역량관리 — 내 K-STAR 단계와 다음 목표를 확인하세요.',
+      url: url
+    }).catch(function(){ /* 사용자가 취소한 경우 */ });
+    return;
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){
+      showShareToast('링크를 복사했어요. 단톡방에 붙여넣어 주세요.');
+    }, function(){
+      window.prompt('아래 주소를 복사해 주세요', url);
+    });
+    return;
+  }
+  window.prompt('아래 주소를 복사해 주세요', url);
+}
+
 function copyInstallUrl(){
   var url = installUrl();
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -1285,10 +1321,12 @@ function renderApp(){
         '<div class="brand-text"><strong>K-STAR 현황판</strong>' +
         '<span>계명대학교 태권도 시범단 · 역량관리(COMpass K / K-STAR) 추적</span></div></div>' +
         '<div class="topbar-actions">' +
+          '<button class="guide-link" data-action="share-link">🔗 공유</button>' +
           (isStandalone() ? '' : '<button class="guide-link" data-action="install">⬇️ 앱 설치</button>') +
           '<button class="guide-link" data-action="open-guide">📘 이용 안내</button>' +
         '</div>' +
       '</div>' +
+      (state.shareToast ? '<div class="share-toast">'+esc(state.shareToast)+'</div>' : '') +
       (sess ? '' :
       '<div class="roletabs">' +
         '<button class="roletab '+(state.role==='student'?'active':'')+'" data-action="set-role" data-role="student">학생</button>' +
@@ -2870,6 +2908,7 @@ document.addEventListener('click', function(e){
   else if(act==='close-guide'){ navBack(function(){ state.mode='app'; }); }
   else if(act==='set-guide-role'){ navReplace(function(){ state.guideRole = el.dataset.role; }); window.scrollTo(0,0); }
   else if(act==='open-detail'){ navGo(function(){ state.detailId = el.dataset.id; state.view='detail'; }); }
+  else if(act==='share-link'){ shareLink(); }
   else if(act==='do-update'){ reloadForUpdate(); }
   else if(act==='install'){ doInstall(); }
   else if(act==='do-install'){ installNow(); }
