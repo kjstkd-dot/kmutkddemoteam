@@ -321,7 +321,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-20 f';
+var APP_VERSION = '2026-09-21 a';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -848,6 +848,769 @@ registerEmptyMajor('mfg-service', '제조서비스전공', ['국제통상학과'
 registerEmptyMajor('future-city', '미래도시전공', ['교통공학과', '환경공학과', '도시계획학과', '생태조경학과', '경영빅데이터학과', '심리학과', '통계학과']);
 registerEmptyMajor('digital-platform-content', '디지털플랫폼콘텐츠전공', ['영상애니메이션과', '시각디자인과', '사진영상미디어과', '웹툰과']);
 registerEmptyMajor('future-mobility-autonomous', '미래모빌리티자율주행공학전공', ['컴퓨터공학과', '전기공학과', '전자공학과', '기계공학과', '자동차공학과']);
+// 계명대학교 2026년도 공식 교육과정표(PDF)에서 추출한 22개 융합전공의 실제 개설과목 목록.
+// 표 구조가 바뀌면 재추출이 필요하다.
+// ===== medical-mgmt (의료경영전공) =====
+// courseCatalog (source file: 0b352c7a-__________.pdf, parm_cd=005)
+MAJORS['medical-mgmt'].courseCatalog = [
+  { code:'11245', name:'공중보건학', credits:3 },
+  { code:'15987', name:'의학용어', credits:3 },
+  { code:'20781', name:'관리회계원리', credits:3 },
+  { code:'13423', name:'보건교육', credits:3 },
+  { code:'15290', name:'역학', credits:3 },
+  { code:'16126', name:'인체해부생리학', credits:3 },
+  { code:'17058', name:'조직행동론', credits:3 },
+  { code:'21025', name:'마케팅원론', credits:3 },
+  { code:'22096', name:'통계자료분석', credits:3 },
+  { code:'12792', name:'마케팅전략론', credits:3 },
+  { code:'13413', name:'병태생리학', credits:3 },
+  { code:'13452', name:'보건행정학', credits:3 },
+  { code:'13947', name:'산업안전보건론', credits:3 },
+  { code:'21267', name:'생산운영관리', credits:3 },
+  { code:'21708', name:'인적자원관리', credits:3 },
+  { code:'10830', name:'경영과학', credits:3 },
+  { code:'13444', name:'보건조사분석및실습', credits:3 },
+  { code:'21290', name:'서비스경영론', credits:3 },
+  { code:'21793', name:'재무관리', credits:3 },
+  { code:'19614', name:'품질경영', credits:3 },
+  { code:'28288', name:'보건프로그램개발및평가', credits:3 },
+  { code:'16577', name:'작업환경관리', credits:3 },
+  { code:'13419', name:'보건관계법규', credits:3 },
+  { code:'26797', name:'보건사업관리', credits:3 },
+  { code:'33886', name:'의료보험및실무', credits:3 },
+  { code:'33885', name:'원무관리및병원정보', credits:3 },
+  { code:'21795', name:'재무회계원리', credits:3 },
+  { code:'33887', name:'보건의료경영학', credits:3 }
+];
+
+// ===== wellbeing-bio (웰빙바이오전공) =====
+// courseCatalog (source file: 3e528d79-_____._____.pdf, parm_cd=014)
+MAJORS['wellbeing-bio'].courseCatalog = [
+  { code:'13542', name:'분석화학(1)', credits:3 },
+  { code:'21437', name:'실험동물학및실습', credits:3 },
+  { code:'21617', name:'유기화학(1)', credits:3 },
+  { code:'31677', name:'웰빙바이오소재학', credits:3 },
+  { code:'31782', name:'식품첨가물응용학', credits:3 },
+  { code:'42496', name:'세포신호전달학', credits:3 },
+  { code:'13413', name:'병태생리학', credits:3 },
+  { code:'31317', name:'웰빙식품가공학총론', credits:3 },
+  { code:'31783', name:'향장학개론', credits:3 },
+  { code:'11976', name:'기기분석(1)', credits:3 },
+  { code:'13323', name:'발효식품학', credits:3 },
+  { code:'31678', name:'힐링식품', credits:3 },
+  { code:'31781', name:'식품공전이해', credits:3 },
+  { code:'38279', name:'아로마응용과학', credits:3 },
+  { code:'38283', name:'웰빙바이오산업학', credits:3 },
+  { code:'13310', name:'발생생물학', credits:3 },
+  { code:'20854', name:'기능성식품학', credits:3 },
+  { code:'31784', name:'기계장치학개론', credits:3 },
+  { code:'34436', name:'산업발효공정학', credits:3 },
+  { code:'38281', name:'바이오분리분석학', credits:3 },
+  { code:'42035', name:'독성학개론', credits:3 },
+  { code:'43389', name:'나노융합기술', credits:3 },
+  { code:'14866', name:'식품독성학', credits:3 },
+  { code:'42086', name:'응용유전공학', credits:3 },
+  { code:'42719', name:'식품안전과품질관리', credits:3 },
+  { code:'32457', name:'BIOCHEMISTRY(2)', credits:3 },
+  { code:'42087', name:'유전자진단과치료학', credits:3 },
+  { code:'31779', name:'웰빙바이오소재인턴십', credits:3 },
+  { code:'31786', name:'CEO특강', credits:3 }
+];
+
+// ===== xr-game (실감게임전공) =====
+// courseCatalog (source file: e87a1daf-__________.pdf, parm_cd=044)
+MAJORS['xr-game'].courseCatalog = [
+  { code:'29703', name:'영상애니메이션의기초', credits:3 },
+  { code:'29704', name:'게임학기초', credits:3 },
+  { code:'33325', name:'3D기초그래픽', credits:3 },
+  { code:'24692', name:'기초게임프로그래밍', credits:3 },
+  { code:'43316', name:'게임프로그래밍', credits:3 },
+  { code:'26817', name:'3D기초애니메이션', credits:3 },
+  { code:'42225', name:'2D게임그래픽', credits:3 },
+  { code:'42226', name:'2D게임프로젝트', credits:3 },
+  { code:'21453', name:'아이디어발상법', credits:3 },
+  { code:'24800', name:'디지털문화산업론', credits:3 },
+  { code:'43298', name:'3D애니메이션', credits:3 },
+  { code:'26426', name:'PROJECT I', credits:3 },
+  { code:'26428', name:'COMPUTER GRAPHICS I', credits:3 },
+  { code:'29707', name:'게임디자인', credits:3 },
+  { code:'38352', name:'실감피지컬컴퓨팅', credits:3 },
+  { code:'43460', name:'게임컨셉디자인', credits:3 },
+  { code:'32226', name:'스토리텔링의이해와실습', credits:3 },
+  { code:'34434', name:'게임그래픽', credits:3 },
+  { code:'41989', name:'2D캐릭터애니메이션', credits:3 },
+  { code:'43459', name:'캐릭터디자인', credits:3 },
+  { code:'26832', name:'3D애니메이션제작 1', credits:3 },
+  { code:'34815', name:'MODELING 3D ASSETS', credits:3 },
+  { code:'38323', name:'실감응용인공지능', credits:3 },
+  { code:'38385', name:'디지털광고제작론', credits:3 },
+  { code:'42227', name:'3D게임그래픽', credits:3 },
+  { code:'42228', name:'3D게임프로젝트', credits:3 },
+  { code:'43462', name:'게임UX/UI디자인', credits:3 },
+  { code:'24538', name:'게임알고리즘', credits:3 },
+  { code:'26436', name:'COMPUTER GRAPHICS II', credits:3 },
+  { code:'34846', name:'인간과컴퓨터상호작용', credits:3 },
+  { code:'43461', name:'게임프로젝트', credits:3 },
+  { code:'44133', name:'게임기획실무', credits:3 },
+  { code:'44134', name:'실감3D캐릭터모델링', credits:3 },
+  { code:'44363', name:'GAME PROJECT CAPSTONE DESIGN(1)', credits:3 },
+  { code:'44367', name:'고급게임엔진', credits:3 },
+  { code:'32831', name:'CHARACTER MODELING', credits:3 },
+  { code:'43300', name:'VR/AR게임프로그래밍', credits:3 },
+  { code:'44364', name:'GAME PROJECT CAPSTONE DESIGN(2)', credits:3 },
+  { code:'30712', name:'영상프로덕션창업실무', credits:3 }
+];
+
+// ===== emerging-market (신흥시장지역학전공) =====
+// courseCatalog (source file: 0178a009-_____________.pdf, parm_cd=019)
+MAJORS['emerging-market'].courseCatalog = [
+  { code:'22335', name:'현대중국의이해', credits:3 },
+  { code:'17223', name:'중국학입문', credits:3 },
+  { code:'28690', name:'중남미학입문', credits:3 },
+  { code:'21914', name:'중국현대경제론', credits:3 },
+  { code:'28678', name:'중남미사회입문', credits:3 },
+  { code:'28687', name:'중남미정치입문', credits:3 },
+  { code:'32236', name:'중국사회지리', credits:3 },
+  { code:'27889', name:'현대중국사회의 이해', credits:3 },
+  { code:'28673', name:'중남미경제입문', credits:3 },
+  { code:'32238', name:'중국경영전략', credits:3 },
+  { code:'25419', name:'중국무역론', credits:3 },
+  { code:'28134', name:'남미의이해', credits:3 },
+  { code:'32266', name:'중남미경제통상정책', credits:3 },
+  { code:'38287', name:'중국언어와사회문화', credits:3 },
+  { code:'25431', name:'중국투자론', credits:3 },
+  { code:'32235', name:'현대중국문화의이해', credits:3 },
+  { code:'41169', name:'글로벌지역학캡스톤디자인', credits:3 },
+  { code:'37568', name:'신자유주의와라틴아메리카의사회변화', credits:3 },
+  { code:'30999', name:'중국무역회사창업과경영', credits:3 },
+  { code:'35800', name:'근현대멕시코의이해', credits:3 },
+  { code:'37566', name:'중국사회의신성장동력', credits:3 },
+  { code:'38267', name:'멕시코중미카리브지역연구:지역적접근', credits:3 },
+  { code:'38314', name:'중남미금융시장의이해', credits:3 },
+  { code:'40079', name:'중국과국제정치경제', credits:3 },
+  { code:'37223', name:'중반구문명과르네상스', credits:3 },
+  { code:'38626', name:'신흥시장의이해', credits:3 },
+  { code:'45715', name:'이머징마켓의이해와진출', credits:3 }
+];
+
+// ===== biz-data (비즈니스데이터분석전공) =====
+// courseCatalog (source file: a2ce9956-_______________.pdf, parm_cd=029)
+MAJORS['biz-data'].courseCatalog = [
+  { code:'27890', name:'현대통계학실습(1)', credits:3 },
+  { code:'39734', name:'4차산업혁명과디지털경영', credits:3 },
+  { code:'42716', name:'경영빅데이터개론', credits:3 },
+  { code:'17761', name:'컴퓨터의활용과실무', credits:3 },
+  { code:'24731', name:'데이터베이스실무', credits:3 },
+  { code:'26371', name:'비즈니스프로그래밍(1)', credits:3 },
+  { code:'37213', name:'비즈니스데이터인포그래픽스', credits:3 },
+  { code:'42702', name:'BUSINESS DATA ANALYTICS FOR BEGINNERS', credits:3 },
+  { code:'12264', name:'데이타베이스설계', credits:3 },
+  { code:'33266', name:'STATISTICAL APPLICATIONS IN BUSINESS', credits:3 },
+  { code:'37548', name:'비즈니스정보시각화프로그래밍', credits:3 },
+  { code:'37549', name:'비즈니스인공지능', credits:3 },
+  { code:'39719', name:'INTRODUCTION TO BIG DATA ANALYSIS', credits:3 },
+  { code:'42703', name:'DATA MINING FOR BUSINESS', credits:3 },
+  { code:'27891', name:'현대통계학실습(2)', credits:3 },
+  { code:'28739', name:'탐색적자료분석실습', credits:3 },
+  { code:'38288', name:'비즈니스데이터베이스', credits:3 },
+  { code:'38289', name:'비즈니스데이터시각화', credits:3 },
+  { code:'39736', name:'경영빅데이터분석', credits:3 },
+  { code:'40913', name:'통계적머신러닝', credits:3 },
+  { code:'42704', name:'DATA ENGINEERING FOR BUSINESS', credits:3 },
+  { code:'42791', name:'빅데이터와경영전략', credits:3 },
+  { code:'12174', name:'다변량자료분석', credits:3 },
+  { code:'37212', name:'비즈니스정보시각화리포팅', credits:3 },
+  { code:'37508', name:'금융빅데이터분석', credits:3 },
+  { code:'38290', name:'빅데이터분석프로그래밍', credits:3 },
+  { code:'38291', name:'비즈니스데이터사이언스', credits:3 },
+  { code:'42124', name:'통계자료분석실습', credits:3 },
+  { code:'36970', name:'데이터마이닝', credits:3 },
+  { code:'36969', name:'비즈니스회귀분석', credits:3 }
+];
+
+// ===== creative-digital (크리에이티브디지털콘텐츠전공) =====
+// courseCatalog (source file: 68a5f0d6-__________________.pdf, parm_cd=032)
+MAJORS['creative-digital'].courseCatalog = [
+  { code:'25222', name:'영상제작기초', credits:3 },
+  { code:'11450', name:'광고학입문', credits:3 },
+  { code:'19119', name:'홍보학입문', credits:3 },
+  { code:'24619', name:'광고와마케팅', credits:3 },
+  { code:'33738', name:'창의적영상콘텐츠기획', credits:3 },
+  { code:'38387', name:'디지털미디어광고론', credits:3 },
+  { code:'21453', name:'아이디어발상법', credits:3 },
+  { code:'28898', name:'시나리오작법', credits:3 },
+  { code:'32292', name:'영상학개론', credits:3 },
+  { code:'24616', name:'광고기획론1', credits:3 },
+  { code:'29630', name:'스튜디오제작', credits:3 },
+  { code:'34823', name:'뮤직비디오제작', credits:3 },
+  { code:'41345', name:'창의적콘셉트와파워풀라이팅', credits:3 },
+  { code:'32299', name:'미디어와문화', credits:3 },
+  { code:'36995', name:'광고와인문학', credits:3 },
+  { code:'38385', name:'디지털광고제작론', credits:3 },
+  { code:'41343', name:'1인미디어콘텐츠제작', credits:3 },
+  { code:'43500', name:'디지털테크놀로지와미디어진화', credits:3 },
+  { code:'11448', name:'광고카피작성론', credits:3 },
+  { code:'36797', name:'커뮤니케이션데이터분석과활용', credits:3 },
+  { code:'36798', name:'미디어콘텐츠트렌드분석', credits:3 },
+  { code:'44339', name:'디지털광고실무', credits:3 },
+  { code:'11439', name:'광고와뉴미디어', credits:3 },
+  { code:'36799', name:'미디어철학과역사', credits:3 },
+  { code:'41337', name:'검색광고론', credits:3 },
+  { code:'32281', name:'광고홍보학캡스톤디자인', credits:3 }
+];
+
+// ===== global-area-studies (국제지역학전공) =====
+// courseCatalog (source file: a5f40987-___________.pdf, parm_cd=037)
+MAJORS['global-area-studies'].courseCatalog = [
+  { code:'22335', name:'현대중국의이해', credits:3 },
+  { code:'25287', name:'유럽학입문', credits:3 },
+  { code:'27744', name:'초급일본어연습(1)', credits:3 },
+  { code:'42557', name:'현대중국어기초한자', credits:3 },
+  { code:'44541', name:'기초스페인어(1)', credits:3 },
+  { code:'17223', name:'중국학입문', credits:3 },
+  { code:'27745', name:'초급일본어연습(2)', credits:3 },
+  { code:'44542', name:'기초스페인어(2)', credits:3 },
+  { code:'28690', name:'중남미학입문', credits:3 },
+  { code:'21914', name:'중국현대경제론', credits:3 },
+  { code:'23474', name:'미국사회의이해', credits:3 },
+  { code:'28260', name:'미국정치제도와과정', credits:3 },
+  { code:'28678', name:'중남미사회입문', credits:3 },
+  { code:'28687', name:'중남미정치입문', credits:3 },
+  { code:'28883', name:'기초프랑스어실습(1)', credits:3 },
+  { code:'28257', name:'미국의인종과민족', credits:3 },
+  { code:'28673', name:'중남미경제입문', credits:3 },
+  { code:'30087', name:'현대유럽의이해', credits:3 },
+  { code:'27964', name:'INTERNATIONAL LAW', credits:3 },
+  { code:'42234', name:'국제이주와이주자', credits:3 },
+  { code:'25662', name:'현대일본의정치와사회', credits:3 },
+  { code:'32250', name:'현대일본경제론', credits:3 },
+  { code:'32786', name:'유럽도시와문화유산의이해(1)', credits:3 },
+  { code:'33725', name:'국제학세미나', credits:3 },
+  { code:'43223', name:'일본의지역사회와관광', credits:3 },
+  { code:'32235', name:'현대중국문화의이해', credits:3 },
+  { code:'33815', name:'해외지역학세미나', credits:3 },
+  { code:'42986', name:'GEOPOLITICS', credits:3 },
+  { code:'27155', name:'INTERNATIONAL ORGANIZATIONS', credits:3 },
+  { code:'27944', name:'GLOBAL ENVIRONMENTAL POLITICS', credits:3 },
+  { code:'42235', name:'국제협력과개발', credits:3 },
+  { code:'31000', name:'미국의대통령', credits:3 },
+  { code:'33260', name:'유럽도시와문화유산의이해(2)', credits:3 },
+  { code:'27962', name:'INTERNAITONAL PUBLIC POLICY', credits:3 },
+  { code:'42236', name:'국제지역전문가실습', credits:3 }
+];
+
+// ===== convergence-design (융합디자인전공) =====
+// courseCatalog (source file: 9d636e4c-___________.pdf, parm_cd=038)
+MAJORS['convergence-design'].courseCatalog = [
+  { code:'33331', name:'브랜드매니지먼트', credits:3 },
+  { code:'21788', name:'재료연구(1)', credits:2 },
+  { code:'28202', name:'디지털텍스타일디자인(1)', credits:3 },
+  { code:'28204', name:'디지털표현(1)', credits:3 },
+  { code:'28731', name:'컴퓨터디자인1', credits:3 },
+  { code:'28779', name:'패션미디어', credits:3 },
+  { code:'28799', name:'프린팅디자인(1)', credits:3 },
+  { code:'31669', name:'어패럴디자인(1)', credits:3 },
+  { code:'36760', name:'색채디자인', credits:2 },
+  { code:'36898', name:'패션일러스트레이션', credits:3 },
+  { code:'39681', name:'금속기초기법(1)', credits:3 },
+  { code:'39725', name:'에코디자인', credits:3 },
+  { code:'22127', name:'패션마케팅', credits:3 },
+  { code:'28888', name:'디지털표현(2)', credits:3 },
+  { code:'36909', name:'패션상품일러스트레이션', credits:3 },
+  { code:'39683', name:'기초도자공예', credits:3 },
+  { code:'42249', name:'디자인트렌드와전략', credits:3 },
+  { code:'41598', name:'화면구성', credits:3 },
+  { code:'41599', name:'평면조형', credits:3 },
+  { code:'42250', name:'글로벌디자인전략기획', credits:3 },
+  { code:'42251', name:'디자인문제해결', credits:3 },
+  { code:'42252', name:'디자인융합캡스톤디자인', credits:3 }
+];
+
+// ===== future-auto (미래자동차공학전공) =====
+// courseCatalog (source file: d32b34c0-_____________.pdf, parm_cd=041)
+MAJORS['future-auto'].courseCatalog = [
+  { code:'25500', name:'컴퓨터개론', credits:3 },
+  { code:'21861', name:'정역학', credits:3 },
+  { code:'42449', name:'융합기초전기전자공학', credits:3 },
+  { code:'42895', name:'자동차공학기초(공유)', credits:3 },
+  { code:'10708', name:'객체지향프로그래밍', credits:3 },
+  { code:'33376', name:'회로및시스템', credits:3 },
+  { code:'41000', name:'고체역학(1)', credits:3 },
+  { code:'44771', name:'PYTHON프로그래밍', credits:3 },
+  { code:'45625', name:'디지털논리회로', credits:3 },
+  { code:'16828', name:'전자회로(1)', credits:3 },
+  { code:'20968', name:'동역학', credits:3 },
+  { code:'42385', name:'친환경차시스템공학개론', credits:3 },
+  { code:'42466', name:'자동차공학기초', credits:3 },
+  { code:'42467', name:'융합기초동역학', credits:3 },
+  { code:'42468', name:'자동차3차원설계', credits:3 },
+  { code:'42469', name:'자동차SW디자인융합의기초', credits:3 },
+  { code:'46275', name:'미래자동차공학프로젝트', credits:1 },
+  { code:'17959', name:'통신이론', credits:3 },
+  { code:'42819', name:'자율주행자동차기술', credits:3 },
+  { code:'43141', name:'미래모빌리티공학', credits:3 },
+  { code:'12781', name:'마이크로프로세서', credits:3 },
+  { code:'16475', name:'자동제어', credits:3 },
+  { code:'34408', name:'전력전자공학', credits:3 },
+  { code:'41002', name:'3차원CAD및실습', credits:3 },
+  { code:'41049', name:'전기기기응용', credits:3 },
+  { code:'42446', name:'자동차인공지능', credits:3 },
+  { code:'42450', name:'모터이론및제어', credits:3 },
+  { code:'46172', name:'글로벌공학설계프로젝트', credits:3 },
+  { code:'43135', name:'캡스톤디자인(공유)', credits:3 },
+  { code:'46574', name:'미래자동차글로벌창업기획', credits:3 },
+  { code:'46575', name:'미래자동차글로벌창업실무', credits:3 },
+  { code:'42447', name:'차량비전시스템', credits:3 },
+  { code:'44303', name:'하이브리드자동차', credits:3 },
+  { code:'44437', name:'차량신호처리', credits:3 },
+  { code:'38228', name:'자작자동차설계및실습', credits:3 },
+  { code:'42448', name:'전동화파워트레인', credits:3 },
+  { code:'33883', name:'캡스톤디자인', credits:3 },
+  { code:'42820', name:'차량센서공학', credits:3 },
+  { code:'42897', name:'차량동역학(공유)', credits:3 },
+  { code:'42896', name:'PYTHON 프로그래밍(공유)', credits:3 },
+  { code:'43723', name:'자동차3차원설계(공유)', credits:3 },
+  { code:'43724', name:'융합기초전기전자공학 (공유)', credits:3 },
+  { code:'43952', name:'혁신공유세미나', credits:1 },
+  { code:'44140', name:'자동차SW디자인융합의기초 (공유)', credits:2 },
+  { code:'44141', name:'융합기초동역학(공유)', credits:3 },
+  { code:'44142', name:'차량소프트웨어엔지니어링 (공유)', credits:3 },
+  { code:'45008', name:'자율주행자동차기술(공유)', credits:2 },
+  { code:'45452', name:'자동차재료학(공유)', credits:3 },
+  { code:'45453', name:'차량신호처리(공유)', credits:3 },
+  { code:'45929', name:'객체지향프로그래밍(공유)', credits:3 },
+  { code:'45933', name:'자동제어(공유)', credits:3 },
+  { code:'46698', name:'모빌리티사이버보안(공유)', credits:3 },
+  { code:'46699', name:'자동차배터리(공유)', credits:3 },
+  { code:'46700', name:'친환경차시스템공학개론 (공유)', credits:3 },
+  { code:'47017', name:'자동차인공지능(공유)', credits:3 }
+];
+
+// ===== xr-content (실감콘텐츠전공) =====
+// courseCatalog (source file: a980c779-___________.pdf, parm_cd=042)
+MAJORS['xr-content'].courseCatalog = [
+  { code:'25213', name:'영상문법기초', credits:3 },
+  { code:'26800', name:'크리에이티브디자인', credits:3 },
+  { code:'25222', name:'영상제작기초', credits:3 },
+  { code:'33325', name:'3D기초그래픽', credits:3 },
+  { code:'43025', name:'실감미디어와콘텐츠', credits:3 },
+  { code:'26817', name:'3D기초애니메이션', credits:3 },
+  { code:'32293', name:'영상촬영과연출', credits:3 },
+  { code:'39868', name:'VISUAL COMMUNICATION', credits:3 },
+  { code:'42818', name:'XR스튜디오', credits:3 },
+  { code:'21453', name:'아이디어발상법', credits:3 },
+  { code:'25227', name:'영상편집개론', credits:3 },
+  { code:'28898', name:'시나리오작법', credits:3 },
+  { code:'34385', name:'미디어콘텐츠기획', credits:3 },
+  { code:'43026', name:'XR콘텐츠프로듀싱', credits:3 },
+  { code:'43453', name:'실감미디어의이해', credits:3 },
+  { code:'45442', name:'실감디자인씽킹(공유)', credits:3 },
+  { code:'45916', name:'K-콘텐츠(한류)의이해(공유)', credits:3 },
+  { code:'25226', name:'영상특수효과론', credits:3 },
+  { code:'33326', name:'3D디지털합성및VFX', credits:3 },
+  { code:'33737', name:'커뮤니케이션문제해결워크숍', credits:3 },
+  { code:'43463', name:'실감미디어캡스톤디자인', credits:3 },
+  { code:'46446', name:'인공지능활용콘텐츠기획및제작', credits:3 },
+  { code:'24717', name:'다큐멘터리제작기초', credits:3 },
+  { code:'26832', name:'3D애니메이션제작(1)', credits:3 },
+  { code:'35284', name:'커뮤니케이션이론의원리와활용', credits:3 },
+  { code:'39865', name:'CREATIVE PROBLEM SOLVING STRATEGY', credits:3 },
+  { code:'40078', name:'광고캠페인디자인', credits:3 },
+  { code:'24617', name:'광고기획론2', credits:3 },
+  { code:'36798', name:'미디어콘텐츠트렌드분석', credits:3 },
+  { code:'43464', name:'XR마케팅', credits:3 },
+  { code:'44339', name:'디지털광고실무', credits:3 },
+  { code:'45780', name:'로컬콘텐츠실감미디어PBL', credits:3 },
+  { code:'46583', name:'광고기획실무', credits:3 },
+  { code:'44161', name:'글로벌사회적가치와창업사례(공유)', credits:3 },
+  { code:'44162', name:'기업가정신과벤처경영 (공유)', credits:3 },
+  { code:'44163', name:'콘텐츠산업비즈니스전략(공유)', credits:3 },
+  { code:'44164', name:'효과적인사회문제정의와아이디어 (공유)', credits:3 },
+  { code:'43722', name:'실감미디어의이해(공유)', credits:3 },
+  { code:'46313', name:'메타버스크리에이터세미나(공유)', credits:3 },
+  { code:'47009', name:'영상문법기초(공유)', credits:3 },
+  { code:'47010', name:'대중예술콘텐츠창작실습(공유)', credits:3 }
+];
+
+// ===== xr-media (실감미디어전공) =====
+// courseCatalog (source file: 4e353332-___________.pdf, parm_cd=043)
+MAJORS['xr-media'].courseCatalog = [
+  { code:'42112', name:'디자인씽킹', credits:3 },
+  { code:'25502', name:'컴퓨터공학창의설계', credits:3 },
+  { code:'32293', name:'영상촬영과연출', credits:3 },
+  { code:'39868', name:'VISUAL COMMUNICATION', credits:3 },
+  { code:'21453', name:'아이디어발상법', credits:3 },
+  { code:'42389', name:'디자인방법론과프로세스', credits:3 },
+  { code:'43455', name:'게이미피케이션의이해와활용', credits:3 },
+  { code:'43453', name:'실감미디어의이해', credits:3 },
+  { code:'43454', name:'실감디자인씽킹', credits:3 },
+  { code:'43456', name:'실감미디어컴퓨팅기초', credits:3 },
+  { code:'45929', name:'객체지향프로그래밍(공유)', credits:3 },
+  { code:'45930', name:'실감미디어컴퓨팅기초(공유)', credits:3 },
+  { code:'32226', name:'스토리텔링의이해와실습', credits:3 },
+  { code:'33737', name:'커뮤니케이션문제해결워크숍', credits:3 },
+  { code:'34817', name:'창의적문제해결방법론', credits:3 },
+  { code:'42822', name:'메타버스프로젝트기획(1)', credits:3 },
+  { code:'42823', name:'메타버스융합프로젝트(1)', credits:3 },
+  { code:'42923', name:'UI/UX프로그래밍(공유)', credits:3 },
+  { code:'26839', name:'프로덕션워크숍', credits:3 },
+  { code:'34412', name:'컴퓨터공학캡스톤디자인(1)', credits:3 },
+  { code:'38353', name:'체감형게임제작', credits:3 },
+  { code:'42456', name:'메타버스프로젝트기획(2)', credits:3 },
+  { code:'42457', name:'메타버스융합프로젝트(2)', credits:3 },
+  { code:'46172', name:'글로벌공학설계프로젝트', credits:3 },
+  { code:'43452', name:'글로벌리빙랩프로젝트', credits:3 },
+  { code:'43457', name:'글로벌학제간프로젝트기획', credits:3 },
+  { code:'43458', name:'글로벌학제간융합프로젝트', credits:3 },
+  { code:'44365', name:'UI/UX프로그래밍', credits:3 },
+  { code:'45295', name:'뉴테크융합미디어입문', credits:3 },
+  { code:'45296', name:'뉴테크융합미디어기획', credits:3 },
+  { code:'45297', name:'뉴테크융합미디어프로젝트', credits:3 },
+  { code:'34981', name:'컴퓨터공학캡스톤디자인(2)', credits:3 },
+  { code:'36902', name:'영상애니메이션캡스톤디자인(1)', credits:3 },
+  { code:'36901', name:'영상애니메이션캡스톤디자인(2)', credits:3 },
+  { code:'37740', name:'시각캡스톤디자인', credits:3 },
+  { code:'32319', name:'융합캡스톤디자인', credits:3 },
+  { code:'43721', name:'디지털스토리텔링(공유)', credits:3 },
+  { code:'43722', name:'실감미디어의이해(공유)', credits:3 }
+];
+
+// ===== ai (인공지능전공) =====
+// courseCatalog (source file: a9ffebb4-__________.pdf, parm_cd=045)
+MAJORS['ai'].courseCatalog = [
+  { code:'25500', name:'컴퓨터개론', credits:3 },
+  { code:'36919', name:'메카트로닉스개론', credits:3 },
+  { code:'44343', name:'미분적분학(2)', credits:3 },
+  { code:'40924', name:'프로그래밍과수학적사고', credits:3 },
+  { code:'14288', name:'선형대수학(1)', credits:3 },
+  { code:'32823', name:'자료구조(1)', credits:3 },
+  { code:'39763', name:'로봇설계입문및창업', credits:3 },
+  { code:'14290', name:'선형대수학(2)', credits:3 },
+  { code:'32824', name:'자료구조(2)', credits:3 },
+  { code:'40923', name:'빅데이터분석의원리', credits:3 },
+  { code:'40926', name:'인공지능의수학', credits:3 },
+  { code:'42974', name:'인공지능개론', credits:3 },
+  { code:'42978', name:'AI프로그래밍기초', credits:3 },
+  { code:'14551', name:'소프트웨어공학', credits:3 },
+  { code:'21598', name:'운영체제', credits:3 },
+  { code:'42159', name:'로봇비전', credits:3 },
+  { code:'42566', name:'기계학습원리', credits:3 },
+  { code:'39751', name:'이동로봇공학', credits:3 },
+  { code:'42446', name:'자동차인공지능', credits:3 },
+  { code:'42570', name:'딥러닝', credits:3 },
+  { code:'46849', name:'피지컬AI를위한로봇동역학', credits:3 },
+  { code:'42975', name:'자연어처리', credits:3 },
+  { code:'45253', name:'인공지능모델설계', credits:3 },
+  { code:'40972', name:'수학적최적화입문', credits:3 },
+  { code:'42977', name:'AI프로젝트(2)', credits:3 },
+  { code:'39759', name:'기계학습이론', credits:3 },
+  { code:'41062', name:'빅데이터처리', credits:3 },
+  { code:'41064', name:'AI기반영상정보처리', credits:3 },
+  { code:'32309', name:'수치해석학', credits:3 },
+  { code:'45254', name:'인공지능프로젝트', credits:3 }
+];
+
+// ===== esg-mgmt (ESG융합경영학전공) =====
+// courseCatalog (source file: 6d6c7001-______ESG_____.pdf, parm_cd=048)
+MAJORS['esg-mgmt'].courseCatalog = [
+  { code:'19937', name:'글로벌경영', credits:3 },
+  { code:'15270', name:'여행사경영론', credits:3 },
+  { code:'21267', name:'생산운영관리', credits:3 },
+  { code:'21708', name:'인적자원관리', credits:3 },
+  { code:'21793', name:'재무관리', credits:3 },
+  { code:'24611', name:'관광이벤트론', credits:3 },
+  { code:'36942', name:'글로벌윤리경영', credits:3 },
+  { code:'39688', name:'스마트관광', credits:3 },
+  { code:'39721', name:'기술경영의이해', credits:3 },
+  { code:'45255', name:'글로벌ESG경영과사례', credits:3 },
+  { code:'11273', name:'관광개발론', credits:3 },
+  { code:'14832', name:'식음료관리론', credits:3 },
+  { code:'16751', name:'전략경영론', credits:3 },
+  { code:'34388', name:'투자론', credits:3 },
+  { code:'39840', name:'서비스커뮤니케이션실무', credits:3 },
+  { code:'45256', name:'ESG경영시대의브랜드전략', credits:3 },
+  { code:'46850', name:'ESG경영과기업가치평가', credits:3 },
+  { code:'15796', name:'유통관리론', credits:3 },
+  { code:'41565', name:'비즈니스플래닝', credits:3 }
+];
+
+// ===== local-content-mgmt (로컬콘텐츠경영전공) =====
+// courseCatalog (source file: 070fa48e-_____________.pdf, parm_cd=049)
+MAJORS['local-content-mgmt'].courseCatalog = [
+  { code:'27892', name:'호텔관광서비스론', credits:3 },
+  { code:'33869', name:'호텔실무의이해', credits:3 },
+  { code:'44129', name:'글로컬문화와관광', credits:3 },
+  { code:'21290', name:'서비스경영론', credits:3 },
+  { code:'21793', name:'재무관리', credits:3 },
+  { code:'39706', name:'비즈니스협상전략', credits:3 },
+  { code:'44131', name:'로컬콘텐츠창업in관광', credits:3 },
+  { code:'14832', name:'식음료관리론', credits:3 },
+  { code:'19614', name:'품질경영', credits:3 },
+  { code:'43273', name:'구매관리', credits:3 },
+  { code:'24511', name:'객실관리론', credits:3 },
+  { code:'44132', name:'로컬특화프랜차이즈', credits:3 },
+  { code:'11328', name:'관광행동론', credits:3 },
+  { code:'44130', name:'로컬브랜드개발', credits:3 }
+];
+
+// ===== global-esg-trade (글로벌ESG통상전공) =====
+// courseCatalog (source file: c9b3a4a9-_________ESG__.pdf, parm_cd=050)
+MAJORS['global-esg-trade'].courseCatalog = [
+  { code:'40403', name:'기초환경정보론및실습', credits:3 },
+  { code:'34996', name:'환경공학론', credits:3 },
+  { code:'12910', name:'무역실무론', credits:3 },
+  { code:'20828', name:'국제경영론', credits:3 },
+  { code:'20830', name:'국제경제론', credits:3 },
+  { code:'29641', name:'법협상론(1)', credits:3 },
+  { code:'19818', name:'무역영어', credits:3 },
+  { code:'38995', name:'소비자분쟁해결론', credits:3 },
+  { code:'41071', name:'환경문제와환경법', credits:3 },
+  { code:'11797', name:'국제금융론', credits:3 },
+  { code:'11808', name:'국제마케팅', credits:3 },
+  { code:'12101', name:'노동법(1)', credits:3 },
+  { code:'19374', name:'회사법', credits:3 },
+  { code:'24704', name:'기후변화적응대책', credits:3 },
+  { code:'44682', name:'글로벌공급망과ESG', credits:3 },
+  { code:'11822', name:'국제물류론', credits:3 },
+  { code:'18818', name:'해외시장조사론', credits:3 },
+  { code:'20917', name:'대외무역법', credits:3 },
+  { code:'22289', name:'해외직접투자전략론', credits:3 },
+  { code:'45716', name:'ESG사례분석', credits:3 },
+  { code:'11828', name:'국제법', credits:3 },
+  { code:'11845', name:'국제상사중재론', credits:3 },
+  { code:'42117', name:'녹색도시계획', credits:3 },
+  { code:'11867', name:'국제통상법', credits:3 },
+  { code:'42113', name:'환경계획및정책', credits:3 },
+  { code:'43915', name:'국제인권법', credits:3 }
+];
+
+// ===== mfg-bigdata (제조빅데이터분석전공) =====
+// courseCatalog (source file: c4ab3749-______________.pdf, parm_cd=052)
+MAJORS['mfg-bigdata'].courseCatalog = [
+  { code:'42706', name:'프로그래밍입문', credits:3 },
+  { code:'27890', name:'현대통계학실습(1)', credits:3 },
+  { code:'26371', name:'비즈니스프로그래밍(1)', credits:3 },
+  { code:'27849', name:'스포츠마케팅입문', credits:3 },
+  { code:'32311', name:'자료처리응용실습', credits:3 },
+  { code:'44958', name:'제조빅데이터분석개론', credits:3 },
+  { code:'44959', name:'제조빅데이터시각화', credits:3 },
+  { code:'12264', name:'데이타베이스설계', credits:3 },
+  { code:'26372', name:'비즈니스프로그래밍(2)', credits:3 },
+  { code:'42703', name:'DATA MINING FOR BUSINESS', credits:3 },
+  { code:'44960', name:'제조정보시스템의이해', credits:3 },
+  { code:'44961', name:'제조빅데이터처리와활용', credits:3 },
+  { code:'27891', name:'현대통계학실습(2)', credits:3 },
+  { code:'28739', name:'탐색적자료분석실습', credits:3 },
+  { code:'33775', name:'스포츠융합기술마케팅', credits:3 },
+  { code:'42704', name:'DATA ENGINEERING FOR BUSINESS', credits:3 },
+  { code:'42789', name:'머신러닝기초', credits:3 },
+  { code:'44962', name:'제조프로세스혁신과프로세스마이닝', credits:3 },
+  { code:'41078', name:'스포츠데이터분석및계시계측실무', credits:1 },
+  { code:'42124', name:'통계자료분석실습', credits:3 },
+  { code:'42793', name:'머신러닝실무', credits:3 },
+  { code:'44963', name:'제조빅데이터마이닝', credits:3 },
+  { code:'20071', name:'MIS특강', credits:3 },
+  { code:'27851', name:'스포츠이벤트경영및관리', credits:3 },
+  { code:'42799', name:'딥러닝의이해와응용', credits:3 },
+  { code:'44964', name:'제조빅데이터실무(1)', credits:3 },
+  { code:'44965', name:'제조빅데이터실무(2)', credits:3 }
+];
+
+// ===== mobility-materials (모빌리티소재·부품전공) =====
+// courseCatalog (source file: 45dc52a5-_______________.pdf, parm_cd=053)
+MAJORS['mobility-materials'].courseCatalog = [
+  { code:'21412', name:'신소재과학(1)', credits:3 },
+  { code:'13544', name:'분석화학(2)', credits:3 },
+  { code:'21413', name:'신소재과학(2)', credits:3 },
+  { code:'21418', name:'신소재열역학', credits:3 },
+  { code:'28629', name:'제어공학', credits:3 },
+  { code:'13082', name:'물리화학(1)', credits:3 },
+  { code:'15727', name:'유기화학(3)', credits:3 },
+  { code:'21414', name:'신소재물리학', credits:3 },
+  { code:'34407', name:'에너지변환공학', credits:3 },
+  { code:'36765', name:'고분자공학', credits:3 },
+  { code:'44974', name:'스마트데이터분석', credits:3 },
+  { code:'12889', name:'무기화학(2)', credits:3 },
+  { code:'21785', name:'재료상변태', credits:3 },
+  { code:'24676', name:'기기분석(2)', credits:3 },
+  { code:'34408', name:'전력전자공학', credits:3 },
+  { code:'41049', name:'전기기기응용', credits:3 },
+  { code:'42450', name:'모터이론및제어', credits:3 },
+  { code:'44975', name:'모빌리티산업연계소재설계프로젝트', credits:3 },
+  { code:'44976', name:'전자현미경학', credits:3 },
+  { code:'21813', name:'전기화학공학', credits:3 },
+  { code:'44977', name:'X-선분광학', credits:3 },
+  { code:'44978', name:'모빌리티산업과탄성소재화학', credits:3 },
+  { code:'44980', name:'DSP프로그래밍응용', credits:3 },
+  { code:'45779', name:'소재의기계적거동', credits:3 },
+  { code:'44979', name:'모빌리티산업과나노소재화학', credits:3 },
+  { code:'44981', name:'모빌리티전력변환시스템', credits:3 },
+  { code:'21478', name:'에너지공학', credits:3 },
+  { code:'43230', name:'공정시뮬레이션', credits:3 },
+  { code:'43231', name:'반도체소재공학', credits:3 }
+];
+
+// ===== transmedia-content (트랜스미디어콘텐츠전공) =====
+// courseCatalog (source file: 9eeba11a-_______________.pdf, parm_cd=054)
+MAJORS['transmedia-content'].courseCatalog = [
+  { code:'34965', name:'크리에이티브포토그래피', credits:3 },
+  { code:'26817', name:'3D기초애니메이션', credits:3 },
+  { code:'32762', name:'드라마창작기초', credits:3 },
+  { code:'42174', name:'사진미디어플랫폼디자인', credits:3 },
+  { code:'44579', name:'2D애니메이션기초', credits:3 },
+  { code:'44582', name:'단편웹툰창작', credits:3 },
+  { code:'44585', name:'웹툰드로잉', credits:3 },
+  { code:'44588', name:'웹툰콘텐츠설정', credits:3 },
+  { code:'44954', name:'트랜스미디어콘텐츠기획', credits:3 },
+  { code:'26823', name:'비디오&오디오워크숍', credits:3 },
+  { code:'44580', name:'2D모션그래픽', credits:3 },
+  { code:'44586', name:'웹툰연출', credits:3 },
+  { code:'44589', name:'일러스트제작연구', credits:3 },
+  { code:'44590', name:'장르스토리창작', credits:3 },
+  { code:'44955', name:'트랜스미디어콘텐츠제작', credits:3 },
+  { code:'32226', name:'스토리텔링의이해와실습', credits:3 },
+  { code:'39781', name:'디지털이미지제작(1)', credits:3 },
+  { code:'44956', name:'트랜스미디어콘텐츠창작스튜디오', credits:3 },
+  { code:'32764', name:'미디어서사의이해', credits:3 },
+  { code:'44957', name:'트랜스미디어콘텐츠프로젝트', credits:3 },
+  { code:'25572', name:'편집디자인실습', credits:3 },
+  { code:'34989', name:'사진미디어창업프로젝트', credits:3 },
+  { code:'41661', name:'사진미디어캡스톤디자인', credits:3 }
+];
+
+// ===== mfg-service (제조서비스전공) =====
+// courseCatalog (source file: 3f8ef180-___________.pdf, parm_cd=055)
+MAJORS['mfg-service'].courseCatalog = [
+  { code:'27744', name:'초급일본어연습(1)', credits:3 },
+  { code:'43200', name:'중앙아시아의이해', credits:3 },
+  { code:'44541', name:'기초스페인어(1)', credits:3 },
+  { code:'20842', name:'국제통상학의이해', credits:3 },
+  { code:'28690', name:'중남미학입문', credits:3 },
+  { code:'12910', name:'무역실무론', credits:3 },
+  { code:'19937', name:'글로벌경영', credits:3 },
+  { code:'21025', name:'마케팅원론', credits:3 },
+  { code:'30562', name:'심화영어회화(1)', credits:3 },
+  { code:'43207', name:'러시아지역학개론', credits:3 },
+  { code:'19818', name:'무역영어', credits:3 },
+  { code:'21267', name:'생산운영관리', credits:3 },
+  { code:'30563', name:'심화영어회화(2)', credits:3 },
+  { code:'30564', name:'심화영어글쓰기', credits:3 },
+  { code:'25419', name:'중국무역론', credits:3 },
+  { code:'32266', name:'중남미경제통상정책', credits:3 },
+  { code:'43223', name:'일본의지역사회와관광', credits:3 },
+  { code:'44982', name:'제조서비스4차산업혁명', credits:3 },
+  { code:'44983', name:'제조서비스무역법규', credits:3 },
+  { code:'44987', name:'제조서비스전자상거래', credits:3 },
+  { code:'32252', name:'동북아경제와일본의통상정책', credits:3 },
+  { code:'44984', name:'제조서비스디지털마케팅', credits:3 },
+  { code:'44986', name:'제조서비스스마트물류', credits:3 },
+  { code:'44989', name:'러시아중앙아시아지역제조서비스융합사례연구와실습', credits:3 },
+  { code:'44988', name:'제조서비스원산지관리', credits:3 },
+  { code:'30999', name:'중국무역회사창업과경영', credits:3 },
+  { code:'44985', name:'제조서비스융합창업', credits:3 }
+];
+// primaryCatalogs: 영어영문학과 교육과정은 기본 전공(글로벌K-공연콘텐츠전공)이 이미 갖고 있는
+// PRIMARY_CATALOGS['영어영문학과']와 완전히 같은 학과 교육과정표라 그대로 재사용한다(중복 방지).
+// 나머지 참여학과(국제통상학과, 경영학과, 중국어중국학과, 일본어일본학과, 러시아중앙아시아학과,
+// 스페인어중남미학과)는 매칭되는 일반전공 교육과정표 PDF가 없어 생략함 — 확보되는 대로 추가할 것.
+MAJORS['mfg-service'].primaryCatalogs = {
+  '영어영문학과': PRIMARY_CATALOGS['영어영문학과']
+};
+
+
+// ===== future-city (미래도시전공) =====
+// courseCatalog (source file: 7b12d17c-__________.pdf, parm_cd=056)
+MAJORS['future-city'].courseCatalog = [
+  { code:'27890', name:'현대통계학실습(1)', credits:3 },
+  { code:'13842', name:'사회심리학', credits:3 },
+  { code:'41053', name:'스마트시티', credits:3 },
+  { code:'43337', name:'빅데이터시각적분석', credits:3 },
+  { code:'44424', name:'디지털기초설계', credits:3 },
+  { code:'44549', name:'생태조경설계스튜디오(1)', credits:3 },
+  { code:'28871', name:'회귀분석', credits:3 },
+  { code:'43338', name:'빅데이터마이닝기법과활용', credits:3 },
+  { code:'44550', name:'생태조경설계스튜디오(2)', credits:3 },
+  { code:'27891', name:'현대통계학실습(2)', credits:3 },
+  { code:'25457', name:'창의성심리학', credits:3 },
+  { code:'40920', name:'지능형교통시스템개론', credits:3 },
+  { code:'41073', name:'환경영향평가이론과활용', credits:3 },
+  { code:'42789', name:'머신러닝기초', credits:3 },
+  { code:'44506', name:'교통인프라및네트워크분석', credits:3 },
+  { code:'20148', name:'소비자심리학', credits:3 },
+  { code:'24747', name:'도시환경계획', credits:3 },
+  { code:'32314', name:'시계열자료분석(1)', credits:3 },
+  { code:'41055', name:'도시빅데이터분석', credits:3 },
+  { code:'42114', name:'환경지리정보시스템', credits:3 },
+  { code:'42793', name:'머신러닝실무', credits:3 },
+  { code:'44477', name:'스마트모빌리티서비스및운영', credits:3 },
+  { code:'44503', name:'교통시뮬레이션', credits:3 },
+  { code:'44508', name:'교통안전예측모형론', credits:3 },
+  { code:'28875', name:'THEORY OF URBAN PLANNING', credits:3 },
+  { code:'24796', name:'디자인심리학', credits:3 },
+  { code:'43322', name:'부동산빅데이터분석', credits:3 },
+  { code:'44625', name:'GLOBAL ENVIRONMENTAL ENGINEERING', credits:3 },
+  { code:'29179', name:'SATELLITE REMOTE SENSING FOR ENVIRONMENT', credits:3 }
+];
+
+// ===== digital-platform-content (디지털플랫폼콘텐츠전공) =====
+// courseCatalog (source file: d6b8746b-_______________.pdf, parm_cd=057)
+MAJORS['digital-platform-content'].courseCatalog = [
+  { code:'26800', name:'크리에이티브디자인', credits:3 },
+  { code:'26814', name:'동작연구', credits:3 },
+  { code:'42787', name:'디지털기초표현(1)', credits:1 },
+  { code:'26817', name:'3D기초애니메이션', credits:3 },
+  { code:'30573', name:'타이포그래피기초', credits:3 },
+  { code:'44409', name:'그래픽디자인&미디어', credits:3 },
+  { code:'44582', name:'단편웹툰창작', credits:3 },
+  { code:'44585', name:'웹툰드로잉', credits:3 },
+  { code:'44588', name:'웹툰콘텐츠설정', credits:3 },
+  { code:'45259', name:'플랫폼콘텐츠크리에이터영상제작', credits:3 },
+  { code:'34385', name:'미디어콘텐츠기획', credits:3 },
+  { code:'39779', name:'디지털이미지기초', credits:3 },
+  { code:'43298', name:'3D애니메이션', credits:3 },
+  { code:'44586', name:'웹툰연출', credits:3 },
+  { code:'44589', name:'일러스트제작연구', credits:3 },
+  { code:'45257', name:'생성형AI실습', credits:3 },
+  { code:'39781', name:'디지털이미지제작(1)', credits:3 },
+  { code:'45258', name:'플랫폼콘텐츠기초프로그래밍', credits:3 },
+  { code:'39787', name:'디지털이미지표현기법', credits:3 },
+  { code:'45260', name:'플랫폼콘텐츠크리에이터창작스튜디오', credits:3 }
+];
+
+// ===== future-mobility-autonomous (미래모빌리티자율주행공학전공) =====
+// courseCatalog (source file: 881e9e50-____________.pdf, parm_cd=058)
+MAJORS['future-mobility-autonomous'].courseCatalog = [
+  { code:'25500', name:'컴퓨터개론', credits:3 },
+  { code:'45589', name:'자동차공학의이해', credits:3 },
+  { code:'45839', name:'전기공학프로그래밍', credits:3 },
+  { code:'42449', name:'융합기초전기전자공학', credits:3 },
+  { code:'12147', name:'논리회로', credits:3 },
+  { code:'44430', name:'공학프로그래밍', credits:3 },
+  { code:'44771', name:'PYTHON프로그래밍', credits:3 },
+  { code:'45625', name:'디지털논리회로', credits:3 },
+  { code:'21426', name:'신호및시스템', credits:3 },
+  { code:'42385', name:'친환경차시스템공학개론', credits:3 },
+  { code:'17959', name:'통신이론', credits:3 },
+  { code:'42480', name:'자동차공학', credits:3 },
+  { code:'43141', name:'미래모빌리티공학', credits:3 },
+  { code:'25455', name:'차량운동설계', credits:3 },
+  { code:'28591', name:'임베디드시스템', credits:3 },
+  { code:'34408', name:'전력전자공학', credits:3 },
+  { code:'38323', name:'실감응용인공지능', credits:3 },
+  { code:'42450', name:'모터이론및제어', credits:3 },
+  { code:'43137', name:'기계공학실험', credits:3 },
+  { code:'46701', name:'인공지능기초의이해', credits:3 },
+  { code:'44302', name:'자율주행공학이론및실습', credits:3 },
+  { code:'44303', name:'하이브리드자동차', credits:3 },
+  { code:'44634', name:'알고리즘', credits:3 },
+  { code:'12708', name:'디지탈영상처리', credits:3 },
+  { code:'41062', name:'빅데이터처리', credits:3 },
+  { code:'42448', name:'전동화파워트레인', credits:3 },
+  { code:'46702', name:'인공지능과미래모빌리티', credits:3 }
+];
+
+
+
 function majorList(){
   return Object.keys(MAJORS).map(function(id){ return { id:id, trackName:MAJORS[id].trackName }; });
 }
