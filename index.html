@@ -253,6 +253,9 @@ button{font-family:inherit;}
 .mini-bar i{position:absolute; left:0; top:0; bottom:0; border-radius:3px;}
 .tag{font-size:11px; color:var(--text-muted); background:var(--track); border-radius:5px; padding:2px 7px;}
 .pending{font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:999px; padding:2px 8px;}
+.fresh{font-size:11px; font-weight:800; color:var(--success); background:var(--success-bg);
+  border:1px solid #BFE6D6; border-radius:999px; padding:2px 8px; white-space:nowrap;}
+.cardtags{display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex:none;}
 
 /* 학생 넘기기 */
 .pager{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
@@ -429,7 +432,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-21 f';
+var APP_VERSION = '2026-09-21 g';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -905,6 +908,46 @@ function recommendation(s, a){
 }
 
 /* 이번 달에 점수를 올렸는지 본다 */
+/* 지난번에 현황판을 본 뒤로 점수를 새로 올린 학생을 표시한다.
+   "며칠 이내" 로 하면 명단을 한꺼번에 넣은 날짜에 전원이 걸려 쓸모가 없어진다. */
+var SEEN_KEY = 'kstar_board_seen';
+var boardSeenAt = null;        // 이번에 화면을 연 시점의 기준 시각
+
+function boardSeen(){
+  if(boardSeenAt !== null) return boardSeenAt;
+  var prev = null;
+  try{ prev = localStorage.getItem(SEEN_KEY); }catch(e){}
+  // 처음 쓰는 기기라면 지금부터 — 전원에게 배지가 붙는 일을 막는다
+  boardSeenAt = prev || nowIso();
+  try{ localStorage.setItem(SEEN_KEY, nowIso()); }catch(e){}
+  return boardSeenAt;
+}
+function markAllSeen(){
+  boardSeenAt = nowIso();
+  try{ localStorage.setItem(SEEN_KEY, boardSeenAt); }catch(e){}
+}
+function isFresh(s){
+  if(!s || !s.updatedAt) return false;
+  var t = new Date(s.updatedAt).getTime();
+  var base = new Date(boardSeen()).getTime();
+  return isFinite(t) && isFinite(base) && t > base;
+}
+function daysSince(iso){
+  if(!iso) return null;
+  var t = new Date(iso).getTime();
+  if(!isFinite(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+function freshWhen(s){
+  if(!isFresh(s)) return '';
+  var d = daysSince(s.updatedAt);
+  return d <= 0 ? '오늘' : d === 1 ? '어제' : d + '일 전';
+}
+function freshBadge(s){
+  var w = freshWhen(s);
+  return w ? '<span class="fresh">' + w + ' 갱신</span>' : '';
+}
+
 function updatedThisMonth(s){
   if(!s || !s.updatedAt) return false;
   var d = new Date(s.updatedAt), n = new Date();
@@ -1060,7 +1103,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, freshOnly:false
 };
 var cache = { roster:[], me:null };
 
@@ -1534,6 +1577,7 @@ function boardGroups(){
     if(q && (s.name||'').toLowerCase().indexOf(q)===-1) return false;
     if(state.yearFilter && String(num(s.year))!==state.yearFilter) return false;
     if(pick && !pick(s, analyze(s))) return false;
+    if(state.freshOnly && !isFresh(s)) return false;
     return true;
   });
   var groups = { R:[], A:[], T:[], S:[] };
@@ -1684,6 +1728,7 @@ function screenBoard(){
   var noneCount = list.filter(function(s){ return !currentStage(s, analyze(s)); }).length;
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
   var staleCount = list.filter(function(s){ return !updatedThisMonth(s); }).length;
+  var freshCount = list.filter(isFresh).length;
 
 
   return (
@@ -1732,6 +1777,15 @@ function screenBoard(){
       '<b>이름 옆 배지</b>에 표시됩니다. 아직 아무 단계도 인증받지 못했으면 ' +
       '<span class="curpill none" style="margin-left:0;">인증 전</span> 으로 나옵니다.' +
     '</div>' +
+    (freshCount ?
+      '<div class="notice-box" style="border-color:var(--success);background:var(--success-bg);color:var(--success);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<span>지난번에 보신 뒤로 <b>'+freshCount+'명</b>이 점수를 새로 올렸습니다.</span>' +
+        '<span style="margin-left:auto;display:flex;gap:12px;white-space:nowrap;">' +
+          '<button class="linklike" data-action="toggle-fresh" style="color:var(--success);">' +
+            (state.freshOnly ? '전체 보기' : '이 학생들만 보기') + '</button>' +
+          '<button class="linklike" data-action="mark-seen" style="color:var(--text-muted);">확인 완료</button>' +
+        '</span>' +
+      '</div>' : '') +
     (staleCount ?
       '<div class="notice-box" style="border-color:var(--amber-border);background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;gap:10px;">' +
         '<span>이번 달 점수를 아직 안 올린 학생 <b>'+staleCount+'명</b>입니다.</span>' +
@@ -1777,7 +1831,10 @@ function cardHtml(s){
     '<div class="row" style="justify-content:space-between; align-items:flex-start;">' +
       '<div><div class="nm">'+esc(s.name)+curPill(s,a)+'</div>' +
       '<div class="mt">'+esc(num(s.year))+'학년 · '+esc(s.major||'학과 미입력')+'</div></div>' +
-      (s.claimedBy ? '' : '<span class="pending">미가입</span>') +
+      '<div class="cardtags">' +
+        (s.claimedBy ? '' : '<span class="pending">미가입</span>') +
+        freshBadge(s) +
+      '</div>' +
     '</div>' +
     '<div class="mini">' +
       AREAS.map(function(x){
@@ -1809,7 +1866,13 @@ function screenDetail(){
     '<div class="row-between">' +
       '<div><div class="eyebrow">'+esc(s.major||'학과 미입력')+' · '+esc(num(s.year))+'학년' +
       (s.claimedBy ? ' · 학번 '+esc(s.claimedBy) : ' · 미가입')+'</div>' +
-      '<h2 class="screen-title">'+esc(s.name)+curPill(s, analyze(s))+'</h2></div>' +
+      '<h2 class="screen-title">'+esc(s.name)+curPill(s, analyze(s))+'</h2>' +
+      (s.updatedAt
+        ? '<div class="mt" style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">' +
+          '마지막 갱신 ' + esc(String(s.updatedAt).slice(0,10)) +
+          (freshWhen(s) ? ' <span class="fresh">'+freshWhen(s)+'</span>' : '') + '</div>'
+        : '') +
+      '</div>' +
     '</div>' +
     pyramidHtml(s, analyze(s)) +
     analysisHtml(s, {noCerts:true}) +
@@ -2773,6 +2836,8 @@ document.addEventListener('click', function(e){
     render(); window.scrollTo(0,0);
   }
   else if(act==='clear-tile'){ state.tileFilter=''; render(); }
+  else if(act==='toggle-fresh'){ state.freshOnly = !state.freshOnly; render(); window.scrollTo(0,0); }
+  else if(act==='mark-seen'){ markAllSeen(); state.freshOnly = false; render(); window.scrollTo(0,0); }
   else if(act==='goto-import'){ navGo(function(){ state.view='import'; state.importResult=''; }); }
   else if(act==='do-import'){ doImport(); }
   else if(act==='view-shot'){
