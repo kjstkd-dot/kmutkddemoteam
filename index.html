@@ -302,6 +302,11 @@ button{font-family:inherit;}
 .gtable{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:10px;}
 .gtable th,.gtable td{text-align:left; padding:7px 6px; border-bottom:1px solid var(--border); vertical-align:top;}
 .gtable th{color:var(--text-faint); font-weight:700; font-size:11px;}
+.step-shot-wrap{margin:14px 0 4px; text-align:center;}
+.step-shot{max-width:280px; width:100%; border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow-card); display:inline-block;}
+.step-shot.wide{max-width:100%;}
+.step-shot-cap{font-size:11.5px; color:var(--text-faint); margin-top:6px; line-height:1.5;}
 details.acc{border-left:4px solid var(--border); padding-left:11px; margin-bottom:8px;}
 details.acc summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:6px 0;}
 .install-preview{display:flex; align-items:center; gap:14px; background:var(--surface-3);
@@ -424,7 +429,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwAFtdwKL3QTGxGSzOiJiwc19kmYAjOwWH2yszp2hy64RD1OClqMN5IOR5y-nx7uhNd/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-20 d';
+var APP_VERSION = '2026-09-21 e';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1418,8 +1423,8 @@ function screenMyStatus(){
     '<div style="height:8px;"></div>' +
     '<button class="btn btn-ghost" data-action="open-certs">📘 내 자격증은 몇 점일까 — 자격증 점수표</button>' +
     '<div class="notice-box" style="margin-top:14px; margin-bottom:0;">' +
-      '<span style="float:right;color:var(--text-faint);font-size:10.5px;">v'+APP_VERSION+'</span>' +
-      '점수는 계명스튜던트포털(STORY+) &gt; 역량관리 &gt; 역량 대시보드 화면의 숫자를 그대로 입력하면 됩니다. 실제 인증 여부는 학생성공센터에서 확인하세요.</div>'
+      '점수는 계명스튜던트포털(STORY+) &gt; 역량관리 &gt; 역량 대시보드 화면의 숫자를 그대로 입력하면 됩니다. 실제 인증 여부는 학생성공센터에서 확인하세요.' +
+      '<span style="display:block;text-align:right;color:var(--text-faint);font-size:10.5px;margin-top:6px;">v'+APP_VERSION+'</span></div>'
   );
 }
 
@@ -1938,6 +1943,14 @@ function modalHtml(){
 }
 
 /* ============ guide ============ */
+/* 글로만 설명하지 않고, 실제 화면이 어떻게 보이는지 바로 확인할 수 있게 한다.
+   캡처 속 이름·점수는 예시이며 실제 학생 자료가 아니다. */
+function stepShot(src, caption, wide){
+  return '<div class="step-shot-wrap">' +
+    '<img class="step-shot'+(wide?' wide':'')+'" src="'+esc(src)+'" alt="'+esc(caption)+'" loading="lazy">' +
+    '<div class="step-shot-cap">'+esc(caption)+'</div></div>';
+}
+
 function guideStudent(){
   return (
     '<div class="step"><div class="step-num">1</div>' +
@@ -1948,32 +1961,58 @@ function guideStudent(){
         '<li><b>학번, 이름, 학과, 학년, 6자 이상 비밀번호</b>를 입력해 등록을 완료해 주세요.</li>' +
         '<li>이름이 시범단 명단에 있으면 <b>기존 기록을 그대로 이어받습니다.</b> 처음부터 다시 입력할 필요가 없어요.</li>' +
         '<li>다음부터는 학번과 비밀번호로 로그인해 주세요.</li>' +
-      '</ul></div>' +
+      '</ul>' +
+      stepShot('guide-img/s1-login.png', '로그인 화면 — 처음이라면 아래 "비밀번호 설정하기"를 눌러요') +
+      stepShot('guide-img/s2-register.png', '등록 화면 — 학번·이름·학과·학년·비밀번호를 넣어요') +
+      '</div>' +
     '<div class="step"><div class="step-num">2</div>' +
       '<h2>내 점수 입력하기</h2>' +
       '<p>계명스튜던트포털(STORY+)에 접속해 <b>역량관리 &gt; 역량 대시보드</b> 화면을 열어 주세요.</p>' +
       '<ul>' +
-        '<li>화면에 나온 <b>COMpass K 총점</b>과 <b>F·A·C·E 점수</b>를 그대로 옮겨 적어 주세요.</li>' +
+        '<li><b>📷 캡쳐 이미지 첨부하기</b>를 누르고 역량 대시보드 캡쳐를 고르면, ' +
+          'F·A·C·E 점수를 읽어 <b>자동으로 채워 넣습니다.</b> 숫자가 맞는지만 확인하면 돼요.</li>' +
+        '<li>직접 적어도 됩니다. 화면에 나온 <b>COMpass K 총점</b>과 <b>F·A·C·E 점수</b>를 그대로 옮겨 적어 주세요.</li>' +
         '<li><b>My K-STAR(단계별 현황)</b> 화면에서 R단계 요건 3가지와, 피라미드에 빨간 "인증" 도장이 찍힌 단계를 체크해 주세요.</li>' +
         '<li>저장하면 바로 아래에 내 분석 결과가 나타납니다.</li>' +
-      '</ul></div>' +
+      '</ul>' +
+      stepShot('guide-img/s8-score-form.png', '내 점수 입력 화면 — 맨 아래 "캡쳐 이미지 첨부하기"를 쓰면 자동으로 채워져요') +
+      '</div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>내 분석 결과 보기</h2>' +
       '<p>내 현황 화면에서 다음을 확인할 수 있어요.</p>' +
       '<ul>' +
+        '<li><b>인증 피라미드</b> — 빨간 "인증" 도장이 지금까지 받은 단계입니다. ' +
+          '오른쪽 칸에 <b>다음에 무엇을 노리면 되는지</b>가 나옵니다.</li>' +
         '<li><b>F·A·C·E 막대</b> — 영역별로 몇 점이 남았는지, 어느 영역이 가장 가까운지 표시됩니다.</li>' +
+        '<li><b>장학금</b> — 지금 받을 수 있는 금액과, 한 영역을 더 채우면 얼마가 되는지 보여줍니다. ' +
+          'S단계는 <b>최대 2개 영역</b>까지 나옵니다.</li>' +
         '<li><b>다음 목표</b> — 지금 무엇을 하면 되는지 구체적인 활동으로 안내합니다.</li>' +
-        '<li><b>장학금</b> — 단계별로 받을 수 있는 금액을 보여줍니다.</li>' +
         '<li>점수가 바뀌면 <b>내 점수 입력·수정하기</b>에서 다시 저장해 주세요.</li>' +
-      '</ul></div>' +
+      '</ul>' +
+      stepShot('guide-img/s4-pyramid.png', '인증 피라미드 — 왼쪽은 지금까지 받은 단계, 오른쪽은 다음 목표') +
+      stepShot('guide-img/s5-face.png', 'F·A·C·E 막대 — 금메달 표시가 가장 가까운 영역') +
+      stepShot('guide-img/s6-reco.png', '다음 목표 — 한 영역을 더 채우면 장학금이 2배가 된다고 알려줍니다') +
+      '</div>' +
     '<div class="step"><div class="step-num">4</div>' +
+      '<h2>인증은 내가 신청하나요?</h2>' +
+      '<p>내 현황 화면 아래쪽 <b>빨간 동그라미로 표시된 칸</b>을 눌러 보세요. 한 번은 꼭 읽어야 하는 내용입니다.</p>' +
+      '<ul>' +
+        '<li><b>R·T·A단계</b> — 신청할 것이 없습니다. 정해진 날짜의 점수로 학교가 뽑습니다.</li>' +
+        '<li><b>S단계</b> — 1차는 자동이지만, <b>2차 MY포트폴리오 심사는 기한 안에 직접 신청</b>해야 합니다. 놓치면 거기서 끝납니다.</li>' +
+        '<li>정작 내가 해야 하는 일은 <b>실적을 EDWARD에 입력하고 승인받는 것</b>입니다. 입력하지 않으면 아무리 활동해도 점수가 0입니다.</li>' +
+      '</ul>' +
+      stepShot('guide-img/s7-proc.png', '펼쳐서 읽는 인증 절차 안내 — 단계별 신청 여부와 날짜가 정리돼 있어요') +
+      '</div>' +
+    '<div class="step"><div class="step-num">5</div>' +
       '<h2>점수 올릴 방법 찾기</h2>' +
       '<p>위쪽 <b>자격증 점수</b> 탭을 눌러 보세요.</p>' +
       '<ul>' +
         '<li>내가 가진 자격증이 <b>COMpass K에서 몇 점인지</b> 바로 찾을 수 있습니다.</li>' +
-        '<li><b>태권도 단증은 “격투기”로 입력</b>합니다. 1단 40점부터 5단 80점까지 받을 수 있고, 입학 전에 딴 단증도 인정됩니다.</li>' +
+        '<li><b>태권도 단증은 "격투기"로 입력</b>합니다. 1단 40점부터 5단 80점까지 받을 수 있고, 입학 전에 딴 단증도 인정됩니다.</li>' +
         '<li>EDWARD에 어떻게 입력하고 승인받는지도 항목별로 정리되어 있습니다.</li>' +
-      '</ul></div>'
+      '</ul>' +
+      stepShot('guide-img/s9-certs.png', '자격증 점수표 — "격투기"로 찾으면 단증 배점이 바로 나와요') +
+      '</div>'
   );
 }
 
@@ -1985,7 +2024,9 @@ function guideAdmin(){
       '<ul>' +
         '<li>첫 관리자는 등록코드 없이 바로 등록할 수 있습니다. <b>앱을 열자마자 가장 먼저 등록해 주세요.</b></li>' +
         '<li>등록 후 <b>설정</b>에서 등록코드를 정해두면, 이후 다른 관리자는 그 코드를 알아야 등록할 수 있습니다.</li>' +
-      '</ul></div>' +
+      '</ul>' +
+      stepShot('guide-img/s10-login-admin.png', '관리자 로그인 화면 — 위쪽 탭에서 "관리자"를 먼저 고릅니다') +
+      '</div>' +
     '<div class="step"><div class="step-num">2</div>' +
       '<h2>전체 현황 보기</h2>' +
       '<p>학생들이 <b>S · T · A · R</b> 네 칸으로 나뉘어 표시됩니다.</p>' +
@@ -1999,15 +2040,31 @@ function guideAdmin(){
         '<li>S칸에 있어도 <b>학생이 따로 신청할 일은 없습니다.</b> 1차는 학교가 자동으로 뽑습니다. ' +
           '다만 1차 합격 뒤 <b>2차 MY포트폴리오 심사는 본인이 기한 내에 신청</b>해야 하니, 4월·10월 발표를 챙겨 주세요.</li>' +
         '<li>이름 검색과 학년 필터로 좁혀 볼 수 있고, <b>엑셀 저장</b>으로 전체 명단을 내려받을 수 있습니다.</li>' +
-      '</ul></div>' +
+      '</ul>' +
+      stepShot('guide-img/s11-tiles.png', '위쪽 요약 칸 — 누르면 그 단계 학생만 걸러서 봅니다', true) +
+      stepShot('guide-img/s12-board.png', 'S·T·A·R 네 칸 현황판 — 이름 옆 배지가 실제로 인증받은 단계입니다', true) +
+      '</div>' +
     '<div class="step"><div class="step-num">3</div>' +
       '<h2>학생별 확인과 수정</h2>' +
       '<p>카드를 누르면 그 학생의 전체 분석과 수정 화면이 열립니다.</p>' +
       '<ul>' +
         '<li>학생이 잘못 입력한 점수를 관리자가 직접 고칠 수 있습니다.</li>' +
         '<li>비밀번호를 잊은 학생은 <b>비밀번호 초기화</b>를 눌러 주세요. 점수 기록은 지워지지 않습니다.</li>' +
+        '<li>좌우로 밀거나 <b>이전·다음</b>을 눌러 학생을 넘겨볼 수 있습니다.</li>' +
       '</ul>' +
-      '<div class="disclaimer">엑셀 자료에는 학번과 점수가 들어 있습니다. 외부에 공유하기 전에 개인정보를 가려 주세요.</div>' +
+      stepShot('guide-img/s13-detail.png', '학생 상세 화면 — 분석 결과를 보고 그 자리에서 점수를 고칩니다') +
+      '</div>' +
+    '<div class="step"><div class="step-num">4</div>' +
+      '<h2>여러 명을 한꺼번에 입력하기</h2>' +
+      '<p>전체 현황 위쪽의 <b>일괄 입력</b>을 눌러 주세요.</p>' +
+      '<ul>' +
+        '<li>캡쳐를 읽어 정리한 내용을 붙여넣고 <b>적용하기</b>를 누르면 한꺼번에 반영됩니다.</li>' +
+        '<li><b>이름으로 찾아</b> 점수를 바꿉니다. 명단에 없는 이름은 새 학생으로 추가됩니다.</li>' +
+        '<li>적어 보낸 항목만 바뀌고, 없는 항목은 원래 값이 그대로 남습니다.</li>' +
+        '<li>옆의 <b>공지문 복사</b>는 단톡방에 붙여넣을 월초 안내문을, <b>명단 복사</b>는 전체 자료를 복사합니다.</li>' +
+      '</ul>' +
+      stepShot('guide-img/s14-import.png', '일괄 입력 화면 — 정리된 내용을 붙여넣고 적용하면 끝') +
+      '<div class="disclaimer">엑셀 자료와 복사한 명단에는 학번과 점수가 들어 있습니다. 외부에 공유하기 전에 개인정보를 가려 주세요.</div>' +
     '</div>'
   );
 }
