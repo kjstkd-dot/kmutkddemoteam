@@ -321,7 +321,14 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-20 e';
+var APP_VERSION = '2026-09-20 f';
+
+/* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
+   실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
+   보호책임자의 이름과 연락처를 처리방침에 실제로 밝히도록 요구합니다. */
+var PRIVACY_OFFICER_NAME = '(담당자 이름을 입력해 주세요)';
+var PRIVACY_OFFICER_CONTACT = '(이메일 또는 전화번호를 입력해 주세요)';
+var PRIVACY_POLICY_EFFECTIVE_DATE = '2026-09-21';
 
 /* ============ store: 서버 → 기기저장 순으로 사용 ============ */
 var apiMode = !!API_URL;
@@ -1262,8 +1269,12 @@ function microdegreeStatus(student){
 var root = document.getElementById('app');
 var state = {
   majorId: (function(){ try{ return localStorage.getItem('cvg_major_id') || DEFAULT_MAJOR_ID; }catch(e){ return DEFAULT_MAJOR_ID; } })(),
-  mode: 'app',                // 'app' | 'guide'
+  mode: 'app',                // 'app' | 'guide' | 'privacy'
   guideRole: 'student',       // 'student' | 'admin'
+  // 회원가입 화면에서 "개인정보처리방침 전문 보기"를 누르면 화면이 통째로
+  // 바뀌므로(그래야 뒤로가기 버튼도 자연스럽게 동작함), 입력하던 내용이
+  // 사라지지 않도록 잠깐 여기 담아뒀다가 방침에서 돌아오면 다시 채워 넣는다.
+  registerDraft: null,
   role: 'student',           // 'student' | 'admin'
   view: 'login',             // login | register | register-admin | home | course-form | profile | list | detail | settings
   studentSession: null, adminSession: null,
@@ -1307,7 +1318,8 @@ function navSnapshot(){
   return {
     mode: state.mode, role: state.role, view: state.view, guideRole: state.guideRole,
     detailId: state.detailId, editingCourseId: state.editingCourseId,
-    editingMicrodegreeId: state.editingMicrodegreeId, showInstallModal: state.showInstallModal
+    editingMicrodegreeId: state.editingMicrodegreeId, showInstallModal: state.showInstallModal,
+    registerDraft: state.registerDraft
   };
 }
 function syncHistoryOnRender(){
@@ -1328,7 +1340,7 @@ window.addEventListener('popstate', function(e){
 });
 
 function render(){
-  root.innerHTML = state.mode==='guide' ? renderGuide() : renderApp();
+  root.innerHTML = state.mode==='guide' ? renderGuide() : (state.mode==='privacy' ? renderPrivacyPolicy() : renderApp());
   syncHistoryOnRender();
 }
 function errMsg(e){ return e && e.message ? e.message : String(e); }
@@ -1386,7 +1398,7 @@ function renderApp(){
         '</div>'
       ) : '') +
       body +
-      '<div class="footer-note">v'+esc(APP_VERSION)+(apiMode?'':' · 서버 미연결(기기 저장)')+'</div>' +
+      '<div class="footer-note">v'+esc(APP_VERSION)+(apiMode?'':' · 서버 미연결(기기 저장)')+' · <button type="button" class="linklike" data-action="open-privacy" style="font-size:11px; vertical-align:baseline;">개인정보처리방침</button></div>' +
     '</div>' +
     (state.showInstallModal ? installModalHtml() : '')
   );
@@ -1443,6 +1455,7 @@ function screenLogin(){
   );
 }
 function screenRegisterStudent(){
+  var d = (state.registerDraft && state.registerDraft.view==='register') ? state.registerDraft : null;
   return (
     '<div class="phone">' +
       '<div class="eyebrow">학생 등록</div>' +
@@ -1450,18 +1463,18 @@ function screenRegisterStudent(){
       '<p class="screen-sub">학번으로 처음 접속하는 경우 비밀번호를 만들어 주세요.</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-register" class="stack">' +
-        '<div class="field"><label>학번</label><input id="regId" required></div>' +
-        '<div class="field"><label>이름</label><input id="regName" required></div>' +
+        '<div class="field"><label>학번</label><input id="regId" required value="'+(d?esc(d.id):'')+'"></div>' +
+        '<div class="field"><label>이름</label><input id="regName" required value="'+(d?esc(d.name):'')+'"></div>' +
         '<div class="grid2">' +
           '<div class="field"><label>학과(제1전공)</label><select id="regDept" required>' +
             '<option value="">선택해 주세요</option>' +
-            PARTICIPATING_DEPTS.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('') +
+            PARTICIPATING_DEPTS.map(function(dep){ return '<option value="'+esc(dep)+'" '+((d&&d.dept===dep)?'selected':'')+'>'+esc(dep)+'</option>'; }).join('') +
           '</select></div>' +
-          '<div class="field"><label>입학년도(선택)</label><select id="regYear">'+admissionYearOptions('')+'</select></div>' +
+          '<div class="field"><label>입학년도(선택)</label><select id="regYear">'+admissionYearOptions(d?d.year:'')+'</select></div>' +
         '</div>' +
-        '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password"></div>' +
-        '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password"></div>' +
-        privacyNoticeHtml() +
+        '<div class="field"><label>비밀번호</label><input id="regPw" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw):'')+'"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="regPw2" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw2):'')+'"></div>' +
+        privacyNoticeHtml('regConsent', d && d.consent) +
         '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
       '</form>' +
       '<div class="row" style="justify-content:center; margin-top:14px;">' +
@@ -1470,16 +1483,44 @@ function screenRegisterStudent(){
     '</div>'
   );
 }
-// 회원가입 화면에 넣는 개인정보 수집·이용 안내. 법적 검토를 거친 정식 개인정보처리방침은
-// 아니고, 어떤 정보를 왜 모으는지 최소한으로 알려주는 문구다.
-function privacyNoticeHtml(){
+// "개인정보처리방침 전문 보기"를 누르면 화면이 통째로 방침 페이지로 바뀌어서
+// 회원가입 폼의 DOM 자체가 사라진다. 그 전에 지금까지 입력한 값을 state에
+// 담아뒀다가, 방침에서 돌아올 때 screenRegisterStudent/Admin이 다시 채워 넣는다.
+function captureRegisterDraft(){
+  if(state.view==='register'){
+    var f = document.getElementById('form-register');
+    if(!f) return;
+    state.registerDraft = { view:'register',
+      id: f.querySelector('#regId').value, name: f.querySelector('#regName').value,
+      dept: f.querySelector('#regDept').value, year: f.querySelector('#regYear').value,
+      pw: f.querySelector('#regPw').value, pw2: f.querySelector('#regPw2').value,
+      consent: f.querySelector('#regConsent').checked };
+  } else if(state.view==='register-admin'){
+    var f2 = document.getElementById('form-register-admin');
+    if(!f2) return;
+    state.registerDraft = { view:'register-admin',
+      id: f2.querySelector('#raId').value, name: f2.querySelector('#raName').value,
+      pw: f2.querySelector('#raPw').value, pw2: f2.querySelector('#raPw2').value,
+      code: f2.querySelector('#raCode').value, consent: f2.querySelector('#raConsent').checked };
+  }
+}
+// 회원가입 화면에 넣는 개인정보 수집·이용 안내 + 필수 동의 체크박스. 자세한 내용은
+// 별도 페이지(renderPrivacyPolicy, 개인정보처리방침 제1~8조)에서 전문을 볼 수 있다.
+// 체크박스는 required라 체크하지 않으면 폼 자체가 제출되지 않는다(브라우저 기본 검증).
+function privacyNoticeHtml(consentId, checked){
   return '<div class="notice-box" style="font-size:11.5px; line-height:1.6;">' +
     '<b>수집하는 개인정보</b>: 학번(또는 관리자 번호)·이름·학과·입학년도·이수과목·마이크로디그리 이수 내역 등 이 화면에서 입력하는 정보<br>' +
     '<b>이용 목적</b>: 융합전공 이수 조건 충족 여부를 계산해서 보여주고, 담당교수님이 이수 현황을 확인·관리할 수 있도록 하기 위함<br>' +
-    '<b>보관·삭제</b>: 별도로 정한 기간 없이 계정이 있는 동안 보관하며, 본인 또는 담당교수님(관리자)에게 요청하면 삭제할 수 있어요. 이 정보는 담당교수님(관리자)만 볼 수 있고, 그 외에는 제공하지 않아요.' +
-  '</div>';
+    '<b>보관·삭제</b>: 별도로 정한 기간 없이 계정이 있는 동안 보관하며, 본인 또는 담당교수님(관리자)에게 요청하면 지체 없이 삭제해요. 이 정보는 담당교수님(관리자)만 볼 수 있고, 그 외에는 제공하지 않아요.<br>' +
+    '<button type="button" class="linklike" data-action="open-privacy" style="font-size:11.5px;">개인정보처리방침 전문 보기 →</button>' +
+  '</div>' +
+  '<label style="display:flex; align-items:flex-start; gap:8px; margin:2px 0 14px; font-size:12.5px; font-weight:700; cursor:pointer;">' +
+    '<input type="checkbox" id="'+consentId+'" required '+(checked?'checked':'')+' style="margin-top:2px; width:16px; height:16px; flex:none;">' +
+    '<span>(필수) 위 개인정보 수집·이용 및 개인정보처리방침에 동의합니다.</span>' +
+  '</label>';
 }
 function screenRegisterAdmin(){
+  var d = (state.registerDraft && state.registerDraft.view==='register-admin') ? state.registerDraft : null;
   return (
     '<div class="phone">' +
       '<div class="eyebrow">관리자 등록</div>' +
@@ -1487,12 +1528,12 @@ function screenRegisterAdmin(){
       '<p class="screen-sub">가장 처음 등록하는 관리자는 등록코드 없이 만들 수 있어요. 이후부터는 기존 관리자에게 등록코드를 받아야 해요.</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-register-admin" class="stack">' +
-        '<div class="field"><label>관리자 번호</label><input id="raId" required></div>' +
-        '<div class="field"><label>이름</label><input id="raName" required></div>' +
-        '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password"></div>' +
-        '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password"></div>' +
-        '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode"></div>' +
-        privacyNoticeHtml() +
+        '<div class="field"><label>관리자 번호</label><input id="raId" required value="'+(d?esc(d.id):'')+'"></div>' +
+        '<div class="field"><label>이름</label><input id="raName" required value="'+(d?esc(d.name):'')+'"></div>' +
+        '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw):'')+'"></div>' +
+        '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw2):'')+'"></div>' +
+        '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode" value="'+(d?esc(d.code):'')+'"></div>' +
+        privacyNoticeHtml('raConsent', d && d.consent) +
         '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
       '</form>' +
       '<div class="row" style="justify-content:center; margin-top:14px;">' +
@@ -1563,7 +1604,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
     await storeSet('cvg_students', id, doc0);
     setSession('student', { id:id, name:name, majorId: state.majorId });
     state.cache.me = Object.assign({id:id}, doc0);
-    state.formError=''; state.view='home';
+    state.formError=''; state.view='home'; state.registerDraft=null;
     render();
     return;
   }
@@ -1577,7 +1618,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   }
   setSession('student', { id:id, name:name, majorId: state.majorId, token: result.token });
   state.cache.me = result.doc;
-  state.formError=''; state.view='home';
+  state.formError=''; state.view='home'; state.registerDraft=null;
   render();
 }
 async function doRegisterAdmin(id, name, pw, pw2, code){
@@ -1599,7 +1640,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
     var hash = await sha256Hex(pw);
     await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: state.majorId, createdAt:nowIso() });
     setSession('admin', { id:id, name:name, majorId: state.majorId });
-    state.formError=''; state.view='list';
+    state.formError=''; state.view='list'; state.registerDraft=null;
     await loadRoster();
     render();
     return;
@@ -1615,7 +1656,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
     state.formError = msg; render(); return;
   }
   setSession('admin', { id:id, name:name, majorId: state.majorId, token: result.token });
-  state.formError=''; state.view='list';
+  state.formError=''; state.view='list'; state.registerDraft=null;
   await loadRoster();
   render();
 }
@@ -2925,6 +2966,94 @@ function guideAdmin(){
   );
 }
 
+/* ============ 개인정보처리방침 ============
+   개인정보보호법 제30조(개인정보처리방침 수립·공개)가 요구하는 항목을
+   담은 별도 페이지. 회원가입 화면의 동의 체크박스 옆 "전문 보기"에서
+   연결되고, 로그인 여부와 상관없이 footer-note에서도 열 수 있다. */
+function renderPrivacyPolicy(){
+  return (
+    '<div class="page"><div class="guide-shell">' +
+      '<div class="guide-hero">' +
+        '<div class="eyebrow">'+esc(TRACK_NAME)+'</div>' +
+        '<h1>개인정보처리방침</h1>' +
+        '<p>시행일: '+esc(PRIVACY_POLICY_EFFECTIVE_DATE)+'</p>' +
+        '<button class="back" data-action="close-privacy">← 돌아가기</button>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제1조(수집하는 개인정보 항목)</h2>' +
+        '<p>이 서비스는 회원가입·이용 과정에서 아래 정보를 수집합니다.</p>' +
+        '<ul>' +
+          '<li><b>학생</b>: 학번, 이름, 학과(제1전공), 입학년도, 이수과목 내역, 마이크로디그리 이수 내역, 인정학기, 졸업논문 여부, 비밀번호(암호화되어 저장되며 운영자도 원문을 볼 수 없음)</li>' +
+          '<li><b>관리자(담당교수님)</b>: 관리자 번호, 이름, 비밀번호(암호화 저장)</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제2조(개인정보의 수집 및 이용 목적)</h2>' +
+        '<p>수집한 정보는 아래 목적으로만 이용하며, 명시한 목적 외 다른 목적으로 이용하지 않습니다.</p>' +
+        '<ul>' +
+          '<li>학번·비밀번호로 본인 확인 및 로그인 처리</li>' +
+          '<li>융합전공 이수 조건(복수전공·부전공) 충족 여부 계산 및 안내</li>' +
+          '<li>담당교수님(관리자)이 학생별 이수 현황을 확인·관리할 수 있도록 지원</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제3조(보유 및 이용 기간, 파기 절차·방법)</h2>' +
+        '<ul>' +
+          '<li>회원 탈퇴(계정 삭제) 또는 본인·담당교수님의 삭제 요청이 있으면 지체 없이(원칙적으로 5일 이내) 파기합니다.</li>' +
+          '<li>별도 삭제 요청이 없으면 계정이 유지되는 동안 보관하며, 관련 법령에 따라 보존할 의무가 있는 경우 그 기간 동안 별도 보관합니다.</li>' +
+          '<li>전자적 파일은 복구할 수 없는 방법으로 삭제합니다.</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제4조(개인정보의 제3자 제공)</h2>' +
+        '<p>이 서비스는 정보주체의 동의, 법률의 특별한 규정 등 개인정보보호법 제17조·제18조에 해당하는 경우를 제외하고는 개인정보를 외부에 제공하지 않습니다. 담당교수님(해당 융합전공 관리자)은 본인이 담당하는 융합전공 학생의 정보만 조회할 수 있습니다.</p>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제5조(개인정보 처리업무의 위탁 및 국외 이전)</h2>' +
+        '<p>이 서비스는 입력받은 정보를 구글(Google LLC)의 Google Sheets·Google Apps Script(구글 클라우드 인프라)에 저장합니다. 이 과정에서 아래와 같이 정보가 국외로 이전될 수 있습니다.</p>' +
+        '<ul>' +
+          '<li><b>이전받는 자</b>: Google LLC</li>' +
+          '<li><b>이전되는 국가</b>: 미국 등 구글 데이터센터 소재국</li>' +
+          '<li><b>이전 일시·방법</b>: 서비스 이용 시점마다 네트워크(HTTPS)를 통해 전송</li>' +
+          '<li><b>이전받는 자의 이용 목적</b>: 개인정보의 저장 및 서버 인프라 제공(구글은 그 내용을 별도 목적으로 이용하지 않음)</li>' +
+          '<li><b>보유·이용 기간</b>: 제3조와 동일</li>' +
+          '<li><b>거부 방법 및 불이익</b>: 위 저장 위탁은 서비스 제공에 반드시 필요한 절차라, 이를 거부하실 경우 이 서비스 자체를 이용하실 수 없습니다.</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제6조(정보주체의 권리와 행사 방법)</h2>' +
+        '<ul>' +
+          '<li>학생은 <b>이수정보 수정</b> 화면 등에서 본인 정보를 직접 열람·정정할 수 있습니다.</li>' +
+          '<li>본인 확인 후 담당교수님(관리자)에게 요청하면 개인정보 열람·정정·삭제·처리정지를 요청할 수 있습니다.</li>' +
+          '<li>만 14세 미만 아동의 개인정보는 수집하지 않습니다(대학생 대상 서비스).</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제7조(개인정보의 안전성 확보조치)</h2>' +
+        '<ul>' +
+          '<li><b>암호화</b>: 비밀번호는 사용자별 salt와 PBKDF2-HMAC-SHA256(8000회 반복)으로 암호화해 저장하며, 통신은 HTTPS로 암호화됩니다.</li>' +
+          '<li><b>접근 통제</b>: 로그인 시 발급되는 세션 토큰을 서버가 직접 검사해, 학생은 본인 기록만, 관리자는 자신이 담당하는 융합전공 학생만 접근할 수 있습니다.</li>' +
+          '<li><b>세션 만료</b>: 로그인 세션은 12시간 뒤 자동으로 만료됩니다.</li>' +
+          '<li><b>초기 비밀번호</b>: 관리자가 비밀번호를 초기화하면 매번 새로운 임의 번호가 발급되고, 다음 로그인 때 새 비밀번호로 바꾸도록 강제합니다.</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>제8조(개인정보 보호책임자)</h2>' +
+        '<p>개인정보 처리에 관한 문의, 열람·정정·삭제 요청은 아래로 연락해 주세요.</p>' +
+        '<ul>' +
+          '<li><b>담당자</b>: '+esc(PRIVACY_OFFICER_NAME)+'</li>' +
+          '<li><b>연락처</b>: '+esc(PRIVACY_OFFICER_CONTACT)+'</li>' +
+          '<li>개별 융합전공의 학생 정보에 관한 문의는 해당 융합전공의 담당교수님(관리자)에게 먼저 연락하실 수도 있습니다.</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div class="step">' +
+        '<h2>부칙</h2>' +
+        '<p>이 개인정보처리방침은 '+esc(PRIVACY_POLICY_EFFECTIVE_DATE)+'부터 시행됩니다. 내용이 바뀌면 이 화면에 바로 반영해 안내합니다.</p>' +
+      '</div>' +
+    '</div></div>'
+  );
+}
+
 /* ============ 이벤트 처리 ============ */
 document.addEventListener('submit', function(e){
   var f = e.target;
@@ -3066,10 +3195,12 @@ document.addEventListener('click', function(e){
   state.formError='';
   if(act==='open-guide'){ state.mode='guide'; state.guideRole = state.role==='admin'?'admin':'student'; window.scrollTo(0,0); }
   else if(act==='close-guide'){ state.mode='app'; }
+  else if(act==='open-privacy'){ captureRegisterDraft(); state.mode='privacy'; window.scrollTo(0,0); }
+  else if(act==='close-privacy'){ state.mode='app'; }
   else if(act==='set-guide-role'){ state.guideRole = el.dataset.role; window.scrollTo(0,0); }
   else if(act==='set-role'){ state.role = el.dataset.role; state.view='login'; state.formOk=''; }
-  else if(act==='goto-register'){ state.view='register'; }
-  else if(act==='goto-register-admin'){ state.view='register-admin'; }
+  else if(act==='goto-register'){ state.view='register'; state.registerDraft=null; }
+  else if(act==='goto-register-admin'){ state.view='register-admin'; state.registerDraft=null; }
   else if(act==='goto-login'){ state.view='login'; state.formOk=''; }
   else if(act==='goto-home'){ state.view='home'; state.editingCourseId=null; state.cache.pdf=null; }
   else if(act==='goto-list'){
