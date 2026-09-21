@@ -253,6 +253,9 @@ button{font-family:inherit;}
 .mini-bar i{position:absolute; left:0; top:0; bottom:0; border-radius:3px;}
 .tag{font-size:11px; color:var(--text-muted); background:var(--track); border-radius:5px; padding:2px 7px;}
 .pending{font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:999px; padding:2px 8px;}
+.todaybtn{white-space:nowrap; border:1px solid var(--border); background:var(--surface);
+  border-radius:999px; padding:4px 11px; font-size:12px;}
+.todaybtn.on{background:var(--success-bg); border-color:var(--success); color:var(--success);}
 .fresh{font-size:11px; font-weight:800; color:var(--success); background:var(--success-bg);
   border:1px solid #BFE6D6; border-radius:999px; padding:2px 8px; white-space:nowrap;}
 .cardtags{display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex:none;}
@@ -432,7 +435,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-21 h';
+var APP_VERSION = '2026-09-21 i';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -932,6 +935,13 @@ function isFresh(s){
   var base = new Date(boardSeen()).getTime();
   return isFinite(t) && isFinite(base) && t > base;
 }
+function isToday(s){
+  if(!s || !s.updatedAt) return false;
+  var d = new Date(s.updatedAt), n = new Date();
+  return d.getFullYear() === n.getFullYear() &&
+         d.getMonth()    === n.getMonth()    &&
+         d.getDate()     === n.getDate();
+}
 function daysSince(iso){
   if(!iso) return null;
   var t = new Date(iso).getTime();
@@ -1103,7 +1113,7 @@ var state = {
   mode:'app', role:'student', view:'login', guideRole:'student',
   studentSession:null, adminSession:null,
   formError:'', formOk:'', modal:null,
-  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, freshOnly:false
+  detailId:null, search:'', certSearch:'', yearFilter:'', tileFilter:'', regBusy:false, slideDir:null, installMsg:'', apiError:'', loading:false, previewMode:false, shotMsg:'', shotBusy:false, importResult:'', importBusy:false, importProgress:'', sessionLost:false, updFilter:''
 };
 var cache = { roster:[], me:null };
 
@@ -1578,7 +1588,8 @@ function boardGroups(){
     if(q && (s.name||'').toLowerCase().indexOf(q)===-1) return false;
     if(state.yearFilter && String(num(s.year))!==state.yearFilter) return false;
     if(pick && !pick(s, analyze(s))) return false;
-    if(state.freshOnly && !isFresh(s)) return false;
+    if(state.updFilter === 'new'   && !isFresh(s)) return false;
+    if(state.updFilter === 'today' && !isToday(s)) return false;
     return true;
   });
   var groups = { R:[], A:[], T:[], S:[] };
@@ -1730,6 +1741,7 @@ function screenBoard(){
   var joined = list.filter(function(s){ return !!s.claimedBy; }).length;
   var staleCount = list.filter(function(s){ return !updatedThisMonth(s); }).length;
   var freshCount = list.filter(isFresh).length;
+  var todayCount = list.filter(isToday).length;
 
 
   return (
@@ -1747,10 +1759,10 @@ function screenBoard(){
     '</div>' +
     '<div class="summary">' +
       [ ['',      't-indigo', '등록 학생',      total,  '앱 가입 '+joined+'명 포함'],
-        ['R',     't-red',    'R단계 이수',     rCount, 'R까지만 인증 (A·T 없음)'],
-        ['A',     't-teal',   'A단계 이수',     aCount, 'A까지 인증 (T 없음)'],
-        ['T',     't-purple', 'T단계 이수',     tCount, 'T까지 인증'],
         ['S',     't-blue',   'S단계 도전 가능', sCount, 'FACE 1개 영역 이상 달성'],
+        ['T',     't-purple', 'T단계 이수',     tCount, 'T까지 인증'],
+        ['A',     't-teal',   'A단계 이수',     aCount, 'A까지 인증 (T 없음)'],
+        ['R',     't-red',    'R단계 이수',     rCount, 'R까지만 인증 (A·T 없음)'],
         ['none',  't-gold',   '인증 전',        noneCount, 'R단계 요건 3종 미완료']
       ].map(function(t){
         var on = (state.tileFilter||'') === t[0];
@@ -1763,11 +1775,15 @@ function screenBoard(){
           '</div></button>';
       }).join('') +
     '</div>' +
-    '<div class="notice-box" style="display:flex;align-items:center;gap:10px;">' +
+    '<div class="notice-box" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
       '<span>' + (state.loading ? '명단을 불러오는 중입니다…'
         : (apiMode ? '서버 연결됨' : '이 기기에만 저장 중') +
           ' · 명단 <b>'+cache.roster.length+'명</b>' +
           (cache.roster.length ? '' : ' — 비어 있습니다')) + '</span>' +
+      '<button class="linklike todaybtn'+(state.updFilter==='today'?' on':'')+'"' +
+        ' data-action="filter-upd" data-key="today">' +
+        (state.updFilter==='today' ? '✓ 오늘 갱신 '+todayCount+'명만 보는 중' : '오늘 갱신 '+todayCount+'명') +
+      '</button>' +
       '<span style="margin-left:auto;font-size:10.5px;color:var(--text-faint);white-space:nowrap;">v'+APP_VERSION+'</span>' +
       '<button class="linklike" data-action="reload" style="white-space:nowrap;">다시 불러오기</button>' +
     '</div>' +
@@ -1782,8 +1798,8 @@ function screenBoard(){
       '<div class="notice-box" style="border-color:var(--success);background:var(--success-bg);color:var(--success);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         '<span>지난번에 보신 뒤로 <b>'+freshCount+'명</b>이 점수를 새로 올렸습니다.</span>' +
         '<span style="margin-left:auto;display:flex;gap:12px;white-space:nowrap;">' +
-          '<button class="linklike" data-action="toggle-fresh" style="color:var(--success);">' +
-            (state.freshOnly ? '전체 보기' : '이 학생들만 보기') + '</button>' +
+          '<button class="linklike" data-action="filter-upd" data-key="new" style="color:var(--success);">' +
+            (state.updFilter === 'new' ? '전체 보기' : '이 학생들만 보기') + '</button>' +
           '<button class="linklike" data-action="mark-seen" style="color:var(--text-muted);">확인 완료</button>' +
         '</span>' +
       '</div>' : '') +
@@ -1796,6 +1812,11 @@ function screenBoard(){
       '<div class="notice-box" style="display:flex;align-items:center;gap:10px;border-color:var(--primary);">' +
         '<span><b>'+esc(TILE_LABEL[state.tileFilter])+'</b> 학생만 보는 중입니다.</span>' +
         '<button class="linklike" data-action="clear-tile" style="margin-left:auto;">전체 보기</button>' +
+      '</div>' : '') +
+    (state.updFilter === 'today' ?
+      '<div class="notice-box" style="display:flex;align-items:center;gap:10px;border-color:var(--success);background:var(--success-bg);color:var(--success);">' +
+        '<span><b>오늘 점수를 올린 학생</b>만 보는 중입니다.</span>' +
+        '<button class="linklike" data-action="filter-upd" data-key="today" style="margin-left:auto;color:var(--success);">전체 보기</button>' +
       '</div>' : '') +
     '<div class="controls">' +
       '<input id="adminSearch" placeholder="이름으로 검색" value="'+esc(state.search)+'">' +
@@ -2866,8 +2887,16 @@ document.addEventListener('click', function(e){
     render(); window.scrollTo(0,0);
   }
   else if(act==='clear-tile'){ state.tileFilter=''; render(); }
-  else if(act==='toggle-fresh'){ state.freshOnly = !state.freshOnly; render(); window.scrollTo(0,0); }
-  else if(act==='mark-seen'){ markAllSeen(); state.freshOnly = false; render(); window.scrollTo(0,0); }
+  else if(act==='filter-upd'){
+    var k = el.dataset.key || '';
+    state.updFilter = (state.updFilter === k) ? '' : k;
+    render(); window.scrollTo(0,0);
+  }
+  else if(act==='mark-seen'){
+    markAllSeen();
+    if(state.updFilter === 'new') state.updFilter = '';
+    render(); window.scrollTo(0,0);
+  }
   else if(act==='goto-import'){ navGo(function(){ state.view='import'; state.importResult=''; }); }
   else if(act==='do-import'){ doImport(); }
   else if(act==='view-shot'){
