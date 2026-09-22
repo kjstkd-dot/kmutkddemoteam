@@ -59,7 +59,10 @@ var DEFAULT_MAJOR_ID = 'global-k';
 function getBook() {
   var id = PropertiesService.getScriptProperties().getProperty('bookId');
   if (id) {
-    try { return SpreadsheetApp.openById(id); } catch (e) { /* 지워졌으면 새로 만든다 */ }
+    // bookId가 이미 저장돼 있다면 그 시트를 열지 못했을 때 조용히 새 빈 시트를
+    // 만들어버리지 않는다(예전엔 그래서 실제 데이터가 든 시트와 연결이 끊긴 적이 있었다).
+    // 여기서 에러가 나면 doGet/doPost 쪽에서 그대로 오류로 보여준다.
+    return SpreadsheetApp.openById(id);
   }
   var book = SpreadsheetApp.create(SHEET_NAME);
   PropertiesService.getScriptProperties().setProperty('bookId', book.getId());
