@@ -186,11 +186,31 @@ function randomToken() {
   return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 }
 
+// 세션을 만들 때마다 만료된 세션과, 같은 사용자의 예전 세션을 같이 정리한다.
+// (안 그러면 새로고침/재로그인마다 줄이 계속 쌓여서, 매 요청마다 훑어야 하는
+// 목록이 끝없이 길어지고 앱 전체가 점점 느려진다.)
 function createSession(book, role, id, majorId) {
   var sh = getSheet(book, 'cvg_sessions');
   var token = randomToken();
   var expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString();
-  sh.appendRow([token, JSON.stringify({ role: role, id: String(id), majorId: majorId, expiresAt: expiresAt })]);
+  var now = Date.now();
+  var last = sh.getLastRow();
+  var kept = [];
+  if (last >= 2) {
+    var rows = sh.getRange(2, 1, last - 1, 2).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      var obj;
+      try { obj = JSON.parse(rows[i][1] || '{}'); } catch (e) { obj = null; }
+      if (!obj || !obj.expiresAt) continue;
+      if (new Date(obj.expiresAt).getTime() < now) continue;
+      if (String(obj.role) === String(role) && String(obj.id) === String(id)) continue;
+      kept.push(rows[i]);
+    }
+  }
+  kept.push([token, JSON.stringify({ role: role, id: String(id), majorId: majorId, expiresAt: expiresAt })]);
+  sh.clearContents();
+  sh.getRange(1, 1, 1, 2).setValues([['id', 'data']]);
+  sh.getRange(2, 1, kept.length, 2).setValues(kept);
   return token;
 }
 
