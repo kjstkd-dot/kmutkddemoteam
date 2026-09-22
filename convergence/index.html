@@ -202,8 +202,9 @@ button{font-family:inherit;}
 .kboard{display:grid; grid-template-columns:1fr 3fr; gap:12px; align-items:start;}
 .kboard-left{display:flex; flex-direction:column; gap:12px;}
 .kcol{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-l); overflow:hidden; display:flex; flex-direction:column;}
-.kcol-head{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 14px; color:#fff; font-weight:800; font-size:12.5px; word-break:keep-all;}
-.kcol-count{background:rgba(255,255,255,.28); border-radius:999px; padding:2px 9px; font-family:var(--font-mono); white-space:nowrap;}
+.kcol-head{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 14px; color:#fff; font-weight:800; font-size:12.5px; word-break:keep-all; width:100%; border:none; cursor:pointer; font-family:inherit; text-align:left;}
+.kcol-count{background:rgba(255,255,255,.28); border-radius:999px; padding:2px 9px; font-family:var(--font-mono); white-space:nowrap; display:flex; align-items:center; gap:3px;}
+.kcol-chev{font-size:9px;}
 .kcol-body{padding:10px; display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow-y:auto;}
 .kcol-body.grid{display:grid; grid-template-columns:repeat(3,1fr); align-content:start;}
 .kcol-3 .kcol-head{background:linear-gradient(100deg,#2563EB,#60A5FA);}
@@ -348,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 j';
+var APP_VERSION = '2026-09-22 k';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5902,6 +5903,7 @@ var state = {
   expandedTrack: null,
   expandedRecGroups: {},
   expandedExplain: {},
+  expandedKcol: {},
   q: '', filter: 'all',
   cache: { me:null, roster:[], pdf: null }
 };
@@ -7101,6 +7103,26 @@ function studentRosterCard(s){
       '<span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
   '</button>';
 }
+// 학생이 없는 칸은 기본으로 접어서 화면을 아낀다. 오른쪽 인원 수(배지)를 누르면
+// 펼치고 접을 수 있다 — 한 번 직접 펼치거나 접으면(state.expandedKcol) 그 선택을 기억한다.
+function kcolExpanded(key, hasStudents){
+  if(Object.prototype.hasOwnProperty.call(state.expandedKcol, key)) return state.expandedKcol[key];
+  return hasStudents;
+}
+function kcolHtml(key, cls, title, amount, list, bodyClass){
+  var expanded = kcolExpanded(key, list.length>0);
+  return '<div class="kcol '+cls+(expanded?'':' collapsed')+'">' +
+    '<button type="button" class="kcol-head" data-action="toggle-kcol" data-key="'+esc(key)+'">' +
+      '<span>'+esc(title)+(amount?' · '+esc(amount):'')+'</span>' +
+      '<span class="kcol-count">'+list.length+'명<span class="kcol-chev">'+(expanded?'▾':'▸')+'</span></span>' +
+    '</button>' +
+    (expanded ?
+      '<div class="kcol-body'+(bodyClass?' '+bodyClass:'')+'">' +
+        (list.length ? list.map(studentRosterCardBoard).join('') : '<div class="empty-state" style="padding:20px 8px; font-size:12px;">해당 학생 없음</div>') +
+      '</div>'
+    : '') +
+  '</div>';
+}
 // K-Cloud 인증 단계별 보드(관리자 PC 화면)에 쓰는 학생 카드. 이수경로(복수전공/부전공)
 // 충족 배지에 더해, 부전공(1개) 기준 세 조건(핵심과목/융합전공학점/제1전공학점)의
 // 진행 상황을 미니 스텝으로 한눈에 보여준다.
@@ -7129,25 +7151,15 @@ function kcloudBoardHtml(rows){
     (idx>=0 ? buckets[idx] : noneBucket).push(s);
   });
   var columns = stageDefs.map(function(st, i){
-    return { cls: colorClasses[i] || 'kcol-1', title: st.label.replace(/^\d단계\s*·\s*/,'')+' 달성',
+    return { key: st.key, cls: colorClasses[i] || 'kcol-1', title: st.label.replace(/^\d단계\s*·\s*/,'')+' 달성',
       amount: num(st.scholarship/10000)+'만원', list: buckets[i] };
   });
   var achievedHtml = '<div class="kboard-left">' + columns.map(function(col){
-    return '<div class="kcol '+col.cls+'">' +
-      '<div class="kcol-head"><span>'+esc(col.title)+(col.amount?' · '+esc(col.amount):'')+'</span><span class="kcol-count">'+col.list.length+'명</span></div>' +
-      '<div class="kcol-body">' +
-        (col.list.length ? col.list.map(studentRosterCardBoard).join('') : '<div class="empty-state" style="padding:20px 8px; font-size:12px;">해당 학생 없음</div>') +
-      '</div>' +
-    '</div>';
+    return kcolHtml(col.key, col.cls, col.title, col.amount, col.list);
   }).join('') + '</div>';
   // 달성 칸(복수전공/부전공/MD)은 아직 사람이 적을 때가 많아서 왼쪽에 좁게 세로로
   // 쌓아두고, 남는 공간은 "아직 미달성" 학생을 한 줄에 3명씩 보여주는 데 쓴다.
-  var noneHtml = '<div class="kcol kcol-none kboard-main">' +
-    '<div class="kcol-head"><span>아직 미달성</span><span class="kcol-count">'+noneBucket.length+'명</span></div>' +
-    '<div class="kcol-body grid">' +
-      (noneBucket.length ? noneBucket.map(studentRosterCardBoard).join('') : '<div class="empty-state" style="padding:20px 8px; font-size:12px;">해당 학생 없음</div>') +
-    '</div>' +
-  '</div>';
+  var noneHtml = kcolHtml('none', 'kcol-none kboard-main', '아직 미달성', '', noneBucket, 'grid');
   return '<div class="kboard">' + achievedHtml + noneHtml + '</div>';
 }
 function screenAdminList(){
@@ -7941,6 +7953,11 @@ document.addEventListener('click', function(e){
   else if(act==='toggle-track-info'){ state.showTrackInfo = !state.showTrackInfo; }
   else if(act==='toggle-kcloud-info'){ state.showKcloudInfo = !state.showKcloudInfo; }
   else if(act==='toggle-rec-group'){ var rk=el.dataset.key; state.expandedRecGroups[rk] = !state.expandedRecGroups[rk]; }
+  else if(act==='toggle-kcol'){
+    var kEl = el.closest('.kcol');
+    var wasExpanded = kEl ? !kEl.classList.contains('collapsed') : false;
+    state.expandedKcol[el.dataset.key] = !wasExpanded;
+  }
   else if(act==='toggle-explain'){ var eid=el.dataset.id; state.expandedExplain[eid] = !state.expandedExplain[eid]; }
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
