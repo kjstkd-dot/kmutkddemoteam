@@ -212,7 +212,8 @@ button{font-family:inherit;}
 .kcol-none .kcol-head{background:linear-gradient(100deg,#6B7280,#9CA3AF);}
 .rcard.board{padding:11px 12px;}
 .trk-steps{display:flex; align-items:flex-start; margin-top:8px;}
-.trk-step{display:flex; flex-direction:column; align-items:center; gap:2px;}
+.trk-step{display:flex; flex-direction:column; align-items:center; gap:2px; flex:1 1 0; min-width:0;}
+.trk-label{font-size:7.5px; color:var(--text-faint); text-align:center; line-height:1.2; word-break:keep-all;}
 .trk-dot{width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:800; color:var(--text-muted); background:var(--surface); flex:0 0 auto;}
 .trk-step.done .trk-dot{background:var(--success); border-color:var(--success); color:#fff;}
 .trk-frac{font-size:9px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap;}
@@ -346,7 +347,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 h';
+var APP_VERSION = '2026-09-22 i';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5500,13 +5501,14 @@ function primaryCreditsTotal(student){
 // 보여준다(경로마다 기준이 달라서 매번 바뀌면 카드마다 비교하기 어려우니 고정 기준 하나로).
 function trackProgressMiniHtml(student){
   var items = [
-    { cur: selfCourseCredits(student), min: SELF_COURSE_MIN_CREDITS },
-    { cur: totalCredits(student), min: MINOR_MIN },
-    { cur: primaryCreditsTotal(student), min: MINOR_PRIMARY_SINGLE }
+    { label:'융합전공 이수', cur: selfCourseCredits(student), min: SELF_COURSE_MIN_CREDITS },
+    { label:'융합전공학점', cur: totalCredits(student), min: MINOR_MIN },
+    { label:'제1전공 학점', cur: primaryCreditsTotal(student), min: MINOR_PRIMARY_SINGLE }
   ];
   return '<div class="trk-steps">' + items.map(function(it, i){
     var done = it.cur >= it.min;
     return '<div class="trk-step'+(done?' done':'')+'">' +
+      '<div class="trk-label">'+esc(it.label)+'</div>' +
       '<div class="trk-dot">'+(done?'✓':(i+1))+'</div>' +
       '<div class="trk-frac">'+it.cur+'/'+it.min+'</div>' +
     '</div>' + (i<items.length-1 ? '<div class="trk-line"></div>' : '');
@@ -7105,9 +7107,9 @@ function studentRosterCardBoard(s){
   var m = anyTrackMet(s);
   var b = bestTrack(s);
   return '<button class="rcard board '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
+    '<div class="mini" style="margin-bottom:4px;"><span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
     '<div class="nm">'+esc(s.name)+'</div>' +
     '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
-    '<div class="mini"><span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
     trackProgressMiniHtml(s) +
   '</button>';
 }
