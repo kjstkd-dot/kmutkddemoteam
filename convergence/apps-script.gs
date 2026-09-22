@@ -186,31 +186,33 @@ function randomToken() {
   return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 }
 
-// 세션을 만들 때마다 만료된 세션과, 같은 사용자의 예전 세션을 같이 정리한다.
-// (안 그러면 새로고침/재로그인마다 줄이 계속 쌓여서, 매 요청마다 훑어야 하는
-// 목록이 끝없이 길어지고 앱 전체가 점점 느려진다.)
+// 같은 사용자가 다시 로그인하면 예전 세션 행을 새 걸로 덮어써서, 새로고침/재로그인마다
+// 줄이 끝없이 쌓이는 걸 막는다(그러면 매 요청마다 훑어야 하는 목록이 점점 길어져서
+// 앱 전체가 느려진다). 시트를 통째로 비웠다가 다시 쓰지는 않는다 — 그 사이 순간적으로
+// 다른 사람의 getSession 조회가 빈 시트를 보게 되는 걸 피하기 위해서다.
 function createSession(book, role, id, majorId) {
   var sh = getSheet(book, 'cvg_sessions');
   var token = randomToken();
   var expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString();
-  var now = Date.now();
-  var last = sh.getLastRow();
-  var kept = [];
-  if (last >= 2) {
-    var rows = sh.getRange(2, 1, last - 1, 2).getValues();
-    for (var i = 0; i < rows.length; i++) {
-      var obj;
-      try { obj = JSON.parse(rows[i][1] || '{}'); } catch (e) { obj = null; }
-      if (!obj || !obj.expiresAt) continue;
-      if (new Date(obj.expiresAt).getTime() < now) continue;
-      if (String(obj.role) === String(role) && String(obj.id) === String(id)) continue;
-      kept.push(rows[i]);
+  var data = [token, JSON.stringify({ role: role, id: String(id), majorId: majorId, expiresAt: expiresAt })];
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var last = sh.getLastRow();
+    var targetRow = 0;
+    if (last >= 2) {
+      var rows = sh.getRange(2, 1, last - 1, 2).getValues();
+      for (var i = 0; i < rows.length; i++) {
+        var obj;
+        try { obj = JSON.parse(rows[i][1] || '{}'); } catch (e) { obj = null; }
+        if (obj && String(obj.role) === String(role) && String(obj.id) === String(id)) { targetRow = i + 2; break; }
+      }
     }
+    if (targetRow) sh.getRange(targetRow, 1, 1, 2).setValues([data]);
+    else sh.appendRow(data);
+  } finally {
+    lock.releaseLock();
   }
-  kept.push([token, JSON.stringify({ role: role, id: String(id), majorId: majorId, expiresAt: expiresAt })]);
-  sh.clearContents();
-  sh.getRange(1, 1, 1, 2).setValues([['id', 'data']]);
-  sh.getRange(2, 1, kept.length, 2).setValues(kept);
   return token;
 }
 
@@ -297,13 +299,15 @@ function doRegisterStudent(book, req) {
   if (!req.password || req.password.length < 6) fail('WEAK_PASSWORD');
   var sh = getSheet(book, 'cvg_students');
   var doc;
+  // 비밀번호 해시 계산(PBKDF2, 느리다)은 잠금 밖에서 미리 해둔다 — 다른 요청과 공유하는
+  // 상태가 전혀 없으니 여기서 기다릴 필요가 없다.
+  var hashed = hashNewPassword(req.password);
   // 중복 확인(findRow)과 실제 추가(writeRow) 사이에 다른 요청이 끼어들면(버튼 두 번 클릭,
   // 네트워크 재시도 등) 같은 학번으로 행이 두 개 생길 수 있어 잠금으로 통째로 묶는다.
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     if (findRow(sh, req.id)) fail('DUPLICATE_ID');
-    var hashed = hashNewPassword(req.password);
     doc = Object.assign({
       name: req.name, dept: req.dept || '', year: req.year || '',
       courses: [], recognizedSemesters: '', majorId: req.majorId || DEFAULT_MAJOR_ID,
@@ -325,6 +329,7 @@ function doRegisterAdmin(book, req) {
   var majorId = req.majorId || DEFAULT_MAJOR_ID;
   var adminSh = getSheet(book, 'cvg_admins');
   var doc;
+  var hashed = hashNewPassword(req.password);
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -339,7 +344,6 @@ function doRegisterAdmin(book, req) {
       if (req.code !== required) fail('ADMIN_CODE_INVALID');
     }
     if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
-    var hashed = hashNewPassword(req.password);
     doc = Object.assign({ name: req.name, majorId: majorId, createdAt: new Date().toISOString() }, hashed);
     writeRow(adminSh, 0, req.id, doc);
   } finally {
@@ -359,12 +363,16 @@ function doLogin(book, req) {
   var row = findRow(sh, req.id);
   if (!row) fail('NOT_REGISTERED');
   var doc = readRow(sh, row);
+  // 비밀번호 검사(PBKDF2, 느리다)는 이 학번/관리자번호 자신의 데이터만 보고 판단하니
+  // 잠금 밖에서 해도 다른 사용자와 부딪힐 일이 없다.
+  if (!verifyPassword(req.password, doc)) fail('INVALID_CREDENTIALS');
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (!verifyPassword(req.password, doc)) fail('INVALID_CREDENTIALS');
     // verifyPassword가 예전 방식 계정을 새 방식으로 갱신해뒀을 수 있으니 다시 저장한다.
-    writeRow(sh, row, req.id, doc);
+    // (그 사이 행 위치가 바뀌었을 수 있으니 다시 찾는다.)
+    var row2 = findRow(sh, req.id);
+    if (row2) writeRow(sh, row2, req.id, doc);
   } finally {
     lock.releaseLock();
   }
@@ -381,18 +389,20 @@ function doChangePassword(book, req) {
   if (!req.newPassword || req.newPassword.length < 6) fail('WEAK_PASSWORD');
   var col = session.role === 'admin' ? 'cvg_admins' : 'cvg_students';
   var sh = getSheet(book, col);
+  var row = findRow(sh, session.id);
+  var doc = readRow(sh, row);
+  if (!doc) fail('NOT_FOUND');
+  // 비밀번호 검사/새 해시 계산(둘 다 PBKDF2, 느리다)은 본인 데이터만 보므로 잠금 밖에서 한다.
+  if (!verifyPassword(req.oldPassword, doc)) fail('INVALID_CREDENTIALS');
+  var hashed = hashNewPassword(req.newPassword);
+  doc.passwordSalt = hashed.passwordSalt;
+  doc.passwordHash = hashed.passwordHash;
+  doc.mustChangePassword = false;
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var row = findRow(sh, session.id);
-    var doc = readRow(sh, row);
-    if (!doc) fail('NOT_FOUND');
-    if (!verifyPassword(req.oldPassword, doc)) fail('INVALID_CREDENTIALS');
-    var hashed = hashNewPassword(req.newPassword);
-    doc.passwordSalt = hashed.passwordSalt;
-    doc.passwordHash = hashed.passwordHash;
-    doc.mustChangePassword = false;
-    writeRow(sh, row, session.id, doc);
+    var row2 = findRow(sh, session.id);
+    if (row2) writeRow(sh, row2, session.id, doc);
   } finally {
     lock.releaseLock();
   }
@@ -403,23 +413,25 @@ function doResetPassword(book, req) {
   var session = requireSession(book, req.token);
   if (session.role !== 'admin') fail('FORBIDDEN');
   var sh = getSheet(book, 'cvg_students');
+  var row = findRow(sh, req.studentId);
+  var doc = readRow(sh, row);
+  if (!doc) fail('NOT_FOUND');
+  if ((doc.majorId || DEFAULT_MAJOR_ID) !== session.majorId) fail('FORBIDDEN');
+  var tempPw = randomTempPassword();
+  // 새 임시 비밀번호 해시 계산(PBKDF2, 느리다)은 본인 데이터만 보므로 잠금 밖에서 한다.
+  var hashed = hashNewPassword(tempPw);
+  doc.passwordSalt = hashed.passwordSalt;
+  doc.passwordHash = hashed.passwordHash;
+  doc.mustChangePassword = true;
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var row = findRow(sh, req.studentId);
-    var doc = readRow(sh, row);
-    if (!doc) fail('NOT_FOUND');
-    if ((doc.majorId || DEFAULT_MAJOR_ID) !== session.majorId) fail('FORBIDDEN');
-    var tempPw = randomTempPassword();
-    var hashed = hashNewPassword(tempPw);
-    doc.passwordSalt = hashed.passwordSalt;
-    doc.passwordHash = hashed.passwordHash;
-    doc.mustChangePassword = true;
-    writeRow(sh, row, req.studentId, doc);
-    return { ok: true, tempPassword: tempPw };
+    var row2 = findRow(sh, req.studentId);
+    if (row2) writeRow(sh, row2, req.studentId, doc);
   } finally {
     lock.releaseLock();
   }
+  return { ok: true, tempPassword: tempPw };
 }
 
 // 예전에는 회원가입에 잠금이 없어서(지금은 doRegisterStudent에 추가함) 같은 학번으로
