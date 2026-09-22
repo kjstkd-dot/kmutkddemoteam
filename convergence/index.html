@@ -344,7 +344,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 f';
+var APP_VERSION = '2026-09-22 g';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5725,6 +5725,18 @@ function kcloudCurrentStage(student){
 function kcloudNextStage(student){
   return kcloudCertAnalysis(student).filter(function(s){ return !s.met; })[0] || null;
 }
+// 다음 단계까지 남은 학점(및 자체설계교과목 개수)이 적을수록 앞에 오도록 정렬한다
+// — "가나다순"이나 "학년순"이 아니라 다음 단계를 곧 채울 것 같은 학생이 먼저 보이게.
+// 이미 최고 단계까지 다 채운 학생은(다음 단계가 없음) 맨 앞으로 온다.
+function kcloudSortByProximity(list){
+  return list.slice().sort(function(a,b){
+    var na = kcloudNextStage(a), nb = kcloudNextStage(b);
+    var ga = na ? na.creditGap : -1, gb = nb ? nb.creditGap : -1;
+    if(ga !== gb) return ga - gb;
+    var sa = na ? na.selfGap : -1, sb = nb ? nb.selfGap : -1;
+    return sa - sb;
+  });
+}
 // 학칙 제44조①: 복수전공(융합전공 포함)으로 이수하는 경우, 제1전공 학과의 졸업논문이
 // 필수과목이면 반드시 이수해야 한다. 부전공에는 적용되지 않는다.
 function thesisApplies(student, trackKey){ return trackKey==='double' && !!student.thesisRequired; }
@@ -7090,6 +7102,7 @@ function kcloudBoardHtml(rows){
   var colorClasses = ['kcol-3','kcol-2','kcol-1'];
   var buckets = stageDefs.map(function(){ return []; });
   var noneBucket = [];
+  rows = kcloudSortByProximity(rows);
   rows.forEach(function(s){
     var cur = kcloudCurrentStage(s);
     var idx = cur ? stageDefs.map(function(st){ return st.key; }).indexOf(cur.key) : -1;
