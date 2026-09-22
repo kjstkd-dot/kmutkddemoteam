@@ -198,6 +198,25 @@ button{font-family:inherit;}
 .badge.met{background:var(--success-bg); color:var(--success);}
 .badge.unmet{background:var(--amber-bg); color:var(--amber);}
 
+/* K-Cloud 인증 단계별 보드 (관리자 PC 화면) */
+.kboard{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:start;}
+.kcol{background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-l); overflow:hidden; display:flex; flex-direction:column;}
+.kcol-head{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 14px; color:#fff; font-weight:800; font-size:12.5px; word-break:keep-all;}
+.kcol-count{background:rgba(255,255,255,.28); border-radius:999px; padding:2px 9px; font-family:var(--font-mono); white-space:nowrap;}
+.kcol-body{padding:10px; display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow-y:auto;}
+.kcol-3 .kcol-head{background:linear-gradient(100deg,#2563EB,#60A5FA);}
+.kcol-2 .kcol-head{background:linear-gradient(100deg,#7C3AED,#C4B5FD);}
+.kcol-1 .kcol-head{background:linear-gradient(100deg,#0D9488,#5EEAD4);}
+.kcol-none .kcol-head{background:linear-gradient(100deg,#6B7280,#9CA3AF);}
+.rcard.board{padding:11px 12px;}
+.kc-steps.mini{margin-top:8px; gap:0;}
+.kc-steps.mini .kc-dot{width:16px; height:16px; font-size:8.5px; border-width:1.5px;}
+.kc-steps.mini .kc-label, .kc-steps.mini .kc-amt{display:none;}
+.kc-steps.mini .kc-line{flex:0 0 8px; margin-top:6.5px;}
+@media (max-width:760px){
+  .kboard{grid-template-columns:1fr;}
+}
+
 .overlay{position:fixed; inset:0; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;}
 .modal{width:100%; max-width:420px; background:var(--surface); border-radius:var(--radius-l); padding:22px 20px; box-shadow:var(--shadow-card); max-height:86vh; overflow-y:auto;}
 .modal h3{font-size:17px; margin-bottom:4px;}
@@ -322,7 +341,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 d';
+var APP_VERSION = '2026-09-22 e';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -6257,6 +6276,18 @@ function myConvergenceCoursesBlock(student){
 // K-Cloud 융합 성장 인증제: 이수 조건과 별개로, 단계별(9/15/33학점)로 이수하고 성장
 // 스토리·페스타까지 마치면 장학금을 주는 제도. 3단계 스텝을 한눈에 보여주고, 다음 단계까지
 // 뭐가 더 필요한지 알려준다.
+// K-Cloud 단계 원(●) + 연결선 마크업. 학생 홈 화면의 큰 카드와 관리자 보드의
+// 작은 미니 스텝(kcloudStepsMiniHtml에서 재사용)이 같은 로직을 쓰도록 뽑아냈다.
+function kcloudStepsHtml(stages, next){
+  return stages.map(function(s, i){
+    var cls = s.met ? 'done' : (next && s.key===next.key ? 'next' : '');
+    return '<div class="kc-step '+cls+'">' +
+      '<div class="kc-dot">'+(s.met?'✓':(i+1))+'</div>' +
+      '<div class="kc-label">'+esc(s.label.replace(/^\d단계\s*·\s*/,''))+'</div>' +
+      '<div class="kc-amt">'+num(s.scholarship/10000)+'만원</div>' +
+    '</div>';
+  }).join('<div class="kc-line"></div>');
+}
 function kcloudCertBlock(student){
   // 이 융합전공에 K-Cloud 인증제 단계가 아예 없거나(신규 융합전공), 관리자가
   // 학점을 전부 0으로 둬서 "대상 아님"으로 표시해뒀으면 카드 자체를 숨긴다.
@@ -6265,14 +6296,7 @@ function kcloudCertBlock(student){
   var current = kcloudCurrentStage(student);
   var next = kcloudNextStage(student);
   var selfCr = selfCourseCredits(student);
-  var stepsHtml = stages.map(function(s, i){
-    var cls = s.met ? 'done' : (next && s.key===next.key ? 'next' : '');
-    return '<div class="kc-step '+cls+'">' +
-      '<div class="kc-dot">'+(s.met?'✓':(i+1))+'</div>' +
-      '<div class="kc-label">'+esc(s.label.replace(/^\d단계\s*·\s*/,''))+'</div>' +
-      '<div class="kc-amt">'+num(s.scholarship/10000)+'만원</div>' +
-    '</div>';
-  }).join('<div class="kc-line"></div>');
+  var stepsHtml = kcloudStepsHtml(stages, next);
   var statusText = current ?
     ('지금 <b>'+esc(current.label)+'</b> 조건을 충족했어요 (장학금 '+num(current.scholarship/10000)+'만원).') :
     '아직 1단계 조건도 충족하지 못했어요.';
@@ -7041,6 +7065,47 @@ function studentRosterCard(s){
       '<span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
   '</button>';
 }
+// K-Cloud 인증 단계별 보드(관리자 PC 화면)에 쓰는 학생 카드. 이수경로(복수전공/부전공)
+// 충족 배지에 더해, 지금 몇 단계까지 왔는지 미니 스텝으로 한눈에 보여준다.
+function studentRosterCardBoard(s){
+  var m = anyTrackMet(s);
+  var b = bestTrack(s);
+  var stages = kcloudCertAnalysis(s);
+  var next = kcloudNextStage(s);
+  return '<button class="rcard board '+(m?'met':'unmet')+'" data-action="open-detail" data-id="'+esc(s.id)+'">' +
+    '<div class="nm">'+esc(s.name)+'</div>' +
+    '<div class="mt">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</div>' +
+    '<div class="mini"><span class="badge '+(m?'met':'unmet')+'">'+(m?esc(b.label)+' 충족':'미충족')+'</span></div>' +
+    '<div class="kc-steps mini">' + kcloudStepsHtml(stages, next) + '</div>' +
+  '</button>';
+}
+// 학생들을 지금까지 충족한 K-Cloud 인증 단계(3→2→1단계, 아직 없으면 미달성)별로
+// 나눠 보여주는 보드. 참고 화면(단계별 칸반 보드)과 같은 구조를, 이 앱에 이미 있는
+// K-Cloud 3단계 인증제 개념 그대로 적용한 것이다.
+function kcloudBoardHtml(rows){
+  var stageDefs = KCLOUD_CERT_STAGES.slice().reverse(); // 가장 높은 단계(3단계)부터 왼쪽 칸에
+  var colorClasses = ['kcol-3','kcol-2','kcol-1'];
+  var buckets = stageDefs.map(function(){ return []; });
+  var noneBucket = [];
+  rows.forEach(function(s){
+    var cur = kcloudCurrentStage(s);
+    var idx = cur ? stageDefs.map(function(st){ return st.key; }).indexOf(cur.key) : -1;
+    (idx>=0 ? buckets[idx] : noneBucket).push(s);
+  });
+  var columns = stageDefs.map(function(st, i){
+    return { cls: colorClasses[i] || 'kcol-1', title: st.label.replace(/^\d단계\s*·\s*/,'')+' 달성',
+      amount: num(st.scholarship/10000)+'만원', list: buckets[i] };
+  });
+  columns.push({ cls:'kcol-none', title:'아직 미달성', amount:'', list: noneBucket });
+  return '<div class="kboard">' + columns.map(function(col){
+    return '<div class="kcol '+col.cls+'">' +
+      '<div class="kcol-head"><span>'+esc(col.title)+(col.amount?' · '+esc(col.amount):'')+'</span><span class="kcol-count">'+col.list.length+'명</span></div>' +
+      '<div class="kcol-body">' +
+        (col.list.length ? col.list.map(studentRosterCardBoard).join('') : '<div class="empty-state" style="padding:20px 8px; font-size:12px;">해당 학생 없음</div>') +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
 function screenAdminList(){
   var roster = state.cache.roster || [];
   var total = roster.length;
@@ -7053,17 +7118,25 @@ function screenAdminList(){
     if(state.filter==='unmet' && m) return false;
     return true;
   });
-  var groups = {};
-  rows.forEach(function(s){
-    var g = studentGradeLevel(s);
-    var key = g ? (g+'학년') : '학년 미확인';
-    (groups[key] = groups[key] || []).push(s);
-  });
-  var groupOrder = ['1학년','2학년','3학년','4학년','학년 미확인'].filter(function(k){ return groups[k]; });
-  var rosterHtml = groupOrder.map(function(k){
-    return '<div class="row-between" style="margin-top:14px; margin-bottom:6px;"><b style="font-size:12.5px; color:var(--text-muted);">'+esc(k)+' ('+groups[k].length+'명)</b></div>' +
-      '<div class="roster">' + groups[k].map(studentRosterCard).join('') + '</div>';
-  }).join('');
+  // 이 융합전공에 K-Cloud 인증제가 설정돼 있으면 인증 단계별 보드로, 아니면
+  // (신규 융합전공 등, 아직 K-Cloud 대상이 아닌 경우) 예전처럼 학년별 목록으로 보여준다.
+  var kcloudEnabled = KCLOUD_CERT_STAGES.length && KCLOUD_CERT_STAGES.some(function(st){ return st.creditMin>0; });
+  var rosterHtml;
+  if(kcloudEnabled){
+    rosterHtml = kcloudBoardHtml(rows);
+  } else {
+    var groups = {};
+    rows.forEach(function(s){
+      var g = studentGradeLevel(s);
+      var key = g ? (g+'학년') : '학년 미확인';
+      (groups[key] = groups[key] || []).push(s);
+    });
+    var groupOrder = ['1학년','2학년','3학년','4학년','학년 미확인'].filter(function(k){ return groups[k]; });
+    rosterHtml = groupOrder.map(function(k){
+      return '<div class="row-between" style="margin-top:14px; margin-bottom:6px;"><b style="font-size:12.5px; color:var(--text-muted);">'+esc(k)+' ('+groups[k].length+'명)</b></div>' +
+        '<div class="roster">' + groups[k].map(studentRosterCard).join('') + '</div>';
+    }).join('');
+  }
   return (
     '<div class="phone">' +
       '<div class="eyebrow">관리자</div>' +
