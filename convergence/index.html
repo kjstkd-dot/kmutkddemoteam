@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 l';
+var APP_VERSION = '2026-09-22 m';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -7233,7 +7233,10 @@ function screenAdminDetail(){
     '<div class="phone">' +
       '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
       '<div class="eyebrow">학생 상세</div>' +
-      '<h2 class="screen-title">'+esc(s.name)+' <span class="badge '+(m?'met':'unmet')+'" style="margin-left:6px;">'+(m?esc(b.label)+' 충족':'미충족')+'</span></h2>' +
+      '<div class="row-between" style="margin-top:6px; margin-bottom:4px; align-items:flex-start;">' +
+        '<h2 class="screen-title" style="margin:0;">'+esc(s.name)+' <span class="badge '+(m?'met':'unmet')+'" style="margin-left:6px;">'+(m?esc(b.label)+' 충족':'미충족')+'</span></h2>' +
+        '<button type="button" class="btn btn-ghost" data-action="share-student-analysis" data-id="'+esc(s.id)+'" style="width:auto; flex:0 0 auto; font-size:11.5px; padding:8px 12px; white-space:nowrap;">📤 학생에게 알리기</button>' +
+      '</div>' +
       '<p class="screen-sub">'+esc(s.id)+(s.dept?' · '+esc(s.dept):'')+(s.year?' · '+esc(s.year)+'학번':'')+'</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
@@ -7949,6 +7952,7 @@ document.addEventListener('click', function(e){
   else if(act==='goto-microdegree-form'){ state.editingMicrodegreeId=null; state.view='microdegree-form'; }
   else if(act==='goto-info-form'){ state.view='info-form'; }
   else if(act==='share-link'){ shareLink(); return; }
+  else if(act==='share-student-analysis'){ shareStudentAnalysis(el.dataset.id); return; }
   else if(act==='open-install'){
     if(deferredInstallPrompt){
       deferredInstallPrompt.prompt();
@@ -8005,6 +8009,62 @@ function shareLink(){
       state.shareToast = '링크를 복사했어요.';
       render();
       setTimeout(function(){ state.shareToast=''; render(); }, 2500);
+    }).catch(function(){
+      state.shareToast = '복사에 실패했어요.';
+      render();
+    });
+  } else {
+    state.shareToast = '이 브라우저에서는 지원하지 않아요.';
+    render();
+  }
+}
+
+/* ============ 학생 상세 분석 내용 카카오톡 등으로 공유 ============ */
+// 관리자 상세 화면에서 보는 내용(이수 현황판/K-Cloud 인증제 진행 상황)을 글로 요약한다.
+function studentAnalysisText(student){
+  var met = anyTrackMet(student);
+  var best = bestTrack(student);
+  var lines = [];
+  lines.push('['+TRACK_NAME+'] '+student.name+'님 이수 현황');
+  lines.push(String(student.id)+(student.dept?' · '+student.dept:'')+(student.year?' · '+student.year+'학번':''));
+  lines.push('');
+  if(met){
+    lines.push('✅ '+best.label+'으로 이수 조건을 충족했어요.');
+  } else {
+    lines.push('❗ 아직 어떤 경로도 충족하지 못했어요.');
+    lines.push('지금 페이스면 '+best.label+'이 가장 빨리 채워져요 (앞으로 '+best.cvgGap+'학점).');
+    lines.push('인정학기: '+(eligibleToApply(student)?'신청 가능':'신청 자격 미충족(3학기 이상 필요)'));
+  }
+  if(KCLOUD_CERT_STAGES.length && KCLOUD_CERT_STAGES.some(function(st){ return st.creditMin>0; })){
+    var current = kcloudCurrentStage(student);
+    var next = kcloudNextStage(student);
+    lines.push('');
+    lines.push('💰 K-Cloud 융합 성장 인증제');
+    lines.push(current ? ('현재 '+current.label+' 조건 충족 (장학금 '+num(current.scholarship/10000)+'만원)') : '아직 1단계 조건도 충족하지 못했어요.');
+    lines.push(next ?
+      (next.label+'까지 앞으로 융합전공 '+next.creditGap+'학점'+(next.selfGap?' · 자체개설과목 '+next.selfGap+'개':'')+' 더 필요해요.') :
+      '모든 단계를 충족했어요! 3단계 장학금 100만원까지 신청할 수 있어요.');
+  }
+  var selfCr = selfCourseCredits(student);
+  lines.push('');
+  lines.push('융합전공 자체교과목 이수: '+selfCr+' / '+SELF_COURSE_MIN_CREDITS+'학점'+(coreMet(student)?' (충족)':''));
+  return lines.join('\n');
+}
+function shareStudentAnalysis(id){
+  var s = state.cache.detail;
+  if(!s || String(s.id)!==String(id)) return;
+  var text = studentAnalysisText(s);
+  // navigator.share는 모바일에서 공유 시트(카카오톡 포함)를 띄운다. 지원 안 하는
+  // 환경(주로 PC 브라우저)에서는 대신 클립보드에 복사해서 카카오톡에 직접 붙여넣게 한다.
+  if(navigator.share){
+    navigator.share({ title: s.name+'님 이수 현황', text: text }).catch(function(){});
+    return;
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      state.shareToast = '분석 내용을 복사했어요. 카카오톡에 붙여넣어 보내주세요.';
+      render();
+      setTimeout(function(){ state.shareToast=''; render(); }, 3000);
     }).catch(function(){
       state.shareToast = '복사에 실패했어요.';
       render();
