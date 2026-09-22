@@ -212,12 +212,13 @@ button{font-family:inherit;}
 .kcol-none .kcol-head{background:linear-gradient(100deg,#6B7280,#9CA3AF);}
 .rcard.board{padding:11px 12px;}
 .trk-steps{display:flex; align-items:flex-start; margin-top:8px;}
-.trk-step{display:flex; flex-direction:column; align-items:center; gap:2px; flex:1 1 0; min-width:0;}
-.trk-label{font-size:7.5px; color:var(--text-faint); text-align:center; line-height:1.2; word-break:keep-all;}
-.trk-dot{width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:800; color:var(--text-muted); background:var(--surface); flex:0 0 auto;}
+.trk-step{display:flex; flex-direction:column; align-items:center; gap:3px; flex:1 1 0; min-width:0;}
+.trk-label{font-size:9.5px; font-weight:700; color:var(--text-muted); text-align:center; line-height:1.25; word-break:keep-all; min-height:24px; display:flex; align-items:flex-end; justify-content:center;}
+.trk-dot{width:20px; height:20px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; color:var(--text-muted); background:var(--surface); flex:0 0 auto;}
 .trk-step.done .trk-dot{background:var(--success); border-color:var(--success); color:#fff;}
-.trk-frac{font-size:9px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap;}
-.trk-line{flex:1 1 auto; height:1.5px; background:var(--border); margin:7px 3px 0;}
+.trk-frac{font-size:12px; font-weight:800; color:var(--text); font-family:var(--font-mono); white-space:nowrap;}
+.trk-step.done .trk-frac{color:var(--success);}
+.trk-line{flex:1 1 auto; height:2px; background:var(--border); margin:37px 3px 0;}
 @media (max-width:760px){
   .kboard{grid-template-columns:1fr;}
   .kcol-body.grid{grid-template-columns:1fr;}
@@ -347,7 +348,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 i';
+var APP_VERSION = '2026-09-22 j';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
