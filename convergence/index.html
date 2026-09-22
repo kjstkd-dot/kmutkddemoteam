@@ -77,6 +77,7 @@ button{font-family:inherit;}
 .major-bar-row select{border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12.5px; font-weight:700;
   color:var(--primary); background:var(--surface-2); max-width:65%; text-overflow:ellipsis;}
 .major-bar-title{margin-top:8px; font-size:19px; font-weight:900; color:var(--text); word-break:keep-all;}
+.major-bar-note{margin-top:6px; font-size:11px; color:var(--text-faint); line-height:1.5; word-break:keep-all;}
 .roletabs{width:100%; max-width:460px; display:flex; gap:8px; background:var(--surface-2); padding:5px; border-radius:999px;}
 .roletab{flex:1; border:none; background:transparent; padding:9px 0; border-radius:999px; font-size:13.5px; font-weight:600; color:var(--text-muted); cursor:pointer;}
 .roletab.active{background:var(--surface); color:var(--primary); box-shadow:var(--shadow-card);}
@@ -321,7 +322,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 c';
+var APP_VERSION = '2026-09-22 d';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5918,6 +5919,7 @@ function majorBarHtml(){
       '</select>' +
     '</div>' +
     '<div class="major-bar-title">'+esc(TRACK_NAME)+'</div>' +
+    '<div class="major-bar-note">본인이 실제로 이수하는(또는 이수하려는) 융합전공이 맞는지 확인하고 선택하세요. 다른 융합전공으로 바꾸면 로그인 중이던 계정은 로그아웃되고, 등록도 그 융합전공 소속으로 새로 하게 돼요.</div>' +
   '</div>';
 }
 function renderApp(){
@@ -7726,6 +7728,13 @@ document.addEventListener('change', async function(e){
   if(e.target.id === 'majorSelectBar'){
     var newMajorId = e.target.value;
     if(newMajorId === state.majorId) return;
+    // 실수로 다른 융합전공을 눌러 로그인 중이던 계정에서 로그아웃되는 사고를 막기 위해,
+    // 로그인된 상태에서 바꾸려 하면 한 번 더 확인한다. 취소하면 선택을 원래대로 되돌린다.
+    var newTrackName = (MAJORS[newMajorId] && MAJORS[newMajorId].trackName) || newMajorId;
+    if(session() && !confirm('"'+newTrackName+'"(으)로 바꾸시겠어요?\n\n지금 로그인 중인 계정은 로그아웃되고, 다시 로그인하거나 이 융합전공으로 새로 등록해야 해요.')){
+      e.target.value = state.majorId;
+      return;
+    }
     // 로그인된 상태에서 다른 융합전공으로 바꾸면 지금 세션과 안 맞을 수 있으니
     // 로그아웃부터 하고, 새 융합전공의 로그인 화면으로 보낸다.
     if(session()){
