@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 k';
+var APP_VERSION = '2026-09-22 l';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -7841,16 +7841,27 @@ document.addEventListener('submit', function(e){
   }
 });
 
+var pendingComposeRender = null;
+function renderAfterInput(bind){
+  render();
+  var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
+  if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+}
 document.addEventListener('input', function(e){
   var bind = e.target.dataset && e.target.dataset.bind;
   if(!bind) return;
   state[bind] = e.target.value;
+  clearTimeout(pendingComposeRender);
   // 한글 등 조합 중(e.isComposing)에 화면을 다시 그리면 입력 중인 글자가 깨진다.
-  // 조합이 끝난 뒤(isComposing=false로 다시 오는 input 이벤트)에만 다시 그린다.
-  if(e.isComposing) return;
-  render();
-  var el = bind==='q' ? document.querySelector('[data-bind="q"]') : null;
-  if(el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+  // 조합이 끝난 뒤(isComposing=false로 다시 오는 input 이벤트)에만 다시 그리는 게
+  // 기본이지만, 일부 기기(특히 일부 모바일 키보드)는 조합이 끝났다는 신호가 안정적으로
+  // 오지 않아서 검색창 등에 state는 바뀌었는데 화면(필터링 결과)은 안 바뀌는 채로 남는
+  // 경우가 있었다. 그래서 조합 중이어도 타이핑이 잠깐 멈추면 안전하게 한 번은 그려준다.
+  if(e.isComposing){
+    pendingComposeRender = setTimeout(function(){ renderAfterInput(bind); }, 700);
+    return;
+  }
+  renderAfterInput(bind);
 });
 
 document.addEventListener('change', async function(e){
