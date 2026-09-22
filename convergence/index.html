@@ -321,7 +321,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-21 a';
+var APP_VERSION = '2026-09-22 a';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -3061,6 +3061,18 @@ async function dedupeStudentCourses(){
   state.formOk = parts.join(', ')+' 정리했어요.';
   render();
 }
+// 예전 등록(회원가입) 처리에 서버 쪽 잠금이 없어서, 학생이 등록 버튼을 두 번 누르거나
+// 네트워크가 요청을 중복으로 보내면 같은 학번으로 시트에 행이 두 개 이상 생길 수 있었다
+// (지금은 서버에서 고쳐서 앞으로는 안 생기지만, 이미 생긴 중복은 관리자가 정리해야 한다).
+// 관리자가 "중복 학생 정리"를 누르면 서버가 자기 융합전공 학생 중 같은 학번이 여럿이면
+// 과목이 더 많이 등록된 쪽(정보가 더 충실한 쪽)만 남기고 나머지를 지운다.
+async function dedupeStudents(){
+  if(!apiMode){ state.formOk = '기기 저장 모드에서는 학번마다 하나만 저장되어 중복이 생기지 않아요.'; render(); return; }
+  var result = await apiCall('dedupeStudents', { token: currentToken() });
+  await loadRoster();
+  state.formOk = result.removed ? ('중복 학생 '+result.removed+'명을 정리했어요.') : '중복 학생이 없어요.';
+  render();
+}
 // 이수구분 변경 신청(융합전공 이수 규정 제7조③)을 켜거나 끈다. 켤 때는 이미 신청한 학점과
 // 합쳐 최대 6학점을 넘지 않는지 확인한다.
 async function toggleReclassify(courseId){
@@ -3255,6 +3267,8 @@ function screenAdminList(){
       '<div class="eyebrow">관리자</div>' +
       '<h2 class="screen-title">전체 학생 이수 현황</h2>' +
       '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
+      (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
+      (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       '<div class="summary">' +
         '<div class="tile"><div class="num">'+total+'</div><div class="lbl">전체 학생</div></div>' +
         '<div class="tile"><div class="num">'+metCount+'</div><div class="lbl">요건 충족</div></div>' +
@@ -3272,6 +3286,9 @@ function screenAdminList(){
       '<div class="row" style="margin-top:16px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
         '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>' +
+      '</div>' +
+      '<div class="row" style="margin-top:8px;">' +
+        '<button class="btn btn-line" data-action="dedupe-students" style="width:auto; flex:1;">중복 학생 정리</button>' +
       '</div>' +
     '</div>'
   );
@@ -3997,6 +4014,7 @@ document.addEventListener('click', function(e){
   else if(act==='edit-course'){ state.editingCourseId = el.dataset.id; state.view='course-form'; }
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
   else if(act==='dedupe-courses'){ dedupeStudentCourses().catch(failWith); return; }
+  else if(act==='dedupe-students'){ dedupeStudents().catch(failWith); return; }
   else if(act==='toggle-reclassify'){ toggleReclassify(el.dataset.id).catch(failWith); return; }
   else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
   else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }

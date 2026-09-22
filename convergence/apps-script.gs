@@ -253,6 +253,7 @@ function handle(req) {
   if (action === 'logout') { destroySession(book, req.token); return { ok: true }; }
   if (action === 'changePassword') return doChangePassword(book, req);
   if (action === 'resetPassword') return doResetPassword(book, req);
+  if (action === 'dedupeStudents') return doDedupeStudents(book, req);
 
   // ---- 일반 데이터(과목/이수정보/설정 등) — 여기서부터는 collection별 권한 검사 ----
   var col = req.collection;
@@ -272,15 +273,24 @@ function doRegisterStudent(book, req) {
   if (!req.dept) fail('MISSING_DEPT');
   if (!req.password || req.password.length < 6) fail('WEAK_PASSWORD');
   var sh = getSheet(book, 'cvg_students');
-  if (findRow(sh, req.id)) fail('DUPLICATE_ID');
-  var hashed = hashNewPassword(req.password);
-  var doc = Object.assign({
-    name: req.name, dept: req.dept || '', year: req.year || '',
-    courses: [], recognizedSemesters: '', majorId: req.majorId || DEFAULT_MAJOR_ID,
-    microdegrees: [], thesisRequired: false, thesisDone: false,
-    createdAt: new Date().toISOString()
-  }, hashed);
-  writeRow(sh, 0, req.id, doc);
+  var doc;
+  // 중복 확인(findRow)과 실제 추가(writeRow) 사이에 다른 요청이 끼어들면(버튼 두 번 클릭,
+  // 네트워크 재시도 등) 같은 학번으로 행이 두 개 생길 수 있어 잠금으로 통째로 묶는다.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    if (findRow(sh, req.id)) fail('DUPLICATE_ID');
+    var hashed = hashNewPassword(req.password);
+    doc = Object.assign({
+      name: req.name, dept: req.dept || '', year: req.year || '',
+      courses: [], recognizedSemesters: '', majorId: req.majorId || DEFAULT_MAJOR_ID,
+      microdegrees: [], thesisRequired: false, thesisDone: false,
+      createdAt: new Date().toISOString()
+    }, hashed);
+    writeRow(sh, 0, req.id, doc);
+  } finally {
+    lock.releaseLock();
+  }
   var token = createSession(book, 'student', req.id, doc.majorId);
   var out = stripSecrets(doc); out.id = String(req.id);
   return { token: token, doc: out };
@@ -291,20 +301,27 @@ function doRegisterAdmin(book, req) {
   if (!req.password || req.password.length < 6) fail('WEAK_PASSWORD');
   var majorId = req.majorId || DEFAULT_MAJOR_ID;
   var adminSh = getSheet(book, 'cvg_admins');
-  var allAdmins = readAll(adminSh);
-  var sameMajorAdmins = allAdmins.filter(function (a) { return (a.majorId || DEFAULT_MAJOR_ID) === majorId; });
-  if (sameMajorAdmins.length > 0) {
-    var cfgSh = getSheet(book, 'cvg_config');
-    var cfgRow = findRow(cfgSh, configDocId(majorId));
-    var cfg = readRow(cfgSh, cfgRow) || {};
-    var required = cfg.adminCode || '';
-    if (!required) fail('ADMIN_CODE_LOCKED');
-    if (req.code !== required) fail('ADMIN_CODE_INVALID');
+  var doc;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var allAdmins = readAll(adminSh);
+    var sameMajorAdmins = allAdmins.filter(function (a) { return (a.majorId || DEFAULT_MAJOR_ID) === majorId; });
+    if (sameMajorAdmins.length > 0) {
+      var cfgSh = getSheet(book, 'cvg_config');
+      var cfgRow = findRow(cfgSh, configDocId(majorId));
+      var cfg = readRow(cfgSh, cfgRow) || {};
+      var required = cfg.adminCode || '';
+      if (!required) fail('ADMIN_CODE_LOCKED');
+      if (req.code !== required) fail('ADMIN_CODE_INVALID');
+    }
+    if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
+    var hashed = hashNewPassword(req.password);
+    doc = Object.assign({ name: req.name, majorId: majorId, createdAt: new Date().toISOString() }, hashed);
+    writeRow(adminSh, 0, req.id, doc);
+  } finally {
+    lock.releaseLock();
   }
-  if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
-  var hashed = hashNewPassword(req.password);
-  var doc = Object.assign({ name: req.name, majorId: majorId, createdAt: new Date().toISOString() }, hashed);
-  writeRow(adminSh, 0, req.id, doc);
   var token = createSession(book, 'admin', req.id, majorId);
   var out = stripSecrets(doc); out.id = String(req.id);
   return { token: token, doc: out };
@@ -377,6 +394,46 @@ function doResetPassword(book, req) {
     doc.mustChangePassword = true;
     writeRow(sh, row, req.studentId, doc);
     return { ok: true, tempPassword: tempPw };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 예전에는 회원가입에 잠금이 없어서(지금은 doRegisterStudent에 추가함) 같은 학번으로
+// 시트에 행이 여러 개 생기는 경우가 있었다. 관리자가 자기 융합전공 학생 중 학번이 겹치는
+// 행을 발견하면, 과목이 더 많이 등록된(더 충실한) 쪽만 남기고 나머지를 지운다.
+function doDedupeStudents(book, req) {
+  var session = requireSession(book, req.token);
+  if (session.role !== 'admin') fail('FORBIDDEN');
+  var sh = getSheet(book, 'cvg_students');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var last = sh.getLastRow();
+    if (last < 2) return { ok: true, removed: 0 };
+    var rows = sh.getRange(2, 1, last - 1, 2).getValues();
+    var kept = {}; // id -> { rowIndex, courseCount }
+    var toDelete = [];
+    for (var i = 0; i < rows.length; i++) {
+      var id = String(rows[i][0]);
+      if (!id) continue;
+      var obj;
+      try { obj = JSON.parse(rows[i][1] || '{}'); } catch (e) { obj = {}; }
+      if ((obj.majorId || DEFAULT_MAJOR_ID) !== session.majorId) continue; // 내 융합전공 학생만
+      var score = (obj.courses || []).length;
+      if (!kept[id]) { kept[id] = { rowIndex: i, score: score }; continue; }
+      if (score >= kept[id].score) {
+        toDelete.push(kept[id].rowIndex);
+        kept[id] = { rowIndex: i, score: score };
+      } else {
+        toDelete.push(i);
+      }
+    }
+    // 시트 실제 행 번호 = rows 배열 인덱스 + 2(헤더 1행 + 1부터 시작). 뒤에서부터 지워야
+    // 앞 행을 지웠을 때 뒤 행 번호가 밀리는 문제가 없다.
+    toDelete.sort(function (a, b) { return b - a; });
+    toDelete.forEach(function (idx) { sh.deleteRow(idx + 2); });
+    return { ok: true, removed: toDelete.length };
   } finally {
     lock.releaseLock();
   }
