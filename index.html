@@ -164,6 +164,11 @@ button{font-family:inherit;}
 .facebar .code.A{color:var(--face-a-ink); background:var(--face-a-chip);}
 .facebar .code.C{color:var(--face-c-ink); background:var(--face-c-chip);}
 .facebar .code.E{color:var(--face-e-ink); background:var(--face-e-chip);}
+.facebar .fbmid{display:flex; flex-direction:column; gap:5px; min-width:0;}
+.fname{font-size:11px; font-weight:800; line-height:1.35; word-break:keep-all;}
+.fname.F{color:var(--face-f-ink);} .fname.A{color:var(--face-a-ink);}
+.fname.C{color:var(--face-c-ink);} .fname.E{color:var(--face-e-ink);}
+.fname em{font-style:normal; font-weight:500; color:var(--text-muted); font-size:10.5px;}
 .trackbar{position:relative; height:9px; border-radius:5px; background:var(--track); overflow:hidden;}
 .fill{position:absolute; left:0; top:0; bottom:0; border-radius:5px;}
 .fill.F{background:var(--face-f);} .fill.A{background:var(--face-a);}
@@ -459,7 +464,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 o';
+var APP_VERSION = '2026-09-23 p';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -809,6 +814,15 @@ function brandIcon(px, radius){
 var BRAND_SVG = brandIcon(52);
 
 var FACE_COLOR = { F:'var(--face-f)', A:'var(--face-a)', C:'var(--face-c)', E:'var(--face-e)' };
+
+/* 학생들이 F·A·C·E 가 무슨 영역인지 몰라 찾아보지 않는다.
+   막대 옆에 이름과 대표적으로 무엇이 들어가는지 한 줄로 붙인다. */
+var FACE_BRIEF = {
+  F: ['도전적 개척정신', '자격증 · 공모전 · 현장실습'],
+  A: ['윤리적 봉사정신', '봉사활동 · 학생회 · 인성교양'],
+  C: ['국제적 문화감각', '어학자격 · 교환학생 · 다문화'],
+  E: ['창의적 전문성',   '성적 · 자격증 · 진로취업활동']
+};
 var ARTS_PE = ['태권도','체육','스포츠','무용','음악','미술','연극','영화','디자인','예술','골프','축구'];
 
 /* ============ analysis ============ */
@@ -1105,7 +1119,11 @@ function analysisHtml(s, o){
         var cls = x===r1 ? 'rank1' : x===r2 ? 'rank2' : '';
         return '<div class="facebar '+cls+'">' +
           '<div class="code '+x+'">'+x+'</div>' +
-          '<div class="trackbar"><div class="fill '+x+'" style="width:'+pct+'%"></div></div>' +
+          '<div class="fbmid">' +
+            '<span class="fname '+x+'">'+FACE_BRIEF[x][0] +
+              '<em> · '+FACE_BRIEF[x][1]+'</em></span>' +
+            '<div class="trackbar"><div class="fill '+x+'" style="width:'+pct+'%"></div></div>' +
+          '</div>' +
           '<div class="score">' +
             '<div class="num">'+score+'/'+th+'</div>' +
             '<div class="gap '+(met?'met':'')+'">'+(met ? '달성 ✓' : a.gaps[x]+'점 남음')+'</div>' +
