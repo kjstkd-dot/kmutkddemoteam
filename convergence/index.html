@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 a';
+var APP_VERSION = '2026-09-23 b';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5908,6 +5908,10 @@ var state = {
   cache: { me:null, roster:[], pdf: null }
 };
 function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
+// 조회 전용(뷰어) 관리자 — K-Cloud College처럼 진행 상황만 확인하면 되는 사람 몫.
+// 학생 목록·상세는 그대로 보되, 고치거나 지우는 버튼은 화면에서부터 숨긴다(서버에서도
+// 한 번 더 막는다 — requireFullAdmin).
+function isViewerAdmin(){ return state.role==='admin' && !!(state.adminSession && state.adminSession.viewerOnly); }
 function setSession(role, val){
   try{
     if(val) localStorage.setItem('cvg_session_'+role, JSON.stringify(val));
@@ -6118,7 +6122,8 @@ function captureRegisterDraft(){
     state.registerDraft = { view:'register-admin',
       id: f2.querySelector('#raId').value, name: f2.querySelector('#raName').value,
       pw: f2.querySelector('#raPw').value, pw2: f2.querySelector('#raPw2').value,
-      code: f2.querySelector('#raCode').value, consent: f2.querySelector('#raConsent').checked };
+      code: f2.querySelector('#raCode').value, viewerOnly: f2.querySelector('#raViewerOnly').checked,
+      consent: f2.querySelector('#raConsent').checked };
   }
 }
 // 회원가입 화면에 넣는 개인정보 수집·이용 안내 + 필수 동의 체크박스. 자세한 내용은
@@ -6150,6 +6155,10 @@ function screenRegisterAdmin(){
         '<div class="field"><label>비밀번호</label><input id="raPw" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw):'')+'"></div>' +
         '<div class="field"><label>비밀번호 확인</label><input id="raPw2" type="password" required autocomplete="new-password" value="'+(d?esc(d.pw2):'')+'"></div>' +
         '<div class="field"><label>등록코드(두 번째 관리자부터 필요)</label><input id="raCode" value="'+(d?esc(d.code):'')+'"></div>' +
+        '<label style="display:flex; align-items:flex-start; gap:8px; margin:2px 0 14px; font-size:12.5px; cursor:pointer;">' +
+          '<input type="checkbox" id="raViewerOnly" '+(d && d.viewerOnly?'checked':'')+' style="margin-top:2px; width:16px; height:16px; flex:none;">' +
+          '<span><b>조회 전용(뷰어)으로 등록</b> — 학생 목록·진행 상황만 볼 수 있고, 과목 수정·비밀번호 초기화·삭제 같은 건 못 해요. K-Cloud College처럼 현황만 확인하면 되는 분께 체크해 주세요.</span>' +
+        '</label>' +
         privacyNoticeHtml('raConsent', d && d.consent) +
         '<button class="btn btn-primary" type="submit">등록하고 시작하기</button>' +
       '</form>' +
@@ -6176,7 +6185,7 @@ async function doLogin(role, id, pw){
     if(docMajorId0 !== state.majorId){ await switchMajor(docMajorId0); }
     state.formError=''; state.formOk='';
     if(role==='student'){ setSession('student', { id:id, name:doc.name, majorId:docMajorId0 }); state.cache.me = doc; state.view='home'; }
-    else { setSession('admin', { id:id, name:doc.name, majorId:docMajorId0 }); state.view='list'; await loadRoster(); }
+    else { setSession('admin', { id:id, name:doc.name, majorId:docMajorId0, viewerOnly: !!doc.viewerOnly }); state.view='list'; await loadRoster(); }
     render();
     return;
   }
@@ -6200,7 +6209,7 @@ async function doLogin(role, id, pw){
     state.view = doc.mustChangePassword ? 'profile' : 'home';
     if(doc.mustChangePassword) state.formOk = '관리자가 비밀번호를 초기화했어요. 새 비밀번호를 설정해 주세요.';
   } else {
-    setSession('admin', { id:id, name:doc.name, majorId:docMajorId, token:result.token });
+    setSession('admin', { id:id, name:doc.name, majorId:docMajorId, token:result.token, viewerOnly: !!doc.viewerOnly });
     state.view='list';
     await loadRoster();
   }
@@ -6238,7 +6247,7 @@ async function doRegisterStudent(id, name, dept, year, pw, pw2){
   state.formError=''; state.view='home'; state.registerDraft=null;
   render();
 }
-async function doRegisterAdmin(id, name, pw, pw2, code){
+async function doRegisterAdmin(id, name, pw, pw2, code, viewerOnly){
   if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
   if(pw.length<6){ state.formError='비밀번호는 6자 이상이어야 해요.'; render(); return; }
   if(pw!==pw2){ state.formError='비밀번호가 서로 달라요. 다시 확인해 주세요.'; render(); return; }
@@ -6255,8 +6264,8 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
     var existing = await storeGet('cvg_admins', id);
     if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
     var hash = await sha256Hex(pw);
-    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: state.majorId, createdAt:nowIso() });
-    setSession('admin', { id:id, name:name, majorId: state.majorId });
+    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: state.majorId, viewerOnly: !!viewerOnly, createdAt:nowIso() });
+    setSession('admin', { id:id, name:name, majorId: state.majorId, viewerOnly: !!viewerOnly });
     state.formError=''; state.view='list'; state.registerDraft=null;
     await loadRoster();
     render();
@@ -6264,7 +6273,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
   }
   var result;
   try{
-    result = await apiCall('registerAdmin', { id:id, name:name, password:pw, code:code, majorId: state.majorId });
+    result = await apiCall('registerAdmin', { id:id, name:name, password:pw, code:code, majorId: state.majorId, viewerOnly: !!viewerOnly });
   }catch(e){
     var msg = errMsg(e);
     if(msg==='ADMIN_CODE_LOCKED') msg = '관리자 등록이 잠겨 있어요. 기존 관리자에게 등록코드를 요청해 주세요.';
@@ -6272,7 +6281,7 @@ async function doRegisterAdmin(id, name, pw, pw2, code){
     else if(msg==='DUPLICATE_ID') msg = '이미 등록된 관리자 번호예요.';
     state.formError = msg; render(); return;
   }
-  setSession('admin', { id:id, name:name, majorId: state.majorId, token: result.token });
+  setSession('admin', { id:id, name:name, majorId: state.majorId, token: result.token, viewerOnly: !!result.doc.viewerOnly });
   state.formError=''; state.view='list'; state.registerDraft=null;
   await loadRoster();
   render();
@@ -6587,7 +6596,8 @@ function courseListBlock(student, editable){
   }).join('') + '</div>';
 }
 var COURSE_CATEGORY_ORDER = ['전공필수','전공선택','전공기초','전공인정','타전공','융합전공','교양필수','교양선택','기타'];
-function courseSummaryBox(student, expanded){
+function courseSummaryBox(student, expanded, editable){
+  if(editable===undefined) editable = true;
   var list = courses(student);
   var counts = courseCategoryCounts(student);
   var totalCredits = list.reduce(function(s,c){ return s+num(c.credits); }, 0);
@@ -6606,7 +6616,7 @@ function courseSummaryBox(student, expanded){
     '</div>' +
     (cats.length ? '<div>'+chips+'</div>' : '<div class="cm">아직 등록된 과목이 없어요.</div>') +
   '</button>';
-  if(expanded) html += '<div style="margin-top:10px;">' + courseListBlock(student, true) + '</div>';
+  if(expanded) html += '<div style="margin-top:10px;">' + courseListBlock(student, editable) + '</div>';
   return html;
 }
 function screenStudentHome(){
@@ -7196,7 +7206,7 @@ function screenAdminList(){
   return (
     '<div class="phone">' +
       '<div class="eyebrow">관리자</div>' +
-      '<h2 class="screen-title">전체 학생 이수 현황</h2>' +
+      '<h2 class="screen-title">전체 학생 이수 현황'+(isViewerAdmin()?' <span class="badge" style="background:var(--surface-3); color:var(--text-muted); margin-left:4px;">조회 전용</span>':'')+'</h2>' +
       '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
@@ -7216,11 +7226,11 @@ function screenAdminList(){
       (rows.length ? rosterHtml : '<div class="empty-state">조건에 맞는 학생이 없어요.</div>') +
       '<div class="row" style="margin-top:16px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
-        '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>' +
+        (isViewerAdmin() ? '' : '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>') +
       '</div>' +
-      '<div class="row" style="margin-top:8px;">' +
+      (isViewerAdmin() ? '' : '<div class="row" style="margin-top:8px;">' +
         '<button class="btn btn-line" data-action="dedupe-students" style="width:auto; flex:1;">중복 학생 정리</button>' +
-      '</div>' +
+      '</div>') +
     '</div>'
   );
 }
@@ -7229,6 +7239,7 @@ function screenAdminDetail(){
   if(!s) return '<div class="phone"><div class="empty-state">불러오는 중...</div></div>';
   var m = anyTrackMet(s);
   var b = bestTrack(s);
+  var canManage = !isViewerAdmin();
   return (
     '<div class="phone">' +
       '<button class="linklike" data-action="goto-list" style="margin-bottom:10px;">← 목록으로</button>' +
@@ -7242,23 +7253,23 @@ function screenAdminDetail(){
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       progressBlock(s) +
       '<div class="row-between" style="margin-top:16px;"><b>등록한 과목'+(s.dept?' ('+esc(s.dept)+')':'')+'</b>' +
-        '<div class="row" style="gap:10px;">' +
+        (canManage ? '<div class="row" style="gap:10px;">' +
           '<button class="linklike" data-action="dedupe-courses">과목 정리</button>' +
           '<button class="linklike" data-action="goto-course-upload-form">📄 PDF로 일괄 추가</button>' +
           '<button class="linklike" data-action="goto-course-form">+ 과목 추가</button>' +
-        '</div></div>' +
-      courseSummaryBox(s, !!state.showCourseDetail) +
+        '</div>' : '') + '</div>' +
+      courseSummaryBox(s, !!state.showCourseDetail, canManage) +
       '<div class="row-between" style="margin-top:16px;"><b>마이크로디그리</b>' +
-        '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button></div>' +
-      microdegreeListBlock(s, true) +
+        (canManage ? '<button class="linklike" data-action="goto-microdegree-form">+ 마이크로디그리 추가</button>' : '') + '</div>' +
+      microdegreeListBlock(s, canManage) +
       '<div class="row-between" style="margin-top:16px;"><b>이수정보</b>' +
-        '<button class="linklike" data-action="goto-info-form">수정</button></div>' +
+        (canManage ? '<button class="linklike" data-action="goto-info-form">수정</button>' : '') + '</div>' +
       '<div class="notice-box">인정학기: '+esc(String(s.recognizedSemesters||'-'))+' · 제1전공 이수학점: '+primaryCreditsTotal(s)+'학점' +
       '</div>' +
-      '<div class="row" style="margin-top:18px; gap:8px;">' +
+      (canManage ? '<div class="row" style="margin-top:18px; gap:8px;">' +
         '<button class="btn btn-ghost" data-action="reset-password" style="width:auto; flex:1;">비밀번호 초기화</button>' +
         '<button class="btn btn-danger" data-action="delete-student" style="width:auto; flex:1;">학생 삭제</button>' +
-      '</div>' +
+      '</div>' : '') +
     '</div>'
   );
 }
@@ -7792,7 +7803,8 @@ document.addEventListener('submit', function(e){
     e.preventDefault();
     doRegisterAdmin(
       f.querySelector('#raId').value.trim(), f.querySelector('#raName').value.trim(),
-      f.querySelector('#raPw').value, f.querySelector('#raPw2').value, f.querySelector('#raCode').value.trim()
+      f.querySelector('#raPw').value, f.querySelector('#raPw2').value, f.querySelector('#raCode').value.trim(),
+      f.querySelector('#raViewerOnly').checked
     ).catch(failWith);
   }
   if(f.id==='form-course'){

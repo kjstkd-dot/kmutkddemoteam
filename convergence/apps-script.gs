@@ -190,11 +190,13 @@ function randomToken() {
 // 줄이 끝없이 쌓이는 걸 막는다(그러면 매 요청마다 훑어야 하는 목록이 점점 길어져서
 // 앱 전체가 느려진다). 시트를 통째로 비웠다가 다시 쓰지는 않는다 — 그 사이 순간적으로
 // 다른 사람의 getSession 조회가 빈 시트를 보게 되는 걸 피하기 위해서다.
-function createSession(book, role, id, majorId) {
+function createSession(book, role, id, majorId, viewerOnly) {
   var sh = getSheet(book, 'cvg_sessions');
   var token = randomToken();
   var expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString();
-  var data = [token, JSON.stringify({ role: role, id: String(id), majorId: majorId, expiresAt: expiresAt })];
+  var payload = { role: role, id: String(id), majorId: majorId, expiresAt: expiresAt };
+  if (viewerOnly) payload.viewerOnly = true;
+  var data = [token, JSON.stringify(payload)];
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -240,6 +242,17 @@ function destroySession(book, token) {
 function requireSession(book, token) {
   var session = getSession(book, token);
   if (!session) fail('SESSION_EXPIRED');
+  return session;
+}
+
+// 관리자 세션이면서 조회 전용(viewerOnly)이 아닌 경우에만 통과시킨다. 학생·조회 전용
+// 관리자가 데이터를 고치거나 지우는 요청을 막을 때 쓴다(조회 전용 관리자는 K-Cloud
+// College처럼 진행 상황만 보면 되는 사람 몫 — 학생 정보를 실수로 고치거나 지울 일이
+// 없게 아예 서버에서 막아둔다).
+function requireFullAdmin(book, token) {
+  var session = requireSession(book, token);
+  if (session.role !== 'admin') fail('FORBIDDEN');
+  if (session.viewerOnly) fail('FORBIDDEN');
   return session;
 }
 
@@ -345,11 +358,12 @@ function doRegisterAdmin(book, req) {
     }
     if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
     doc = Object.assign({ name: req.name, majorId: majorId, createdAt: new Date().toISOString() }, hashed);
+    if (req.viewerOnly) doc.viewerOnly = true;
     writeRow(adminSh, 0, req.id, doc);
   } finally {
     lock.releaseLock();
   }
-  var token = createSession(book, 'admin', req.id, majorId);
+  var token = createSession(book, 'admin', req.id, majorId, doc.viewerOnly);
   var out = stripSecrets(doc); out.id = String(req.id);
   return { token: token, doc: out };
 }
@@ -377,7 +391,7 @@ function doLogin(book, req) {
     lock.releaseLock();
   }
   var majorId = doc.majorId || DEFAULT_MAJOR_ID;
-  var token = createSession(book, role, req.id, majorId);
+  var token = createSession(book, role, req.id, majorId, doc.viewerOnly);
   var out = stripSecrets(doc); out.id = String(req.id);
   return { token: token, doc: out };
 }
@@ -410,8 +424,7 @@ function doChangePassword(book, req) {
 }
 
 function doResetPassword(book, req) {
-  var session = requireSession(book, req.token);
-  if (session.role !== 'admin') fail('FORBIDDEN');
+  var session = requireFullAdmin(book, req.token);
   var sh = getSheet(book, 'cvg_students');
   var row = findRow(sh, req.studentId);
   var doc = readRow(sh, row);
@@ -438,8 +451,7 @@ function doResetPassword(book, req) {
 // 시트에 행이 여러 개 생기는 경우가 있었다. 관리자가 자기 융합전공 학생 중 학번이 겹치는
 // 행을 발견하면, 과목이 더 많이 등록된(더 충실한) 쪽만 남기고 나머지를 지운다.
 function doDedupeStudents(book, req) {
-  var session = requireSession(book, req.token);
-  if (session.role !== 'admin') fail('FORBIDDEN');
+  var session = requireFullAdmin(book, req.token);
   var sh = getSheet(book, 'cvg_students');
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -483,7 +495,7 @@ function handleGetAction(book, col, req) {
     if (doc) {
       doc = Object.assign({}, doc);
       var session = getSession(book, req.token);
-      var isOwnerAdmin = session && session.role === 'admin' && configDocId(session.majorId) === req.id;
+      var isOwnerAdmin = session && session.role === 'admin' && !session.viewerOnly && configDocId(session.majorId) === req.id;
       if (!isOwnerAdmin) delete doc.adminCode;
     }
     return { doc: doc };
@@ -516,8 +528,7 @@ function doAll(book, col, req) {
 
 function doUpdate(book, col, req) {
   if (col === 'cvg_config') {
-    var session = requireSession(book, req.token);
-    if (session.role !== 'admin') fail('FORBIDDEN');
+    var session = requireFullAdmin(book, req.token);
     if (configDocId(session.majorId) !== req.id) fail('FORBIDDEN');
     var lock = LockService.getScriptLock();
     lock.waitLock(20000);
@@ -544,7 +555,7 @@ function doUpdate(book, col, req) {
       var cur2 = readRow(sh2, row2);
       var majorId = cur2.majorId || DEFAULT_MAJOR_ID;
       var allowed = (session2.role === 'student' && String(session2.id) === String(req.id)) ||
-        (session2.role === 'admin' && session2.majorId === majorId);
+        (session2.role === 'admin' && !session2.viewerOnly && session2.majorId === majorId);
       if (!allowed) fail('FORBIDDEN');
       var data2 = Object.assign({}, req.data || {});
       // 비밀번호·소속 융합전공은 이 통로로 못 바꾸게 막는다(전용 요청으로만 변경).
@@ -561,8 +572,7 @@ function doUpdate(book, col, req) {
 
 function doDelete(book, col, req) {
   if (col !== 'cvg_students') fail('FORBIDDEN');
-  var session = requireSession(book, req.token);
-  if (session.role !== 'admin') fail('FORBIDDEN');
+  var session = requireFullAdmin(book, req.token);
   var sh = getSheet(book, col);
   var row = findRow(sh, req.id);
   if (!row) return { ok: true };
