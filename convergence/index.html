@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 c';
+var APP_VERSION = '2026-09-23 d';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5909,7 +5909,7 @@ var state = {
   expandedExplain: {},
   expandedKcol: {},
   q: '', filter: 'all',
-  cache: { me:null, roster:[], pdf: null, majorSummary: [] }
+  cache: { me:null, roster:[], pdf: null, majorSummary: [], superViewerResult: null }
 };
 function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
 // 조회 전용(뷰어) 관리자 — K-Cloud College처럼 진행 상황만 확인하면 되는 사람 몫.
@@ -7393,8 +7393,19 @@ function screenAdminSettings(){
         '<div class="field"><label>이름</label><input id="svName" required></div>' +
         '<button class="btn btn-primary" type="submit">계정 만들기</button>' +
       '</form>' +
+      superViewerResultHtml() +
     '</div>'
   );
+}
+function superViewerResultHtml(){
+  var r = state.cache.superViewerResult;
+  if(!r) return '';
+  if(!r.ok) return '<div class="errbox" style="margin-top:10px;">'+esc(r.message)+'</div>';
+  return '<div class="okbox" style="margin-top:10px; line-height:1.7;">' +
+    '"'+esc(r.name)+'"('+esc(r.id)+') 통합 조회 계정을 만들었어요.<br>' +
+    '임시 비밀번호: <b style="font-size:15px; letter-spacing:.03em;">'+esc(r.tempPassword)+'</b><br>' +
+    '이 번호와 비밀번호를 전달해 주세요.' +
+  '</div>';
 }
 async function openDetail(id){
   state.detailId = id;
@@ -7427,14 +7438,17 @@ async function deleteStudent(){
 // 총 관리자가 직접 통합 조회 계정을 만든다(등록코드로 셀프 등록하는 게 아니라, 지금
 // 로그인한 정관리자가 번호·이름만 정하면 서버가 임시 비밀번호를 만들어준다).
 async function createSuperViewer(id, name){
-  if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
+  // 화면 위쪽 배너(state.formOk/formError)만 쓰면, 이 폼은 설정 화면 맨 아래에 있어서
+  // 만들고 나서 스크롤을 올리지 않으면 결과(특히 임시 비밀번호)를 놓치기 쉽다.
+  // 그래서 이 폼 바로 아래에도 결과를 따로 보여준다(state.cache.superViewerResult).
+  if(!id || !name){ state.cache.superViewerResult = { ok:false, message:'관리자 번호와 이름을 입력해 주세요.' }; render(); return; }
   if(!apiMode){
     var existing = await storeGet('cvg_admins', id);
-    if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
+    if(existing){ state.cache.superViewerResult = { ok:false, message:'이미 등록된 관리자 번호예요.' }; render(); return; }
     var tempPw0 = '000000';
     var hash = await sha256Hex(tempPw0);
     await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: DEFAULT_MAJOR_ID, viewerOnly:true, allMajors:true, createdAt:nowIso() });
-    state.formError=''; state.formOk = '"'+name+'"('+id+') 통합 조회 계정을 만들었어요. 임시 비밀번호: '+tempPw0+' — 이 번호와 비밀번호를 전달해 주세요.';
+    state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:tempPw0 };
     render();
     return;
   }
@@ -7444,10 +7458,11 @@ async function createSuperViewer(id, name){
   }catch(e){
     var msg = errMsg(e);
     if(msg==='DUPLICATE_ID') msg = '이미 등록된 관리자 번호예요.';
-    state.formError = msg; render(); return;
+    else if(msg==='UNKNOWN_ACTION') msg = '서버(Apps Script)가 아직 이 기능이 없는 예전 코드로 배포돼 있어요. apps-script.gs를 최신 코드로 다시 배포해 주세요.';
+    state.cache.superViewerResult = { ok:false, message:msg };
+    render(); return;
   }
-  state.formError='';
-  state.formOk = '"'+name+'"('+id+') 통합 조회 계정을 만들었어요. 임시 비밀번호: '+result.tempPassword+' — 이 번호와 비밀번호를 전달해 주세요.';
+  state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:result.tempPassword };
   render();
 }
 async function saveAdminCode(code){
