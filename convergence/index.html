@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 b';
+var APP_VERSION = '2026-09-23 c';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -434,8 +434,12 @@ async function storeDelete(col, id){
   if(fallbackData[col]) delete fallbackData[col][id];
   saveFallback();
 }
-async function storeAll(col){
-  if(apiMode){ var r = await apiCall('all', {collection:col, token:currentToken()}); return r.docs || []; }
+async function storeAll(col, majorId){
+  if(apiMode){
+    var payload = {collection:col, token:currentToken()};
+    if(majorId) payload.majorId = majorId;
+    var r = await apiCall('all', payload); return r.docs || [];
+  }
   var all = fallbackData[col]||{};
   return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); });
 }
@@ -5905,13 +5909,15 @@ var state = {
   expandedExplain: {},
   expandedKcol: {},
   q: '', filter: 'all',
-  cache: { me:null, roster:[], pdf: null }
+  cache: { me:null, roster:[], pdf: null, majorSummary: [] }
 };
 function session(){ return state.role==='student' ? state.studentSession : state.adminSession; }
 // 조회 전용(뷰어) 관리자 — K-Cloud College처럼 진행 상황만 확인하면 되는 사람 몫.
 // 학생 목록·상세는 그대로 보되, 고치거나 지우는 버튼은 화면에서부터 숨긴다(서버에서도
 // 한 번 더 막는다 — requireFullAdmin).
 function isViewerAdmin(){ return state.role==='admin' && !!(state.adminSession && state.adminSession.viewerOnly); }
+// 통합 조회 계정 — 모든 융합전공을 볼 수 있다(총 관리자가 직접 만들어준 계정만 이렇다).
+function isAllMajorsAdmin(){ return state.role==='admin' && !!(state.adminSession && state.adminSession.allMajors); }
 function setSession(role, val){
   try{
     if(val) localStorage.setItem('cvg_session_'+role, JSON.stringify(val));
@@ -6185,7 +6191,7 @@ async function doLogin(role, id, pw){
     if(docMajorId0 !== state.majorId){ await switchMajor(docMajorId0); }
     state.formError=''; state.formOk='';
     if(role==='student'){ setSession('student', { id:id, name:doc.name, majorId:docMajorId0 }); state.cache.me = doc; state.view='home'; }
-    else { setSession('admin', { id:id, name:doc.name, majorId:docMajorId0, viewerOnly: !!doc.viewerOnly }); state.view='list'; await loadRoster(); }
+    else { setSession('admin', { id:id, name:doc.name, majorId:docMajorId0, viewerOnly: !!doc.viewerOnly, allMajors: !!doc.allMajors }); state.view='list'; await loadRoster(); }
     render();
     return;
   }
@@ -6209,7 +6215,7 @@ async function doLogin(role, id, pw){
     state.view = doc.mustChangePassword ? 'profile' : 'home';
     if(doc.mustChangePassword) state.formOk = '관리자가 비밀번호를 초기화했어요. 새 비밀번호를 설정해 주세요.';
   } else {
-    setSession('admin', { id:id, name:doc.name, majorId:docMajorId, token:result.token, viewerOnly: !!doc.viewerOnly });
+    setSession('admin', { id:id, name:doc.name, majorId:docMajorId, token:result.token, viewerOnly: !!doc.viewerOnly, allMajors: !!doc.allMajors });
     state.view='list';
     await loadRoster();
   }
@@ -7077,12 +7083,29 @@ async function changePassword(oldPw, newPw, newPw2){
 
 /* ============ 관리자 화면 ============ */
 async function loadRoster(){
-  var all = await storeAll('cvg_students');
-  // 이 관리자와 같은 융합전공(majorId) 학생만 보여준다. 다른 교수님이 담당하는
-  // 융합전공 학생은 여기 섞이면 안 된다(예전 데이터는 majorId가 없어서 기본
-  // 융합전공 소속으로 본다).
-  var mid = (state.adminSession && state.adminSession.majorId) || DEFAULT_MAJOR_ID;
+  // 통합 조회 계정은 지금 화면 위에서 고른 융합전공(state.majorId) 기준으로 본다
+  // (한 융합전공에 묶여있지 않으니까). 일반 관리자는 항상 자기 융합전공만 본다.
+  var mid = isAllMajorsAdmin() ? state.majorId : ((state.adminSession && state.adminSession.majorId) || DEFAULT_MAJOR_ID);
+  var all = await storeAll('cvg_students', isAllMajorsAdmin() ? mid : null);
+  // 다른 교수님이 담당하는 융합전공 학생은 여기 섞이면 안 된다(예전 데이터는
+  // majorId가 없어서 기본 융합전공 소속으로 본다).
   state.cache.roster = all.filter(function(s){ return (s.majorId||DEFAULT_MAJOR_ID) === mid; });
+  if(isAllMajorsAdmin()) await loadMajorSummary();
+}
+// 통합 조회 계정 전용: 융합전공별로 학생이 몇 명씩 등록돼 있는지 요약(전체 시스템이
+// 어느 정도 돌아가는지 한눈에 보려고). 각 융합전공의 세부 충족/미충족 판정은 그
+// 융합전공만의 학점 기준·K-Cloud 단계가 있어야 정확해서, 여기서는 인원수만 보여주고
+// 자세히 보려면 그 융합전공으로 들어가게(state.majorId 전환) 한다.
+async function loadMajorSummary(){
+  var all = await storeAll('cvg_students', null);
+  var counts = {};
+  all.forEach(function(s){
+    var mid = s.majorId || DEFAULT_MAJOR_ID;
+    counts[mid] = (counts[mid]||0) + 1;
+  });
+  state.cache.majorSummary = Object.keys(counts).map(function(mid){
+    return { majorId: mid, trackName: (MAJORS[mid] && MAJORS[mid].trackName) || mid, count: counts[mid] };
+  }).sort(function(a,b){ return b.count - a.count; });
 }
 function renderAdmin(){
   if(state.view==='detail') return screenAdminDetail();
@@ -7172,6 +7195,25 @@ function kcloudBoardHtml(rows){
   var noneHtml = kcolHtml('none', 'kcol-none kboard-main', '아직 미달성', '', noneBucket, 'grid');
   return '<div class="kboard">' + achievedHtml + noneHtml + '</div>';
 }
+// 통합 조회 계정 전용: 학생이 등록된 융합전공들을 인원수 많은 순으로 보여준다.
+// 눌러서 바로 그 융합전공 현황으로 넘어갈 수 있다(로그아웃 없이).
+function majorSummaryHtml(){
+  var list = state.cache.majorSummary || [];
+  if(!list.length) return '';
+  return '<div class="notice-box" style="margin-bottom:14px;">' +
+    '<b style="font-size:12.5px;">전공별 등록 현황 (눌러서 이동)</b>' +
+    '<div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">' +
+      list.map(function(m){
+        var active = m.majorId===state.majorId;
+        return '<button type="button" data-action="goto-major-summary" data-major="'+esc(m.majorId)+'" ' +
+          'style="all:unset; cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-radius:8px; background:'+(active?'var(--surface-2)':'transparent')+';">' +
+          '<span style="font-size:12.5px; font-weight:'+(active?'800':'600')+'; word-break:keep-all;">'+esc(m.trackName)+(active?' · 보는 중':'')+'</span>' +
+          '<span class="mono" style="font-size:12px; color:var(--text-muted); flex:none; margin-left:8px;">'+m.count+'명</span>' +
+        '</button>';
+      }).join('') +
+    '</div>' +
+  '</div>';
+}
 function screenAdminList(){
   var roster = state.cache.roster || [];
   var total = roster.length;
@@ -7206,8 +7248,9 @@ function screenAdminList(){
   return (
     '<div class="phone">' +
       '<div class="eyebrow">관리자</div>' +
-      '<h2 class="screen-title">전체 학생 이수 현황'+(isViewerAdmin()?' <span class="badge" style="background:var(--surface-3); color:var(--text-muted); margin-left:4px;">조회 전용</span>':'')+'</h2>' +
+      '<h2 class="screen-title">전체 학생 이수 현황'+(isAllMajorsAdmin()?' <span class="badge" style="background:var(--surface-3); color:var(--text-muted); margin-left:4px;">통합 조회</span>':(isViewerAdmin()?' <span class="badge" style="background:var(--surface-3); color:var(--text-muted); margin-left:4px;">조회 전용</span>':''))+'</h2>' +
       '<p class="screen-sub">'+esc(TRACK_NAME)+'</p>' +
+      (isAllMajorsAdmin() ? majorSummaryHtml() : '') +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       (state.formOk? '<div class="okbox">'+esc(state.formOk)+'</div>' : '') +
       '<div class="summary">' +
@@ -7342,6 +7385,14 @@ function screenAdminSettings(){
       '</form>' +
 
       '<div class="notice-box" style="margin-top:16px;">여기서 바꾼 값은 지금 화면 위쪽에서 고른 <b>'+esc(TRACK_NAME)+'</b>에만 적용돼요. 다른 융합전공을 고르면 그 융합전공의 설정을 따로 보고 고칠 수 있어요. 새 융합전공을 이 앱에 추가하려면(참여학과·교육과정표 입력) 아직은 개발자가 코드에 추가해야 해요.</div>' +
+
+      '<h2 class="screen-title" style="margin-top:24px;">통합 조회 계정 만들기</h2>' +
+      '<p class="screen-sub">이 앱에 등록된 <b>모든 융합전공</b>을 조회 전용으로 볼 수 있는 계정을 만들어요. K-Cloud College처럼 학교 전체가 어느 정도 돌아가는지만 확인하면 되는 분께 드리면 돼요. 등록코드 없이 여기서 바로 만들 수 있고, 만든 뒤 나오는 임시 비밀번호를 그분께 전달해 주세요.</p>' +
+      '<form id="form-superviewer" class="stack">' +
+        '<div class="field"><label>관리자 번호</label><input id="svId" required></div>' +
+        '<div class="field"><label>이름</label><input id="svName" required></div>' +
+        '<button class="btn btn-primary" type="submit">계정 만들기</button>' +
+      '</form>' +
     '</div>'
   );
 }
@@ -7371,6 +7422,32 @@ async function deleteStudent(){
   await storeDelete('cvg_students', state.detailId);
   state.view='list'; state.detailId=null; state.cache.detail=null;
   await loadRoster();
+  render();
+}
+// 총 관리자가 직접 통합 조회 계정을 만든다(등록코드로 셀프 등록하는 게 아니라, 지금
+// 로그인한 정관리자가 번호·이름만 정하면 서버가 임시 비밀번호를 만들어준다).
+async function createSuperViewer(id, name){
+  if(!id || !name){ state.formError='관리자 번호와 이름을 입력해 주세요.'; render(); return; }
+  if(!apiMode){
+    var existing = await storeGet('cvg_admins', id);
+    if(existing){ state.formError='이미 등록된 관리자 번호예요.'; render(); return; }
+    var tempPw0 = '000000';
+    var hash = await sha256Hex(tempPw0);
+    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: DEFAULT_MAJOR_ID, viewerOnly:true, allMajors:true, createdAt:nowIso() });
+    state.formError=''; state.formOk = '"'+name+'"('+id+') 통합 조회 계정을 만들었어요. 임시 비밀번호: '+tempPw0+' — 이 번호와 비밀번호를 전달해 주세요.';
+    render();
+    return;
+  }
+  var result;
+  try{
+    result = await apiCall('createSuperViewer', { token: currentToken(), id:id, name:name });
+  }catch(e){
+    var msg = errMsg(e);
+    if(msg==='DUPLICATE_ID') msg = '이미 등록된 관리자 번호예요.';
+    state.formError = msg; render(); return;
+  }
+  state.formError='';
+  state.formOk = '"'+name+'"('+id+') 통합 조회 계정을 만들었어요. 임시 비밀번호: '+result.tempPassword+' — 이 번호와 비밀번호를 전달해 주세요.';
   render();
 }
 async function saveAdminCode(code){
@@ -7854,6 +7931,10 @@ document.addEventListener('submit', function(e){
     e.preventDefault();
     saveKcloudStages(f).catch(failWith);
   }
+  if(f.id==='form-superviewer'){
+    e.preventDefault();
+    createSuperViewer(f.querySelector('#svId').value.trim(), f.querySelector('#svName').value.trim()).catch(failWith);
+  }
 });
 
 var pendingComposeRender = null;
@@ -7883,6 +7964,14 @@ document.addEventListener('change', async function(e){
   if(e.target.id === 'majorSelectBar'){
     var newMajorId = e.target.value;
     if(newMajorId === state.majorId) return;
+    // 통합 조회 계정은 한 융합전공에 묶여있지 않으니, 로그아웃 없이 그냥 그
+    // 융합전공의 현황으로 바로 넘어간다.
+    if(isAllMajorsAdmin()){
+      await switchMajor(newMajorId);
+      await loadRoster();
+      render();
+      return;
+    }
     // 실수로 다른 융합전공을 눌러 로그인 중이던 계정에서 로그아웃되는 사고를 막기 위해,
     // 로그인된 상태에서 바꾸려 하면 한 번 더 확인한다. 취소하면 선택을 원래대로 되돌린다.
     var newTrackName = (MAJORS[newMajorId] && MAJORS[newMajorId].trackName) || newMajorId;
@@ -7956,6 +8045,11 @@ document.addEventListener('click', function(e){
     state.view='list'; state.formOk='';
     loadRoster().then(render);
     render(); return;
+  }
+  else if(act==='goto-major-summary'){
+    var targetMajor = el.dataset.major;
+    if(targetMajor !== state.majorId){ switchMajor(targetMajor).then(loadRoster).then(render); }
+    return;
   }
   else if(act==='goto-detail'){ state.view='detail'; state.editingCourseId=null; state.cache.pdf=null; }
   else if(act==='goto-course-form'){ state.editingCourseId=null; state.view='course-form'; }
