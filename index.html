@@ -271,6 +271,7 @@ button{font-family:inherit;}
 .mini-bar i{position:absolute; left:0; top:0; bottom:0; border-radius:3px;}
 .tag{font-size:11px; color:var(--text-muted); background:var(--track); border-radius:5px; padding:2px 7px;}
 .pending{font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-bg); border:1px solid var(--amber-border); border-radius:999px; padding:2px 8px;}
+.notify-btn{flex:none; max-width:44%; word-break:keep-all; line-height:1.35; padding:9px 12px;}
 .todaybtn{white-space:nowrap; border:1px solid var(--border); background:var(--surface);
   border-radius:999px; padding:4px 11px; font-size:12px;}
 .todaybtn.on{background:var(--success-bg); border-color:var(--success); color:var(--success);}
@@ -458,7 +459,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 n';
+var APP_VERSION = '2026-09-23 o';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -1213,10 +1214,12 @@ function showShareToast(msg){
   if(shareToastTimer) clearTimeout(shareToastTimer);
   shareToastTimer = setTimeout(function(){ state.shareToast = ''; render(); }, 3000);
 }
+// 새로고침용으로 붙은 표시(?v=...)는 빼고 깔끔한 주소만 쓴다
+function appUrl(){
+  try{ return location.origin + location.pathname; }catch(e){ return location.href; }
+}
 function shareLink(){
-  // 새로고침용으로 붙은 표시(?v=...)는 빼고 깔끔한 주소만 보낸다
-  var url;
-  try{ url = location.origin + location.pathname; }catch(e){ url = location.href; }
+  var url = appUrl();
 
   if(navigator.share){
     navigator.share({
@@ -1235,6 +1238,81 @@ function shareLink(){
     return;
   }
   window.prompt('아래 주소를 복사해 주세요', url);
+}
+
+/* ---- 학생에게 알리기 ----
+   관리자가 학생 한 명의 분석 내용을 카톡으로 바로 보낼 수 있게 글로 만든다. */
+function htmlToText(h){
+  return String(h || '')
+    .replace(/<span class="rsub">(.*?)<\/span>/g, '\n◆ $1\n')
+    .replace(/<span class="rfoot">(.*?)<\/span>/g, '\n$1')
+    .replace(/<li>/g, '· ')
+    .replace(/<\/li>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function studentBrief(s){
+  var a = analyze(s);
+  var reco = recommendation(s, a);
+  var cur = currentStage(s, a);
+  var ranked = AREAS.filter(function(x){ return !a.achieved[x]; })
+                    .sort(function(x,y){ return a.gaps[x] - a.gaps[y]; });
+  var near = ranked[0] || null;
+
+  var L = [];
+  L.push('[K-STAR 현황판] ' + s.name + ' 님 현황 안내');
+  L.push('');
+  L.push('■ 현재 인증 단계 : ' + (cur ? cur + '단계 인증 완료' : '아직 인증 전'));
+  L.push('■ COMpass K 총점 : ' + num(s.total) + '점');
+  L.push('');
+  L.push('▶ ' + (reco.head || '다음 목표'));
+  L.push(htmlToText(reco.html));
+  L.push('');
+  L.push('▶ FACE 영역 점수');
+  AREAS.forEach(function(x){
+    L.push('  ' + x + '  ' + num(s[x]) + ' / ' + THRESHOLDS[x] + '  ' +
+      (a.achieved[x] ? '달성 완료 ✔' : a.gaps[x] + '점 남음') +
+      (x === near ? '   ← 가장 가까움' : ''));
+  });
+
+  var dd = daysUntil(SEMESTER.visitEnd);
+  if(dd >= 0){
+    L.push('');
+    L.push('▶ ' + SEMESTER.name + ' 실적 승인 마감 (D-' + dd + ')');
+    L.push('  2026. 12. 28.(월) 16:00');
+    L.push('  자격증·봉사·수상은 EDWARD에 직접 입력하고 승인까지 받아야 점수가 생깁니다.');
+  }
+  L.push('');
+  L.push('▶ 내 현황 자세히 보기');
+  L.push(appUrl());
+  return L.join('\n');
+}
+
+function notifyStudent(id){
+  var s = cache.roster.find(function(x){ return x.id === id; });
+  if(!s) return;
+  var text = studentBrief(s);
+
+  if(navigator.share){
+    // 주소는 글 안에 넣는다 — 카톡은 글만 받아도 주소를 알아서 누를 수 있게 만든다
+    navigator.share({ title: 'K-STAR 현황 안내 — ' + s.name, text: text })
+      .catch(function(){ /* 취소한 경우 */ });
+    return;
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      showShareToast(s.name + ' 님 안내문을 복사했어요. 카톡에 붙여넣어 주세요.');
+    }, function(){
+      window.prompt('아래 내용을 복사해 카톡으로 보내 주세요', text);
+    });
+    return;
+  }
+  window.prompt('아래 내용을 복사해 카톡으로 보내 주세요', text);
 }
 
 function copyInstallUrl(){
@@ -1994,6 +2072,8 @@ function screenDetail(){
           (freshWhen(s) ? ' <span class="fresh">'+freshWhen(s)+'</span>' : '') + '</div>'
         : '') +
       '</div>' +
+      '<button class="btn btn-small btn-primary notify-btn" data-action="notify-student"' +
+        ' data-id="'+esc(s.id)+'">📨 학생에게 알리기</button>' +
     '</div>' +
     pyramidHtml(s, analyze(s)) +
     analysisHtml(s, {noCerts:true}) +
@@ -2236,6 +2316,9 @@ function guideAdmin(){
         '<li>학생이 잘못 입력한 점수를 관리자가 직접 고칠 수 있습니다.</li>' +
         '<li>비밀번호를 잊은 학생은 <b>비밀번호 초기화</b>를 눌러 주세요. 점수 기록은 지워지지 않습니다.</li>' +
         '<li>좌우로 밀거나 <b>이전·다음</b>을 눌러 학생을 넘겨볼 수 있습니다.</li>' +
+        '<li>이름 옆 <b>📨 학생에게 알리기</b>를 누르면 그 학생의 현재 단계·남은 점수·' +
+          '해야 할 일을 정리한 안내문이 만들어져, <b>카톡으로 바로 보낼 수 있습니다.</b> ' +
+          '앱 주소도 함께 들어가 학생이 눌러서 바로 들어옵니다.</li>' +
       '</ul>' +
       stepShot('guide-img/s13-detail.png', '학생 상세 화면 — 분석 결과를 보고 그 자리에서 점수를 고칩니다') +
       '</div>' +
@@ -2982,6 +3065,7 @@ document.addEventListener('click', function(e){
   else if(act==='set-guide-role'){ navReplace(function(){ state.guideRole = el.dataset.role; }); window.scrollTo(0,0); }
   else if(act==='open-detail'){ navGo(function(){ state.detailId = el.dataset.id; state.view='detail'; }); }
   else if(act==='share-link'){ shareLink(); }
+  else if(act==='notify-student'){ notifyStudent(el.dataset.id); }
   else if(act==='do-update'){ reloadForUpdate(); }
   else if(act==='install'){ doInstall(); }
   else if(act==='do-install'){ installNow(); }
