@@ -185,16 +185,31 @@ button{font-family:inherit;}
 .schol .amt{font-size:16px; font-weight:900; color:var(--gold); font-family:var(--font-mono);}
 .schol-row.cmp .amt{font-size:12.5px;}
 .schol .snote{font-size:11px; color:var(--gold); opacity:.9; margin-top:1px;}
-.reco{font-size:13px; line-height:1.6; padding:13px 15px; border-radius:var(--radius-m); background:var(--surface-2); color:var(--text);}
-.reco.ok{background:var(--gold-soft);}
-.reco b{color:var(--primary);}
+/* 다음 목표 — 학생이 가장 먼저 보고 무엇을 할지 알아야 하는 칸 */
+.reco{border:2px solid var(--primary); border-radius:var(--radius-m); overflow:hidden;
+  background:var(--surface); color:var(--text); box-shadow:var(--shadow-card);}
+.reco .rbar{display:flex; align-items:center; gap:9px; padding:12px 14px; color:#fff;
+  background:var(--primary); font-size:16px; font-weight:800; letter-spacing:-.01em;
+  word-break:keep-all; line-height:1.3;}
+.reco .rmark{width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; flex:none;}
+.reco .rbody{padding:13px 14px 15px;}
+.reco.st-R{border-color:var(--pill-r);}  .reco.st-R .rbar{background:var(--g-r);}
+.reco.st-A{border-color:var(--pill-a);}  .reco.st-A .rbar{background:var(--g-a);}
+.reco.st-T{border-color:var(--pill-t);}  .reco.st-T .rbar{background:var(--g-t);}
+.reco.st-S{border-color:var(--pill-s);}  .reco.st-S .rbar{background:var(--g-s);}
+.reco.st-R b{color:var(--pill-r);} .reco.st-A b{color:var(--pill-a);}
+.reco.st-T b{color:var(--pill-t);} .reco.st-S b{color:var(--pill-s);}
+.reco.ok{border-color:var(--gold);}
+.reco.ok .rbar{background:linear-gradient(100deg,#D9A73D,#E8BE66);}
 .reco.ok b{color:var(--gold);}
-.reco .rhead{font-weight:800; display:block; margin-bottom:6px; font-size:14px;}
-.reco .rsub{font-weight:700; font-size:11.5px; display:block; margin:10px 0 4px; opacity:.75; letter-spacing:.03em;}
-.reco ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;}
-.reco li{padding-left:13px; position:relative;}
-.reco li::before{content:"·"; position:absolute; left:0; font-weight:900;}
-.reco .rfoot{display:block; margin-top:9px; opacity:.72; font-size:12px;}
+.reco .rsub{display:block; font-weight:800; font-size:12px; margin:15px 0 7px;
+  color:var(--text-muted); letter-spacing:.02em;}
+.reco ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px;}
+.reco li{position:relative; padding:10px 12px 10px 29px; border-radius:9px;
+  background:var(--surface-3); font-size:13.5px; line-height:1.6; word-break:keep-all;}
+.reco li::before{content:"→"; position:absolute; left:10px; top:10px; font-weight:900; opacity:.5;}
+.reco .rfoot{display:block; margin-top:12px; font-size:12px; color:var(--text-muted); line-height:1.55;}
 .stagepill{font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:999px; white-space:nowrap; color:#fff;}
 .curpill{display:inline-block; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;
   margin-left:6px; color:#fff; vertical-align:middle; white-space:nowrap; letter-spacing:-.01em;}
@@ -443,7 +458,7 @@ function sameName(a, b){
 var API_URL = 'https://script.google.com/macros/s/AKfycbzdGENYqLZVMiW1gDjRwu1DXK8PLuFW3rBE8E1GQ7exrQmRKLdWmgcrJ_99Q6UIWIKJ/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 m';
+var APP_VERSION = '2026-09-23 n';
 
 /* ============ store: 서버 → 아티팩트DB → 기기저장 순으로 사용 ============ */
 var db = null, fallbackMode = false, fallbackData = {};
@@ -850,8 +865,8 @@ function recommendation(s, a){
     if(!s.r1) missing.push('자기소개서 작성');
     if(!s.r2) missing.push('학업계획서 작성');
     if(!s.r3) missing.push('교수상담 1회');
-    return { target:'A', ok:false, html:
-      '<span class="rhead">지금 할 일</span><ul>' +
+    return { target:'A', mark:'R', ok:false, head:'먼저 R단계부터 — 남은 '+missing.length+'가지', html:
+      '<ul>' +
       missing.map(function(m){ return '<li>'+m+'</li>'; }).join('') +
       '</ul><span class="rfoot">이 3가지를 먼저 끝내야 A·T·S단계에 도전할 수 있어요.</span>' };
   }
@@ -877,8 +892,8 @@ function recommendation(s, a){
         '<li>영역을 더 채워도 장학금은 늘지 않습니다. 이제 <b>포트폴리오와 면접</b>에 집중하세요</li>' +
         '</ul>';
     }
-    return { target:'S', ok:true, html:
-      '<span class="rhead">S단계 도전 가능!</span><ul>' +
+    return { target:'S', mark:'S', ok:true, head:'S단계 도전 가능!', html:
+      '<ul>' +
       '<li><b>'+done+'영역</b> 기준 통과 완료</li>' +
       '<li>A·T단계 안 거쳐도 바로 도전 가능</li></ul>' +
       moreHtml +
@@ -894,8 +909,8 @@ function recommendation(s, a){
     if(total>0 && total<th) line = 'COMpass K 점수 <b>'+total+'점</b> — <b>'+(th-total)+'점만 더</b> 채우면 A단계 기본 조건 통과';
     else if(total>=th) line = 'COMpass K 점수('+total+'점) 이미 기준 통과 — 학과 내 순위 발표 대기';
     else line = 'COMpass K 총점이 아직 입력되지 않았어요 — 역량 대시보드에서 확인해 입력해 주세요';
-    return { target:'A', ok:false, html:
-      '<span class="rhead">다음 목표: A단계</span><ul>' +
+    return { target:'A', mark:'A', ok:false, head:'다음 목표 — A단계', html:
+      '<ul>' +
       '<li>'+line+'</li>' +
       '<li>A단계 장학금 25만원 · S단계는 영역당 250만원(더 큼)</li>' +
       '<li>단, 최종 선발은 점수 순위라 확정은 아님</li></ul>' +
@@ -904,15 +919,15 @@ function recommendation(s, a){
   var b = bestGapArea(a);
   var lines = actionLines(b.area, b.gap).map(function(l){ return '<li>'+l+'</li>'; }).join('');
   if(year>=3 && !s.certT){
-    return { target:'T', ok:false, html:
-      '<span class="rhead">다음 목표: T단계</span><ul>' +
+    return { target:'T', mark:'T', ok:false, head:'다음 목표 — T단계', html:
+      '<ul>' +
       '<li>순위 선발이라 확정 아님 · 장학금 최대 60만원</li>' +
       '<li><b>'+b.area+'영역</b> <b>'+b.gap+'점</b>만 더 채우면 완료</li>' +
       '<li>채우면 <b>S단계(영역당 250만원)</b>도 순위와 상관없이 바로 열림</li></ul>' +
       '<span class="rsub">추천 활동</span><ul>'+lines+'</ul>' };
   }
-  return { target:'S', ok:false, html:
-    '<span class="rhead">다음 목표: S단계</span><ul>' +
+  return { target:'S', mark:'S', ok:false, head:'다음 목표 — S단계', html:
+    '<ul>' +
     '<li><b>'+b.area+'영역</b>을 <b>'+b.gap+'점</b> 채우면 가장 빨리 S단계 도달</li></ul>' +
     '<span class="rsub">추천 활동</span><ul>'+lines+'</ul>' +
     '<span class="rfoot">(추정 — 정확한 인정 여부는 학생성공센터에 확인)</span>' };
@@ -1055,6 +1070,12 @@ function pyramidHtml(s, a){
 function analysisHtml(s, o){
   var a = analyze(s), reco = recommendation(s,a);
   var certs = [['S',!!s.certS],['T',!!s.certT],['A',!!s.certA],['R',a.rDone]];
+  var mark = reco.mark || 'S';
+  var recoBlock =
+    '<div class="reco st-'+mark+(reco.ok?' ok':'')+'">' +
+      '<div class="rbar"><span class="rmark">'+mark+'</span><span>'+esc(reco.head||'다음 목표')+'</span></div>' +
+      '<div class="rbody">'+reco.html+'</div>' +
+    '</div>';
   var ranked = AREAS.filter(function(x){ return !a.achieved[x]; }).sort(function(x,y){ return a.gaps[x]-a.gaps[y]; });
   // 장학금이 나오는 영역은 최대 2개. 이미 채운 만큼 빼고 남은 자리만 짚어 준다.
   var slots = Math.max(0, S_MAX_AREAS - a.achievedCount);
@@ -1062,6 +1083,7 @@ function analysisHtml(s, o){
   var r2 = slots>=2 ? (ranked[1]||null) : null;
   var oneMore = a.achievedCount===1 && r1;   // 한 영역만 더 채우면 최대치
   return (
+    ((o && o.recoTop) ? recoBlock + '<div style="height:14px;"></div>' : '') +
     ((o && o.noCerts) ? '' :
       '<div class="certrow"><span class="clabel">현재 인증 단계</span><div class="certbadges">' +
       certs.map(function(c){ return '<span class="certbadge '+(c[1]?'on '+c[0]:'')+'">'+c[0]+'</span>'; }).join('') +
@@ -1111,7 +1133,7 @@ function analysisHtml(s, o){
         '<div class="amt">'+SCHOLARSHIP[reco.target].amount+'</div>' +
         '<div class="snote">'+SCHOLARSHIP[reco.target].note+'</div></div></div>' : '') +
     '</div>' +
-    '<div class="reco '+(reco.ok?'ok':'')+'">'+reco.html+'</div>' +
+    (o && o.recoTop ? '' : recoBlock) +
     (s.note ? '<div class="notice-box" style="margin:12px 0 0;">메모: '+esc(s.note)+'</div>' : '')
   );
 }
@@ -1543,7 +1565,7 @@ function screenMyStatus(){
     monthlyNudge(s) +
     pyramidHtml(s, analyze(s)) +
     deadlineBox(true) +
-    analysisHtml(s, {noCerts:true}) +
+    analysisHtml(s, {noCerts:true, recoTop:true}) +
     '<div style="height:14px;"></div>' +
     procHtml() +
     '<button class="btn btn-primary" data-action="goto-scores">내 점수 입력·수정하기</button>' +
