@@ -190,12 +190,13 @@ function randomToken() {
 // 줄이 끝없이 쌓이는 걸 막는다(그러면 매 요청마다 훑어야 하는 목록이 점점 길어져서
 // 앱 전체가 느려진다). 시트를 통째로 비웠다가 다시 쓰지는 않는다 — 그 사이 순간적으로
 // 다른 사람의 getSession 조회가 빈 시트를 보게 되는 걸 피하기 위해서다.
-function createSession(book, role, id, majorId, viewerOnly) {
+function createSession(book, role, id, majorId, viewerOnly, allMajors) {
   var sh = getSheet(book, 'cvg_sessions');
   var token = randomToken();
   var expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString();
   var payload = { role: role, id: String(id), majorId: majorId, expiresAt: expiresAt };
   if (viewerOnly) payload.viewerOnly = true;
+  if (allMajors) payload.allMajors = true;
   var data = [token, JSON.stringify(payload)];
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -292,6 +293,7 @@ function handle(req) {
   if (action === 'changePassword') return doChangePassword(book, req);
   if (action === 'resetPassword') return doResetPassword(book, req);
   if (action === 'dedupeStudents') return doDedupeStudents(book, req);
+  if (action === 'createSuperViewer') return doCreateSuperViewer(book, req);
 
   // ---- 일반 데이터(과목/이수정보/설정 등) — 여기서부터는 collection별 권한 검사 ----
   var col = req.collection;
@@ -391,7 +393,7 @@ function doLogin(book, req) {
     lock.releaseLock();
   }
   var majorId = doc.majorId || DEFAULT_MAJOR_ID;
-  var token = createSession(book, role, req.id, majorId, doc.viewerOnly);
+  var token = createSession(book, role, req.id, majorId, doc.viewerOnly, doc.allMajors);
   var out = stripSecrets(doc); out.id = String(req.id);
   return { token: token, doc: out };
 }
@@ -486,6 +488,31 @@ function doDedupeStudents(book, req) {
   }
 }
 
+// 총 관리자가 직접 "통합 조회 계정"을 만든다(등록코드로 셀프 등록하는 방식이 아니라,
+// 지금 로그인한 정관리자가 번호·이름만 정하면 서버가 임시 비밀번호를 만들어준다).
+// 이 계정은 모든 융합전공을 조회 전용으로 볼 수 있다(session.allMajors) — K-Cloud
+// College처럼 학교 전체 진행 상황만 확인하면 되는 사람 몫.
+function doCreateSuperViewer(book, req) {
+  requireFullAdmin(book, req.token);
+  if (!req.id || !req.name) fail('MISSING_FIELDS');
+  var adminSh = getSheet(book, 'cvg_admins');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
+    var tempPw = randomTempPassword();
+    var hashed = hashNewPassword(tempPw);
+    var doc = Object.assign({
+      name: req.name, majorId: DEFAULT_MAJOR_ID, viewerOnly: true, allMajors: true,
+      createdAt: new Date().toISOString()
+    }, hashed);
+    writeRow(adminSh, 0, req.id, doc);
+    return { ok: true, tempPassword: tempPw };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /* ---- 일반 데이터 읽기/쓰기: collection별 권한 검사 ---- */
 
 function handleGetAction(book, col, req) {
@@ -508,7 +535,7 @@ function handleGetAction(book, col, req) {
     if (!doc2) return { doc: null };
     var majorId = doc2.majorId || DEFAULT_MAJOR_ID;
     var allowed = (session.role === 'student' && String(session.id) === String(req.id)) ||
-      (session.role === 'admin' && session.majorId === majorId);
+      (session.role === 'admin' && (session.allMajors || session.majorId === majorId));
     if (!allowed) fail('FORBIDDEN');
     var out = stripSecrets(doc2); out.id = String(req.id);
     return { doc: out };
@@ -522,7 +549,11 @@ function doAll(book, col, req) {
   if (session.role !== 'admin') fail('FORBIDDEN');
   var sh = getSheet(book, col);
   var all = readAll(sh);
-  var mine = all.filter(function (s) { return (s.majorId || DEFAULT_MAJOR_ID) === session.majorId; });
+  // 통합 조회 계정(session.allMajors)은 모든 융합전공을 볼 수 있다 — req.majorId를
+  // 주면 그 융합전공만, 안 주면(요약용) 전부 돌려준다. 일반 관리자는 항상 자기
+  // 융합전공(session.majorId)만 본다.
+  var targetMajor = session.allMajors ? (req.majorId || null) : session.majorId;
+  var mine = targetMajor ? all.filter(function (s) { return (s.majorId || DEFAULT_MAJOR_ID) === targetMajor; }) : all;
   return { docs: mine.map(stripSecrets).map(function (d, i) { d.id = mine[i].id; return d; }) };
 }
 
