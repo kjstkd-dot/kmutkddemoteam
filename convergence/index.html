@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-22 m';
+var APP_VERSION = '2026-09-23 a';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -8048,14 +8048,18 @@ function studentAnalysisText(student){
   var selfCr = selfCourseCredits(student);
   lines.push('');
   lines.push('융합전공 자체교과목 이수: '+selfCr+' / '+SELF_COURSE_MIN_CREDITS+'학점'+(coreMet(student)?' (충족)':''));
+  lines.push('');
+  lines.push('👉 내 이수 현황 보러 가기: '+window.location.href);
   return lines.join('\n');
 }
 function shareStudentAnalysis(id){
   var s = state.cache.detail;
   if(!s || String(s.id)!==String(id)) return;
   var text = studentAnalysisText(s);
-  // navigator.share는 모바일에서 공유 시트(카카오톡 포함)를 띄운다. 지원 안 하는
-  // 환경(주로 PC 브라우저)에서는 대신 클립보드에 복사해서 카카오톡에 직접 붙여넣게 한다.
+  // navigator.share는 모바일에서 공유 시트(카카오톡 포함)를 띄운다. 링크는 위
+  // studentAnalysisText 안에 이미 넣어뒀다 — 카카오톡 등 text만 그대로 옮기는 곳이
+  // 많아서, url 필드를 따로 넘기면 오히려 링크가 두 번 보일 수 있어 text에만 둔다.
+  // 지원 안 하는 환경(주로 PC 브라우저)에서는 클립보드에 복사해서 붙여넣게 한다.
   if(navigator.share){
     navigator.share({ title: s.name+'님 이수 현황', text: text }).catch(function(){});
     return;
