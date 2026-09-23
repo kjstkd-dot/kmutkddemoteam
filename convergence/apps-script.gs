@@ -499,7 +499,21 @@ function doCreateSuperViewer(book, req) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (findRow(adminSh, req.id)) fail('DUPLICATE_ID');
+    var row = findRow(adminSh, req.id);
+    if (row) {
+      // 이미 있는 계정이 이 화면으로 예전에 만든 통합 조회 계정이면, 임시 비밀번호를
+      // 못 받았거나 잃어버렸을 수 있으니 새로 만들어 돌려준다. 일반 관리자 계정이면
+      // 실수로 남의 계정을 덮어쓰지 않도록 그대로 막는다.
+      var existing = readRow(adminSh, row);
+      if (!existing.viewerOnly || !existing.allMajors) fail('DUPLICATE_ID');
+      var tempPw2 = randomTempPassword();
+      var hashed2 = hashNewPassword(tempPw2);
+      existing.passwordSalt = hashed2.passwordSalt;
+      existing.passwordHash = hashed2.passwordHash;
+      existing.name = req.name;
+      writeRow(adminSh, row, req.id, existing);
+      return { ok: true, tempPassword: tempPw2, reset: true };
+    }
     var tempPw = randomTempPassword();
     var hashed = hashNewPassword(tempPw);
     var doc = Object.assign({

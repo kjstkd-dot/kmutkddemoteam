@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 d';
+var APP_VERSION = '2026-09-23 e';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -7402,7 +7402,7 @@ function superViewerResultHtml(){
   if(!r) return '';
   if(!r.ok) return '<div class="errbox" style="margin-top:10px;">'+esc(r.message)+'</div>';
   return '<div class="okbox" style="margin-top:10px; line-height:1.7;">' +
-    '"'+esc(r.name)+'"('+esc(r.id)+') 통합 조회 계정을 만들었어요.<br>' +
+    '"'+esc(r.name)+'"('+esc(r.id)+') 통합 조회 계정'+(r.reset?'의 비밀번호를 새로 만들었어요':'을 만들었어요')+'.<br>' +
     '임시 비밀번호: <b style="font-size:15px; letter-spacing:.03em;">'+esc(r.tempPassword)+'</b><br>' +
     '이 번호와 비밀번호를 전달해 주세요.' +
   '</div>';
@@ -7444,11 +7444,15 @@ async function createSuperViewer(id, name){
   if(!id || !name){ state.cache.superViewerResult = { ok:false, message:'관리자 번호와 이름을 입력해 주세요.' }; render(); return; }
   if(!apiMode){
     var existing = await storeGet('cvg_admins', id);
-    if(existing){ state.cache.superViewerResult = { ok:false, message:'이미 등록된 관리자 번호예요.' }; render(); return; }
+    // 이미 있는 계정이 이 화면으로 예전에 만든 통합 조회 계정이면(임시 비밀번호를
+    // 못 받았거나 잃어버렸을 수 있으니) 비밀번호만 새로 만들어준다. 일반 관리자
+    // 계정이면 실수로 덮어쓰지 않는다.
+    var isResetCase = existing && existing.viewerOnly && existing.allMajors;
+    if(existing && !isResetCase){ state.cache.superViewerResult = { ok:false, message:'이미 등록된 관리자 번호예요.' }; render(); return; }
     var tempPw0 = '000000';
     var hash = await sha256Hex(tempPw0);
-    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: DEFAULT_MAJOR_ID, viewerOnly:true, allMajors:true, createdAt:nowIso() });
-    state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:tempPw0 };
+    await storeSet('cvg_admins', id, { name:name, passwordHash:hash, majorId: DEFAULT_MAJOR_ID, viewerOnly:true, allMajors:true, createdAt: (existing?existing.createdAt:nowIso()) });
+    state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:tempPw0, reset: !!isResetCase };
     render();
     return;
   }
@@ -7462,7 +7466,7 @@ async function createSuperViewer(id, name){
     state.cache.superViewerResult = { ok:false, message:msg };
     render(); return;
   }
-  state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:result.tempPassword };
+  state.cache.superViewerResult = { ok:true, id:id, name:name, tempPassword:result.tempPassword, reset: !!result.reset };
   render();
 }
 async function saveAdminCode(code){
