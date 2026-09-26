@@ -18,7 +18,8 @@
 <meta property="og:locale" content="ko_KR">
 <meta property="og:title" content="나의 자서전">
 <meta property="og:description" content="질문에 답하다 보면 한 권의 책이 됩니다">
-<meta property="og:image" content="og-image.png">
+<meta property="og:url" content="https://kmutkddemoteam.vercel.app/autobiography/">
+<meta property="og:image" content="https://kmutkddemoteam.vercel.app/autobiography/og-image.png?v=1">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@400;600;700&display=swap">
@@ -346,21 +347,78 @@ function topbar(){
   return '<div class="topbar no-print"><div class="mark">📖</div><div><strong>나의 자서전</strong>' +
     '<span>' + (state.profile ? esc(state.profile.name) + ' 님의 이야기' : '질문에 답하면 책이 됩니다') + '</span></div>' +
     '<div class="spacer"></div>' +
-    (state.profile ? '<button class="icon-btn" onclick="go(\'#/settings\')">⚙️ 설정</button>' : '') + '</div>';
+    (state.profile ? '<button class="icon-btn" onclick="go(\'#/settings\')">⚙️ 설정</button>' : '') + '</div>' +
+    kakaoBanner();
 }
+
+// ─────────────── 카카오톡 안에서 열렸을 때 ───────────────
+// 카톡 안 브라우저에 저장한 자료는 크롬·사파리와 따로 놀고, 카톡 캐시를 지우면
+// 함께 사라진다. 그래서 늘 휴대폰의 인터넷 앱에서 열리도록 내보낸다.
+var IN_KAKAO = /KAKAOTALK/i.test(navigator.userAgent);
+var IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function openOutside(){ location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); }
+function kakaoBanner(){
+  if(!IN_KAKAO) return '';
+  return '<div class="card stack no-print" style="border:3px solid var(--primary)">' +
+    '<div class="title">잠깐만요! 👋</div>' +
+    '<p class="sub" style="margin:0">지금 카카오톡 안에서 열려 있어요. 여기서 쓰시면 이야기가 사라질 수 있어요. 아래 단추를 눌러 휴대폰의 인터넷 앱에서 열어주세요.</p>' +
+    '<button class="btn btn-primary btn-big" onclick="openOutside()">🌐 인터넷 앱에서 열기</button>' +
+    '<div class="hint">단추가 안 되면 화면 ' + (IS_IOS ? '오른쪽 아래' : '오른쪽 위') + '의 <b>⋮ 또는 ··· 단추</b>를 누르고 <b>"다른 브라우저로 열기"</b>를 골라주세요.</div>' +
+  '</div>';
+}
+
+// ─────────────── 바탕화면에 앱 단추 만들기 ───────────────
+// 아이폰 사파리는 7일 동안 열지 않은 사이트의 저장 자료를 지울 수 있다.
+// 홈 화면에 추가한 앱은 예외라서, 아이폰에서는 특히 꼭 추가하도록 안내한다.
+var installPrompt = null;
+function isStandalone(){
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); installPrompt = e; if(!location.hash || location.hash === '#/') render(); });
+window.addEventListener('appinstalled', function(){ installPrompt = null; render(); });
+function installCard(){
+  if(IN_KAKAO || isStandalone() || state.settings.installHidden) return '';
+  var how;
+  if(installPrompt) how = '<button class="btn btn-primary btn-big" onclick="doInstall()">📲 바탕화면에 단추 만들기</button>';
+  else if(IS_IOS) how = '<ol class="sub" style="margin:0; padding-left:1.3rem">' +
+      '<li>화면 아래 가운데 <b>공유 단추(네모에 위 화살표 ⬆️)</b>를 누르세요.</li>' +
+      '<li>아래로 내려서 <b>"홈 화면에 추가"</b>를 누르세요.</li>' +
+      '<li>오른쪽 위 <b>"추가"</b>를 누르면 끝!</li></ol>';
+  else how = '<ol class="sub" style="margin:0; padding-left:1.3rem">' +
+      '<li>화면 오른쪽 위 <b>⋮ 단추</b>를 누르세요.</li>' +
+      '<li><b>"홈 화면에 추가"</b> 또는 <b>"앱 설치"</b>를 누르세요.</li></ol>';
+  return '<div class="card stack no-print">' +
+    '<div class="title">📲 바탕화면에 단추 만들기</div>' +
+    '<p class="sub" style="margin:0">한 번만 해두시면 다음부터 카톡에서 찾지 않고 바탕화면의 <b>"나의 자서전"</b> 단추로 바로 여실 수 있어요.' +
+      (IS_IOS ? ' 아이폰은 이걸 해두셔야 쓰신 이야기가 안전하게 남아요.' : '') + '</p>' +
+    how +
+    '<button class="btn btn-line" onclick="hideInstall()">' + (IS_IOS ? '다 했어요 / 다음에 할게요' : '다음에 할게요') + '</button>' +
+  '</div>';
+}
+function doInstall(){
+  if(!installPrompt) return;
+  installPrompt.prompt();
+  installPrompt.userChoice.then(function(){ installPrompt = null; render(); }, function(){});
+}
+function hideInstall(){ state.settings.installHidden = true; saveNow(); render(); }
+
+// 링크에 ?name=홍길순&from=막내아들 처럼 붙여 보내면 첫 화면에 미리 채워준다.
+function linkParam(k){ try{ return (new URLSearchParams(location.search).get(k) || '').trim().slice(0, 40); }catch(e){ return ''; } }
 
 // ─────────────── 화면들 ───────────────
 function viewWelcome(){
   return topbar() +
   '<div class="card stack">' +
     '<div class="title">반갑습니다 🙂</div>' +
-    '<p class="sub">질문에 하나씩 답하다 보면 어르신의 삶이 한 권의 책이 됩니다. 글로 써도 되고, 🎤 말로 해도 됩니다.</p>' +
-    '<div class="field"><label for="f-name">성함</label><input id="f-name" autocomplete="name" placeholder="예) 김영자"></div>' +
+    (linkParam('from') ? '<div class="okbox">💌 ' + esc(linkParam('from')) + '(이)가 보내드리는 선물이에요.</div>' : '') +
+    '<p class="sub">질문에 하나씩 답하다 보면 살아오신 이야기가 한 권의 책이 됩니다.</p>' +
+    '<div class="notice"><b>이렇게 하시면 돼요</b><br>① 질문을 읽거나 🔊 소리로 들으세요.<br>② 글로 쓰시거나 🎤 단추를 누르고 말씀하세요.<br>③ 저절로 저장돼요. 틀려도, 짧아도 괜찮아요.</div>' +
+    '<div class="field"><label for="f-name">성함</label><input id="f-name" autocomplete="name" placeholder="예) 김영자" value="' + esc(linkParam('name')) + '"></div>' +
     '<div class="field"><label for="f-year">태어난 해 (적지 않아도 됩니다)</label><input id="f-year" inputmode="numeric" maxlength="4" placeholder="예) 1948"></div>' +
     '<div class="field"><label for="f-home">고향 (적지 않아도 됩니다)</label><input id="f-home" placeholder="예) 경북 안동"></div>' +
     '<div id="f-err"></div>' +
     '<button class="btn btn-primary btn-big" onclick="startProfile()">시작하기</button>' +
-    '<p class="hint">쓰신 이야기는 이 휴대폰 안에만 저장됩니다. 다른 사람에게 보내지 않습니다.</p>' +
+    '<p class="hint">쓰신 이야기는 이 휴대폰 안에만 저장됩니다. 직접 보내기 전에는 누구에게도 가지 않습니다.</p>' +
   '</div>';
 }
 function startProfile(){
@@ -373,7 +431,7 @@ function startProfile(){
 function viewHome(){
   var t = totals(), pct = t.all ? Math.round(t.done / t.all * 100) : 0;
   var next = nextUnanswered();
-  var html = topbar() +
+  var html = topbar() + installCard() + backupReminder(t.done) +
   '<div class="card stack">' +
     '<div class="eyebrow">지금까지</div>' +
     '<div class="title">' + (t.done ? t.done + '개의 이야기를 남기셨어요' : '첫 이야기를 들려주세요') + '</div>' +
@@ -638,10 +696,10 @@ function viewSettings(msg){
   '</div>' +
   '<div class="card stack">' +
     '<div class="title">보관하기</div>' +
-    '<p class="sub">쓰신 이야기는 이 휴대폰 안에만 있어요. 휴대폰을 바꾸거나 잃어버려도 괜찮도록 가끔 보관 파일을 만들어 가족에게 맡겨두세요.</p>' +
-    '<button class="btn btn-ghost" onclick="exportBackup()">💾 보관 파일 만들기</button>' +
+    '<p class="sub">쓰신 이야기는 이 휴대폰 안에만 있어요. 휴대폰을 바꾸거나 잃어버려도 괜찮도록 가끔 보관 파일을 카카오톡으로 가족에게 보내두세요. 받은 가족은 같은 링크를 열고 "보관 파일 불러오기"로 책을 볼 수 있어요.</p>' +
+    '<button class="btn btn-ghost" onclick="exportBackup()">💾 보관 파일 보내기</button>' +
     '<label class="btn btn-line" for="restore-in">📂 보관 파일 불러오기</label>' +
-    '<input type="file" id="restore-in" accept="application/json,.json" hidden onchange="importBackup(this)">' +
+    '<input type="file" id="restore-in" accept="application/json,.json,text/plain,.txt" hidden onchange="importBackup(this)">' +
   '</div>' +
   '<div class="card stack">' +
     '<button class="btn btn-danger" onclick="wipeAll()">모든 이야기 지우기</button>' +
@@ -654,16 +712,41 @@ function saveProfile(){
   state.profile = { name: name, birthYear: $('s-year').value.trim(), hometown: $('s-home').value.trim() };
   saveNow().then(function(){ $('app').innerHTML = viewSettings('<div class="okbox">저장했어요.</div>'); });
 }
+// 휴대폰에만 있는 이야기를 가족에게 맡겨두라고 첫 화면에서 가끔 알려준다.
+var BACKUP_EVERY_DAYS = 7;
+function backupReminder(done){
+  if(!done) return '';
+  var last = state.settings.lastBackupAt || 0;
+  if(Date.now() - last < BACKUP_EVERY_DAYS * 864e5) return '';
+  return '<div class="card stack no-print">' +
+    '<div class="title">💾 가족에게 맡겨두기</div>' +
+    '<p class="sub" style="margin:0">쓰신 이야기는 이 휴대폰에만 있어요. 휴대폰을 잃어버려도 괜찮도록 보관 파일을 카카오톡으로 가족에게 보내두세요.' +
+      (last ? ' (마지막으로 보낸 날: ' + new Date(last).toLocaleDateString('ko-KR') + ')' : '') + '</p>' +
+    '<button class="btn btn-primary" onclick="exportBackup()">💾 보관 파일 보내기</button>' +
+  '</div>';
+}
+// 공유 시트(카톡 포함)로 파일을 바로 보낸다. 안드로이드 크롬은 .json 파일 공유를
+// 막아서 .txt 로 만든다 — 속은 JSON 이고 불러오기에서 그대로 읽힌다.
 function exportBackup(){
   saveNow();
   var data = JSON.stringify({ app:'jaseojeon', version:1, savedAt:new Date().toISOString(), state: state });
-  var blob = new Blob([data], { type:'application/json' });
   var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  // 파일 이름에 한글을 넣으면 일부 브라우저가 이름을 "download" 로 바꿔버려서 영문으로 둔다.
+  var name = 'jaseojeon-backup-' + stamp + '.txt';
+  var file = null;
+  try{ file = new File([data], name, { type:'text/plain' }); }catch(e){}
+  function markDone(){ state.settings.lastBackupAt = Date.now(); saveNow(); if(!location.hash || location.hash === '#/') render(); }
+  if(file && navigator.canShare && navigator.canShare({ files:[file] })){
+    navigator.share({ files:[file], title:'자서전 보관 파일' }).then(function(){ markDone(); toast('보냈어요. 고맙습니다!'); }, function(){});
+    return;
+  }
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '자서전-' + ((state.profile && state.profile.name) || '보관') + '-' + stamp + '.json';
+  a.href = URL.createObjectURL(new Blob([data], { type:'text/plain' }));
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+  markDone();
+  toast('보관 파일을 내려받았어요.');
 }
 function importBackup(input){
   var file = input.files && input.files[0]; if(!file) return;
@@ -713,6 +796,10 @@ window.addEventListener('pagehide', function(){ saveNow(); });
 document.addEventListener('visibilitychange', function(){ if(document.hidden) saveNow(); });
 
 loadState().then(function(){ applyScale(); render(); });
+if(IN_KAKAO){
+  try{ if(!sessionStorage.getItem('jsj-kakao-out')){ sessionStorage.setItem('jsj-kakao-out', '1'); openOutside(); } }
+  catch(e){ openOutside(); }
+}
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
