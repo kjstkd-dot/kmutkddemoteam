@@ -17,7 +17,7 @@
 ## 카카오톡으로 링크 보내기
 
 - 링크 뒤에 `?name=성함&from=보내는사람`을 붙이면 첫 화면에 성함이 미리 채워지고 "💌 막내아들(이)가 보내드리는 선물이에요"가 보입니다.
-  예: `https://kmutkd-autobiography.vercel.app/?name=김영자&from=막내아들`
+  예: `https://kjstkd-autobiography.vercel.app/?name=김영자&from=막내아들`
 - 카카오톡 안 브라우저에서 열리면 자동으로 휴대폰의 인터넷 앱(크롬·사파리)으로 다시 엽니다(`kakaotalk://web/openExternal`). 안 되면 화면에 방법을 안내합니다. 카톡 안에 저장한 자료는 인터넷 앱과 따로 놀고 카톡 캐시를 지우면 사라지기 때문입니다.
 - 첫 화면에 "바탕화면에 단추 만들기" 안내가 나옵니다. 아이폰 사파리는 7일 동안 열지 않은 사이트의 저장 자료를 지울 수 있는데, 홈 화면에 추가한 앱은 예외라서 아이폰에서는 꼭 해두어야 합니다.
 - 이야기를 하나라도 쓰면 첫 화면에 일주일마다 "💾 보관 파일 보내기" 안내가 나옵니다. 누르면 공유 창이 떠서 카카오톡으로 가족에게 파일을 바로 보낼 수 있습니다. 받은 가족은 같은 링크를 열어 설정 → "보관 파일 불러오기"로 책을 볼 수 있습니다(안드로이드 크롬이 `.json` 공유를 막아서 파일은 `.txt`로 만듭니다).
@@ -45,6 +45,6 @@
 
 ## 배포
 
-- 실제 주소: https://kmutkd-autobiography.vercel.app/ (K-STAR·융합전공과 다른 Vercel 프로젝트)
-- Vercel에서 **Add New → Project**로 이 저장소를 가져오고, 프로젝트 이름은 `kmutkd-autobiography`, **Root Directory**는 `autobiography`, Framework Preset은 `Other`로 둡니다. Vercel은 `main` 브랜치를 배포하므로 이 폴더가 `main`에 있어야 합니다.
+- 실제 주소: https://kjstkd-autobiography.vercel.app/ (K-STAR·융합전공과 다른 Vercel 프로젝트)
+- Vercel에서 **Add New → Project**로 이 저장소를 가져오고, 프로젝트 이름은 `kjstkd-autobiography`, **Root Directory**는 `autobiography`, Framework Preset은 `Other`로 둡니다. Vercel은 `main` 브랜치를 배포하므로 이 폴더가 `main`에 있어야 합니다.
 - 프로젝트 이름을 다르게 지었다면 `index.html`의 `og:url`·`og:image`와 위 주소를 바꿔야 카카오톡 미리보기가 나옵니다.
