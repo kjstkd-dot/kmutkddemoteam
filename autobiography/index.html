@@ -356,6 +356,7 @@ function topbar(){
 // 함께 사라진다. 그래서 늘 휴대폰의 인터넷 앱에서 열리도록 내보낸다.
 var IN_KAKAO = /KAKAOTALK/i.test(navigator.userAgent);
 var IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var IS_SAMSUNG = /SamsungBrowser/i.test(navigator.userAgent);
 function openOutside(){ location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); }
 function kakaoBanner(){
   if(!IN_KAKAO) return '';
@@ -384,6 +385,10 @@ function installCard(){
       '<li>화면 아래 가운데 <b>공유 단추(네모에 위 화살표 ⬆️)</b>를 누르세요.</li>' +
       '<li>아래로 내려서 <b>"홈 화면에 추가"</b>를 누르세요.</li>' +
       '<li>오른쪽 위 <b>"추가"</b>를 누르면 끝!</li></ol>';
+  else if(IS_SAMSUNG) how = '<ol class="sub" style="margin:0; padding-left:1.3rem">' +
+      '<li>화면 아래 오른쪽 <b>≡ 단추(줄 세 개)</b>를 누르세요.</li>' +
+      '<li><b>"＋ 현재 페이지 추가"</b>를 누르고 <b>"홈 화면"</b>을 고르세요.</li>' +
+      '<li><b>"추가"</b>를 누르면 끝!</li></ol>';
   else how = '<ol class="sub" style="margin:0; padding-left:1.3rem">' +
       '<li>화면 오른쪽 위 <b>⋮ 단추</b>를 누르세요.</li>' +
       '<li><b>"홈 화면에 추가"</b> 또는 <b>"앱 설치"</b>를 누르세요.</li></ol>';
