@@ -407,6 +407,12 @@ function doInstall(){
 }
 function hideInstall(){ state.settings.installHidden = true; saveNow(); render(); }
 
+// 이름 끝 글자에 받침이 있으면 "이가"(종석이가), 없으면 "가"(종수가).
+function iGa(word){
+  var c = word.charCodeAt(word.length - 1) - 0xAC00;
+  if(c < 0 || c > 11171) return '(이)가';
+  return c % 28 ? '이가' : '가';
+}
 // 링크에 ?name=홍길순&from=막내아들 처럼 붙여 보내면 첫 화면에 미리 채워준다.
 function linkParam(k){ try{ return (new URLSearchParams(location.search).get(k) || '').trim().slice(0, 40); }catch(e){ return ''; } }
 
@@ -415,7 +421,7 @@ function viewWelcome(){
   return topbar() +
   '<div class="card stack">' +
     '<div class="title">반갑습니다 🙂</div>' +
-    (linkParam('from') ? '<div class="okbox">💌 ' + esc(linkParam('from')) + '(이)가 보내드리는 선물이에요.</div>' : '') +
+    (linkParam('from') ? '<div class="okbox">💌 ' + esc(linkParam('from')) + iGa(linkParam('from')) + ' 보내드리는 선물이에요.</div>' : '') +
     '<p class="sub">질문에 하나씩 답하다 보면 살아오신 이야기가 한 권의 책이 됩니다.</p>' +
     '<div class="notice"><b>이렇게 하시면 돼요</b><br>① 질문을 읽거나 🔊 소리로 들으세요.<br>② 글로 쓰시거나 🎤 단추를 누르고 말씀하세요.<br>③ 저절로 저장돼요. 틀려도, 짧아도 괜찮아요.</div>' +
     '<div class="field"><label for="f-name">성함</label><input id="f-name" autocomplete="name" placeholder="예) 김영자" value="' + esc(linkParam('name')) + '"></div>' +
