@@ -31,6 +31,8 @@ var API_URL = '';
 
 `convergence/` 폴더에는 같은 구조로 만든 "융합전공 이수 현황판"이 들어있습니다. 자세한 내용은 `convergence/README.md` 를 보세요.
 
+`autobiography/` 폴더에는 어르신이 질문에 답하며 자서전을 쓰는 "나의 자서전" 앱이 들어있습니다. 자세한 내용은 `autobiography/README.md` 를 보세요.
+
 ## 카카오톡 미리보기
 
 배포 주소가 정해지면 `index.html` 의 `og:image` 두 줄을 전체 주소로 바꿔주세요.

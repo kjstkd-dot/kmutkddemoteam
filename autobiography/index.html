@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>나의 자서전</title>
+<meta name="description" content="질문에 답하다 보면 한 권의 책이 됩니다. 어르신을 위한 자서전 쓰기 앱">
+<meta name="theme-color" content="#8A4B22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="나의 자서전">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="나의 자서전">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:title" content="나의 자서전">
+<meta property="og:description" content="질문에 답하다 보면 한 권의 책이 됩니다">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@400;600;700&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#FBF6EE; --surface:#FFFFFF; --surface-2:#F5EBDD; --surface-3:#FFFCF7;
+  --border:#E4D6C3; --text:#2A211B; --text-muted:#6B5C50; --text-faint:#8C7D70;
+  --primary:#8A4B22; --primary-dark:#6E3A18; --primary-contrast:#FFFFFF;
+  --accent:#2F7A55; --accent-bg:#E6F3EC;
+  --danger:#B42318; --danger-bg:#FDEEEC; --danger-border:#F4C7C1;
+  --radius-s:12px; --radius-m:16px; --radius-l:22px;
+  --shadow-card:0 1px 2px rgba(42,33,27,.06), 0 10px 24px -16px rgba(42,33,27,.3);
+  --font-body:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-book:'Noto Serif KR','Nanum Myeongjo',serif;
+  --scale:1;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg); font-size:calc(19px * var(--scale)); -webkit-text-size-adjust:100%;}
+body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-body); line-height:1.6; padding:16px 16px 96px; min-height:100vh; word-break:keep-all; overflow-wrap:anywhere;}
+h1,h2,h3{margin:0; font-weight:900; letter-spacing:-.01em; text-wrap:balance;}
+button,input,textarea,select{font-family:inherit; font-size:1rem;}
+button{cursor:pointer;}
+:focus-visible{outline:3px solid var(--primary); outline-offset:2px;}
+
+.page{max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:16px;}
+.topbar{display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:var(--radius-m);
+  background:linear-gradient(100deg,#6E3A18,#B8743F); color:#fff; box-shadow:var(--shadow-card);}
+.topbar .mark{width:2.2rem; height:2.2rem; border-radius:12px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex:none;}
+.topbar strong{font-size:1.15rem; font-weight:900; display:block;}
+.topbar span{font-size:.8rem; opacity:.9; display:block;}
+.topbar .spacer{flex:1;}
+.icon-btn{border:1px solid rgba(255,255,255,.45); background:rgba(255,255,255,.16); color:#fff; font-weight:700;
+  font-size:.85rem; padding:.5rem .8rem; border-radius:10px; white-space:nowrap;}
+
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l); box-shadow:var(--shadow-card); padding:20px 18px;}
+.eyebrow{font-size:.8rem; font-weight:700; color:var(--text-faint);}
+.title{font-size:1.45rem; margin:4px 0 8px;}
+.sub{color:var(--text-muted); margin:0 0 14px;}
+.stack{display:flex; flex-direction:column; gap:12px;}
+.row{display:flex; gap:10px; align-items:center;}
+.row > *{flex:1;}
+
+.btn{display:flex; align-items:center; justify-content:center; gap:.5rem; width:100%; min-height:3.2rem; padding:.7rem 1rem;
+  border-radius:var(--radius-s); border:2px solid transparent; font-weight:700; font-size:1.05rem; text-align:center; line-height:1.3;}
+.btn-primary{background:var(--primary); color:#fff;}
+.btn-primary:active{background:var(--primary-dark);}
+.btn-ghost{background:var(--surface-2); color:var(--primary-dark); border-color:var(--border);}
+.btn-line{background:var(--surface); color:var(--text-muted); border-color:var(--border);}
+.btn-danger{background:var(--danger-bg); color:var(--danger); border-color:var(--danger-border);}
+.btn-rec{background:var(--danger); color:#fff;}
+.btn[disabled]{opacity:.45; cursor:default;}
+.btn-big{min-height:4rem; font-size:1.2rem;}
+
+.field{display:flex; flex-direction:column; gap:6px;}
+.field label{font-weight:700; color:var(--text-muted); font-size:.95rem;}
+.field input{border:2px solid var(--border); background:var(--surface-3); border-radius:var(--radius-s); padding:.75rem .9rem; color:var(--text);}
+.field input:focus, textarea:focus{outline:none; border-color:var(--primary); background:#fff;}
+.hint{font-size:.85rem; color:var(--text-faint);}
+
+.progress{height:.8rem; border-radius:99px; background:var(--surface-2); overflow:hidden;}
+.progress > i{display:block; height:100%; background:var(--accent); border-radius:99px;}
+
+.chapters{display:flex; flex-direction:column; gap:10px;}
+.chapter{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--surface); border:2px solid var(--border);
+  border-radius:var(--radius-m); padding:14px 14px; color:var(--text);}
+.chapter .emo{font-size:1.8rem; width:2.6rem; text-align:center; flex:none;}
+.chapter .body{flex:1; min-width:0;}
+.chapter .name{font-weight:900; font-size:1.1rem;}
+.chapter .count{font-size:.85rem; color:var(--text-muted);}
+.chapter .done{color:var(--accent); font-weight:900; font-size:1.3rem;}
+.chapter .arrow{color:var(--text-faint); font-size:1.3rem;}
+
+.qlist{display:flex; flex-direction:column; gap:8px;}
+.qitem{display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; border:2px solid var(--border); background:var(--surface);
+  border-radius:var(--radius-s); padding:12px 14px; color:var(--text); font-size:1rem;}
+.qitem .chk{flex:none; width:1.6rem; height:1.6rem; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.9rem; margin-top:.1rem;}
+.qitem.answered .chk{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+.question{font-family:var(--font-book); font-size:1.5rem; font-weight:700; line-height:1.45; margin:6px 0 12px;}
+textarea.answer{width:100%; min-height:13rem; resize:vertical; border:2px solid var(--border); border-radius:var(--radius-m);
+  padding:.9rem 1rem; background:var(--surface-3); color:var(--text); line-height:1.7; font-size:1.1rem;}
+.savestate{font-size:.85rem; color:var(--accent); font-weight:700; min-height:1.3rem; text-align:right;}
+.rec-status{background:var(--danger-bg); color:var(--danger); border:2px solid var(--danger-border); border-radius:var(--radius-s); padding:.6rem .9rem; font-weight:700; font-size:.95rem;}
+.photos{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+.photo{position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--border); aspect-ratio:1; background:var(--surface-2);}
+.photo img{width:100%; height:100%; object-fit:cover; display:block;}
+.photo button{position:absolute; right:4px; top:4px; border:none; background:rgba(0,0,0,.6); color:#fff; border-radius:8px; font-size:.8rem; padding:.25rem .5rem; font-weight:700;}
+.pager{display:flex; gap:10px;}
+.pager .btn{flex:1;}
+
+.notice{background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-s); padding:12px 14px; color:var(--text-muted); font-size:.92rem;}
+.okbox{background:var(--accent-bg); color:var(--accent); border-radius:var(--radius-s); padding:10px 14px; font-weight:700;}
+.errbox{background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger-border); border-radius:var(--radius-s); padding:10px 14px; font-weight:700;}
+.seg{display:flex; gap:8px;}
+.seg button{flex:1; min-height:3rem; border-radius:var(--radius-s); border:2px solid var(--border); background:var(--surface); font-weight:700; color:var(--text-muted);}
+.seg button.on{border-color:var(--primary); color:var(--primary); background:var(--surface-2);}
+
+/* 책 보기 */
+.book{background:#fff; border:1px solid var(--border); border-radius:var(--radius-l); box-shadow:var(--shadow-card); padding:32px 22px; font-family:var(--font-book);}
+.book .cover{text-align:center; padding:28px 0 36px; border-bottom:1px solid var(--border); margin-bottom:24px;}
+.book .cover h1{font-size:2rem; font-weight:700; margin-bottom:10px;}
+.book .cover p{color:var(--text-muted); margin:4px 0;}
+.book .toc{margin:0 0 28px; padding:0; list-style:none;}
+.book .toc li{padding:4px 0; color:var(--text-muted);}
+.book h2{font-size:1.4rem; font-weight:700; margin:36px 0 16px; padding-bottom:8px; border-bottom:2px solid var(--surface-2);}
+.book h3{font-size:1rem; font-weight:600; color:var(--primary); margin:22px 0 8px;}
+.book p{margin:0 0 .9em; line-height:1.9; text-indent:.6em;}
+.book .bphotos{display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin:10px 0 16px;}
+.book .bphotos img{width:100%; border-radius:6px; display:block;}
+.book .empty{color:var(--text-faint); text-align:center; padding:30px 0;}
+
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#2A211B; color:#fff; padding:.7rem 1.2rem; border-radius:99px; font-weight:700; font-size:.95rem; z-index:10; max-width:90vw; text-align:center;}
+
+@media print{
+  body{background:#fff; padding:0;}
+  .no-print, .topbar, .toast{display:none !important;}
+  .book{border:none; box-shadow:none; padding:0;}
+  .book h2{page-break-before:always;}
+  .book .cover{page-break-after:always; border:none; padding-top:30vh;}
+  .book img{page-break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+<div class="page" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// ─────────────────────────────────────────────
+// 장(章)과 질문. 질문 id 는 "장id:번호" 로 저장되므로
+// 순서를 바꾸면 이미 쓴 답이 다른 질문에 붙는다 — 새 질문은 맨 뒤에 추가할 것.
+// ─────────────────────────────────────────────
+var CHAPTERS = [
+  { id:'child', emo:'🏡', name:'태어나고 자란 곳', qs:[
+    '언제, 어디에서 태어나셨나요? 태어날 때 이야기를 들으신 적이 있나요?',
+    '어릴 적 살던 집과 동네는 어떤 모습이었나요?',
+    '부모님은 어떤 분이셨나요? 기억나는 모습을 들려주세요.',
+    '형제자매와 함께 지낸 일 중 기억나는 것이 있나요?',
+    '어릴 적 가장 즐겨 하던 놀이는 무엇이었나요?'
+  ]},
+  { id:'school', emo:'🎒', name:'학교 다니던 시절', qs:[
+    '처음 학교에 가던 날이 기억나시나요?',
+    '가장 기억에 남는 선생님은 누구셨나요?',
+    '친하게 지낸 친구는 누구였고, 함께 무엇을 하셨나요?',
+    '학교 다닐 때 좋아했던 과목이나 잘했던 것은 무엇이었나요?',
+    '그 시절 나의 꿈은 무엇이었나요?'
+  ]},
+  { id:'youth', emo:'🌱', name:'젊은 날', qs:[
+    '집을 떠나 처음 홀로서기를 하던 때를 들려주세요.',
+    '젊은 시절 가장 열심히 했던 일은 무엇이었나요?',
+    '그때 즐겨 부르던 노래나 자주 가던 곳이 있었나요?',
+    '군대, 객지 생활처럼 낯선 곳에서 지낸 이야기가 있나요?',
+    '젊은 날의 나에게 한마디 해준다면 무슨 말을 하고 싶으신가요?'
+  ]},
+  { id:'work', emo:'🛠️', name:'일과 생업', qs:[
+    '처음으로 돈을 벌었던 일은 무엇이었나요?',
+    '가장 오래 하신 일은 무엇이고, 하루를 어떻게 보내셨나요?',
+    '일하면서 가장 보람 있었던 순간은 언제였나요?',
+    '일하면서 힘들었던 때는 어떻게 이겨내셨나요?',
+    '함께 일한 사람 가운데 고마운 분이 있나요?'
+  ]},
+  { id:'love', emo:'💞', name:'사랑과 결혼', qs:[
+    '배우자(또는 소중한 사람)를 처음 만난 날을 들려주세요.',
+    '그 사람의 첫인상은 어땠나요?',
+    '결혼식이나 함께하기로 한 날은 어땠나요?',
+    '신혼 시절 살던 곳과 생활은 어땠나요?',
+    '함께 살며 가장 고마웠던 일은 무엇인가요?'
+  ]},
+  { id:'family', emo:'👨‍👩‍👧', name:'자녀와 가족', qs:[
+    '첫 아이가 태어났을 때 기분이 어떠셨나요?',
+    '아이들을 키우며 가장 행복했던 순간은 언제였나요?',
+    '아이들을 키울 때 가장 힘들었던 일은 무엇이었나요?',
+    '가족이 함께 간 여행이나 나들이 중 기억나는 것이 있나요?',
+    '명절이나 집안 행사 때 우리 집만의 풍경이 있었나요?'
+  ]},
+  { id:'hard', emo:'⛰️', name:'힘든 시절을 지나며', qs:[
+    '살면서 가장 힘들었던 때는 언제였나요?',
+    '그때 누가, 또는 무엇이 힘이 되었나요?',
+    '그 경험으로 무엇을 배우셨나요?',
+    '전쟁, 가난, 외환위기처럼 시대의 큰일을 겪으며 기억나는 것이 있나요?',
+    '다시 돌아간다면 다르게 하고 싶은 일이 있나요?'
+  ]},
+  { id:'proud', emo:'🌟', name:'기쁘고 자랑스러운 순간', qs:[
+    '살면서 가장 자랑스러운 일은 무엇인가요?',
+    '가장 크게 웃었던 날을 기억하시나요?',
+    '받은 선물이나 칭찬 가운데 잊지 못할 것이 있나요?',
+    '내가 잘한다고 생각하는 것, 나만의 솜씨는 무엇인가요?',
+    '가장 행복했던 하루를 골라 들려주세요.'
+  ]},
+  { id:'now', emo:'☕', name:'지금의 나', qs:[
+    '요즘 하루는 어떻게 보내시나요?',
+    '요즘 나에게 즐거움을 주는 것은 무엇인가요?',
+    '즐겨 드시는 음식이나 나만의 요리법이 있나요?',
+    '지금 가장 소중한 사람이나 물건은 무엇인가요?',
+    '앞으로 해보고 싶은 일이 있나요?'
+  ]},
+  { id:'words', emo:'✉️', name:'남기고 싶은 말', qs:[
+    '살아보니 가장 중요한 것은 무엇이던가요?',
+    '자녀와 손주에게 꼭 해주고 싶은 말은 무엇인가요?',
+    '배우자(또는 소중한 사람)에게 전하고 싶은 말이 있나요?',
+    '고마운 분께 전하고 싶은 말이 있나요?',
+    '사람들이 나를 어떻게 기억해주면 좋겠나요?'
+  ]}
+];
+
+var MAX_PHOTOS = 3;
+var DB_NAME = 'jaseojeon', DB_STORE = 'kv', DB_KEY = 'state', LS_KEY = 'jaseojeon-state';
+// 쓰는 중인 글은 곧바로 localStorage 에도 적어둔다. IndexedDB 저장은 비동기라
+// 글을 쓰자마자 앱을 닫으면 마지막 몇 글자가 빠질 수 있기 때문.
+var DRAFT_KEY = 'jaseojeon-draft';
+
+var state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 } };
+
+// ─────────────── 저장 (IndexedDB, 안 되면 localStorage) ───────────────
+function openDB(){
+  return new Promise(function(res, rej){
+    if(!window.indexedDB) return rej(new Error('no idb'));
+    var r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore(DB_STORE); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+function dbGet(){
+  return openDB().then(function(db){
+    return new Promise(function(res, rej){
+      var q = db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(DB_KEY);
+      q.onsuccess = function(){ res(q.result || null); };
+      q.onerror = function(){ rej(q.error); };
+    });
+  });
+}
+function dbPut(val){
+  return openDB().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction(DB_STORE,'readwrite');
+      tx.objectStore(DB_STORE).put(val, DB_KEY);
+      tx.oncomplete = function(){ res(); };
+      tx.onerror = function(){ rej(tx.error); };
+    });
+  });
+}
+function loadState(){
+  return dbGet().catch(function(){
+    try{ var s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; }
+  }).then(function(saved){
+    if(saved && typeof saved === 'object'){
+      state.profile = saved.profile || null;
+      state.answers = saved.answers || {};
+      state.custom = saved.custom || {};
+      state.settings = Object.assign({ scale:1 }, saved.settings || {});
+    }
+    var d = readDraft();
+    if(d && d.qid){
+      var a = state.answers[d.qid];
+      if(!a || !a.updated || a.updated < d.t){
+        a = state.answers[d.qid] = a || { text:'', photos:[] };
+        a.text = d.text; a.updated = d.t;
+      }
+    }
+  });
+}
+function readDraft(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); }catch(e){ return null; } }
+function writeDraft(qid, text, t){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify({ qid: qid, text: text, t: t })); }catch(e){} }
+function clearDraftUpTo(t){
+  var d = readDraft();
+  if(d && d.t <= t){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+}
+var saveTimer = null, onSaved = null;
+function saveSoon(cb){
+  onSaved = cb || null;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 500);
+}
+function saveNow(){
+  clearTimeout(saveTimer);
+  var snap = JSON.parse(JSON.stringify(state)), at = Date.now();
+  var done = onSaved; onSaved = null;
+  return dbPut(snap).catch(function(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(snap)); }
+    catch(e){ toast('저장 공간이 부족해요. 사진을 몇 장 지워주세요.'); throw e; }
+  }).then(function(){ clearDraftUpTo(at); if(done) done(); }).catch(function(){});
+}
+// 휴대폰이 공간이 모자랄 때 자료를 지우지 않도록 부탁해둔다.
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+
+// ─────────────── 도움 함수 ───────────────
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+function $(id){ return document.getElementById(id); }
+function go(hash){ location.hash = hash; }
+var toastTimer;
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+function applyScale(){ document.documentElement.style.setProperty('--scale', state.settings.scale || 1); }
+
+function chapterById(id){ for(var i=0;i<CHAPTERS.length;i++) if(CHAPTERS[i].id === id) return CHAPTERS[i]; return null; }
+// 한 장의 질문 목록 (기본 질문 + 직접 추가한 질문)
+function questionsOf(ch){
+  var list = ch.qs.map(function(q, i){ return { id: ch.id + ':' + i, q: q }; });
+  (state.custom[ch.id] || []).forEach(function(c){ list.push({ id: c.id, q: c.q, custom: true }); });
+  return list;
+}
+function hasAnswer(qid){
+  var a = state.answers[qid];
+  return !!(a && ((a.text && a.text.trim()) || (a.photos && a.photos.length)));
+}
+function countAnswered(ch){ return questionsOf(ch).filter(function(q){ return hasAnswer(q.id); }).length; }
+function totals(){
+  var all = 0, done = 0;
+  CHAPTERS.forEach(function(ch){ var qs = questionsOf(ch); all += qs.length; done += countAnswered(ch); });
+  return { all: all, done: done };
+}
+function nextUnanswered(){
+  for(var i=0;i<CHAPTERS.length;i++){
+    var qs = questionsOf(CHAPTERS[i]);
+    for(var j=0;j<qs.length;j++) if(!hasAnswer(qs[j].id)) return { ch: CHAPTERS[i], idx: j };
+  }
+  return null;
+}
+function topbar(){
+  return '<div class="topbar no-print"><div class="mark">📖</div><div><strong>나의 자서전</strong>' +
+    '<span>' + (state.profile ? esc(state.profile.name) + ' 님의 이야기' : '질문에 답하면 책이 됩니다') + '</span></div>' +
+    '<div class="spacer"></div>' +
+    (state.profile ? '<button class="icon-btn" onclick="go(\'#/settings\')">⚙️ 설정</button>' : '') + '</div>';
+}
+
+// ─────────────── 화면들 ───────────────
+function viewWelcome(){
+  return topbar() +
+  '<div class="card stack">' +
+    '<div class="title">반갑습니다 🙂</div>' +
+    '<p class="sub">질문에 하나씩 답하다 보면 어르신의 삶이 한 권의 책이 됩니다. 글로 써도 되고, 🎤 말로 해도 됩니다.</p>' +
+    '<div class="field"><label for="f-name">성함</label><input id="f-name" autocomplete="name" placeholder="예) 김영자"></div>' +
+    '<div class="field"><label for="f-year">태어난 해 (적지 않아도 됩니다)</label><input id="f-year" inputmode="numeric" maxlength="4" placeholder="예) 1948"></div>' +
+    '<div class="field"><label for="f-home">고향 (적지 않아도 됩니다)</label><input id="f-home" placeholder="예) 경북 안동"></div>' +
+    '<div id="f-err"></div>' +
+    '<button class="btn btn-primary btn-big" onclick="startProfile()">시작하기</button>' +
+    '<p class="hint">쓰신 이야기는 이 휴대폰 안에만 저장됩니다. 다른 사람에게 보내지 않습니다.</p>' +
+  '</div>';
+}
+function startProfile(){
+  var name = $('f-name').value.trim();
+  if(!name){ $('f-err').innerHTML = '<div class="errbox">성함을 적어주세요.</div>'; $('f-name').focus(); return; }
+  state.profile = { name: name, birthYear: $('f-year').value.trim(), hometown: $('f-home').value.trim() };
+  saveNow().then(function(){ go('#/'); render(); });
+}
+
+function viewHome(){
+  var t = totals(), pct = t.all ? Math.round(t.done / t.all * 100) : 0;
+  var next = nextUnanswered();
+  var html = topbar() +
+  '<div class="card stack">' +
+    '<div class="eyebrow">지금까지</div>' +
+    '<div class="title">' + (t.done ? t.done + '개의 이야기를 남기셨어요' : '첫 이야기를 들려주세요') + '</div>' +
+    '<div class="progress" aria-label="진행률 ' + pct + '%"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="hint">' + t.all + '개 질문 중 ' + t.done + '개 (' + pct + '%)</div>' +
+    (next
+      ? '<button class="btn btn-primary btn-big" onclick="go(\'#/q/' + next.ch.id + '/' + next.idx + '\')">✏️ ' + (t.done ? '이어서 쓰기' : '첫 질문 시작하기') + '</button>' +
+        '<div class="hint">다음 질문: ' + next.ch.emo + ' ' + esc(next.ch.name) + '</div>'
+      : '<div class="okbox">모든 질문에 답하셨어요! 정말 멋진 책이 되었습니다 🎉</div>') +
+    '<button class="btn btn-ghost" onclick="go(\'#/book\')">📖 내 책 보기 · 인쇄하기</button>' +
+  '</div>' +
+  '<div class="card"><div class="eyebrow" style="margin-bottom:10px">차례 — 원하는 장을 골라 쓰셔도 됩니다</div><div class="chapters">';
+  CHAPTERS.forEach(function(ch){
+    var n = countAnswered(ch), all = questionsOf(ch).length;
+    html += '<button class="chapter" onclick="go(\'#/ch/' + ch.id + '\')">' +
+      '<span class="emo">' + ch.emo + '</span><span class="body"><span class="name">' + esc(ch.name) + '</span><br>' +
+      '<span class="count">' + all + '개 중 ' + n + '개 씀</span></span>' +
+      (n >= all ? '<span class="done">✓</span>' : '<span class="arrow">›</span>') + '</button>';
+  });
+  return html + '</div></div>';
+}
+
+function viewChapter(chId){
+  var ch = chapterById(chId); if(!ch) return viewHome();
+  var qs = questionsOf(ch);
+  var html = topbar() + '<div class="card stack">' +
+    '<button class="btn btn-line" onclick="go(\'#/\')">‹ 처음으로</button>' +
+    '<div class="title">' + ch.emo + ' ' + esc(ch.name) + '</div>' +
+    '<p class="sub">질문을 누르면 이야기를 쓸 수 있어요. 모든 질문에 답하지 않아도 괜찮습니다.</p><div class="qlist">';
+  qs.forEach(function(q, i){
+    var done = hasAnswer(q.id);
+    html += '<button class="qitem' + (done ? ' answered' : '') + '" onclick="go(\'#/q/' + ch.id + '/' + i + '\')">' +
+      '<span class="chk">' + (done ? '✓' : '') + '</span><span>' + esc(q.q) + '</span></button>';
+  });
+  html += '</div>' +
+    '<div class="field" style="margin-top:8px"><label for="f-custom">직접 질문 만들기</label>' +
+    '<input id="f-custom" placeholder="예) 우리 집 강아지 바둑이 이야기"></div>' +
+    '<button class="btn btn-ghost" onclick="addCustom(\'' + ch.id + '\')">＋ 이 장에 이야기 추가</button>' +
+  '</div>';
+  return html;
+}
+function addCustom(chId){
+  var v = $('f-custom').value.trim();
+  if(!v){ toast('만들 질문이나 제목을 적어주세요.'); return; }
+  var list = state.custom[chId] = state.custom[chId] || [];
+  list.push({ id: chId + ':c' + Date.now(), q: v });
+  saveNow().then(function(){ go('#/q/' + chId + '/' + (questionsOf(chapterById(chId)).length - 1)); });
+}
+
+function viewQuestion(chId, idx){
+  var ch = chapterById(chId); if(!ch) return viewHome();
+  var qs = questionsOf(ch); idx = Math.max(0, Math.min(qs.length - 1, idx | 0));
+  var q = qs[idx], a = state.answers[q.id] || {};
+  var photos = a.photos || [];
+  var html = topbar() + '<div class="card stack">' +
+    '<div class="row"><button class="btn btn-line" onclick="go(\'#/ch/' + ch.id + '\')">‹ ' + esc(ch.name) + '</button></div>' +
+    '<div class="eyebrow">' + ch.emo + ' ' + esc(ch.name) + ' · ' + (idx + 1) + ' / ' + qs.length + '</div>' +
+    '<div class="question">' + esc(q.q) + '</div>' +
+    '<button class="btn btn-ghost" onclick="speak()">🔊 질문 소리로 듣기</button>' +
+    '<textarea class="answer" id="answer" data-qid="' + esc(q.id) + '" placeholder="여기에 편하게 적어주세요. 틀려도 괜찮습니다.">' + esc(a.text || '') + '</textarea>' +
+    '<div class="savestate" id="savestate"></div>' +
+    '<div id="rec-status"></div>' +
+    '<button class="btn btn-ghost" id="rec-btn" onclick="toggleRec()">🎤 말로 쓰기</button>' +
+    '<div class="photos" id="photos">' + photos.map(function(p, i){
+      return '<div class="photo"><img src="' + p + '" alt="첨부한 사진 ' + (i + 1) + '"><button onclick="removePhoto(' + i + ')">지우기</button></div>'; }).join('') + '</div>' +
+    (photos.length < MAX_PHOTOS
+      ? '<label class="btn btn-ghost" for="photo-in">📷 사진 넣기 (' + photos.length + '/' + MAX_PHOTOS + ')</label>' +
+        '<input type="file" id="photo-in" accept="image/*" hidden onchange="addPhoto(this)">'
+      : '<div class="hint">사진은 한 질문에 ' + MAX_PHOTOS + '장까지 넣을 수 있어요.</div>') +
+    (q.custom ? '<button class="btn btn-line" onclick="removeCustom()">이 질문 지우기</button>' : '') +
+    '<div class="pager">' +
+      '<button class="btn btn-line" ' + (idx === 0 ? 'disabled' : '') + ' onclick="go(\'#/q/' + ch.id + '/' + (idx - 1) + '\')">‹ 이전</button>' +
+      (idx < qs.length - 1
+        ? '<button class="btn btn-primary" onclick="go(\'#/q/' + ch.id + '/' + (idx + 1) + '\')">다음 ›</button>'
+        : '<button class="btn btn-primary" onclick="finishChapter()">이 장 마치기 ✓</button>') +
+    '</div>' +
+  '</div>';
+  current = { ch: ch, idx: idx, q: q };
+  return html;
+}
+var current = null;
+
+function bindQuestion(){
+  var ta = $('answer'); if(!ta) return;
+  ta.addEventListener('input', function(){ setAnswerText(ta.value); });
+}
+function answerFor(qid){ return state.answers[qid] = state.answers[qid] || { text:'', photos:[] }; }
+function setAnswerText(text){
+  if(!current) return;
+  var a = answerFor(current.q.id);
+  a.text = text; a.updated = Date.now();
+  writeDraft(current.q.id, text, a.updated);
+  var s = $('savestate'); if(s) s.textContent = '저장하는 중…';
+  saveSoon(function(){ var s2 = $('savestate'); if(s2) s2.textContent = '저장됨 ✓'; });
+}
+function finishChapter(){
+  saveNow();
+  var next = nextUnanswered();
+  toast(current.ch.name + ' 장을 마쳤어요 👏');
+  go(next && next.ch.id !== current.ch.id ? '#/ch/' + next.ch.id : '#/');
+}
+function removeCustom(){
+  if(!current || !current.q.custom) return;
+  if(!confirm('이 질문과 쓰신 내용을 지울까요?')) return;
+  var chId = current.ch.id;
+  state.custom[chId] = (state.custom[chId] || []).filter(function(c){ return c.id !== current.q.id; });
+  delete state.answers[current.q.id];
+  saveNow().then(function(){ go('#/ch/' + chId); });
+}
+
+// 질문 읽어주기
+function speak(){
+  if(!current) return;
+  if(!('speechSynthesis' in window)){ toast('이 기기에서는 소리로 들을 수 없어요.'); return; }
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(current.q.q);
+  u.lang = 'ko-KR'; u.rate = 0.85;
+  speechSynthesis.speak(u);
+}
+
+// 말로 쓰기 (음성 인식)
+var rec = null, recOn = false;
+function toggleRec(){
+  if(recOn){ stopRec(); return; }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    toast('이 브라우저는 말로 쓰기를 지원하지 않아요. 자판의 🎤 마이크 단추를 눌러보세요.');
+    return;
+  }
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  rec = new SR();
+  rec.lang = 'ko-KR'; rec.continuous = true; rec.interimResults = true;
+  var ta = $('answer'), base = ta.value;
+  rec.onresult = function(e){
+    var finalText = '', interim = '';
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if(finalText){ base = joinText(base, finalText.trim()); }
+    ta.value = interim ? joinText(base, interim.trim()) : base;
+    setAnswerText(base);
+  };
+  rec.onerror = function(e){
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('마이크 사용을 허용해주세요.');
+    else if(e.error === 'no-speech') toast('말소리가 들리지 않았어요. 다시 눌러주세요.');
+    stopRec();
+  };
+  rec.onend = function(){ if(recOn){ try{ rec.start(); }catch(err){ stopRec(); } } };
+  try{ rec.start(); }catch(err){ toast('말로 쓰기를 시작하지 못했어요.'); return; }
+  recOn = true; updateRecUi();
+}
+function joinText(a, b){ if(!b) return a; if(!a) return b; return a + (/\s$/.test(a) ? '' : ' ') + b; }
+function stopRec(){
+  recOn = false;
+  if(rec){ try{ rec.onend = null; rec.stop(); }catch(e){} rec = null; }
+  var ta = $('answer'); if(ta) setAnswerText(ta.value);
+  updateRecUi();
+}
+function updateRecUi(){
+  var b = $('rec-btn'), s = $('rec-status'); if(!b) return;
+  b.className = 'btn ' + (recOn ? 'btn-rec' : 'btn-ghost');
+  b.textContent = recOn ? '⏹ 그만 말하기' : '🎤 말로 쓰기';
+  s.innerHTML = recOn ? '<div class="rec-status">● 듣고 있어요. 천천히 말씀하세요.</div>' : '';
+}
+
+// 사진: 긴 쪽을 1280px 로 줄여 JPEG 로 저장한다.
+function addPhoto(input){
+  var file = input.files && input.files[0]; if(!file || !current) return;
+  var qid = current.q.id;
+  var url = URL.createObjectURL(file), img = new Image();
+  img.onload = function(){
+    var max = 1280, w = img.naturalWidth, h = img.naturalHeight, r = Math.min(1, max / Math.max(w, h));
+    var c = document.createElement('canvas'); c.width = Math.round(w * r); c.height = Math.round(h * r);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    var a = answerFor(qid);
+    a.photos = a.photos || [];
+    a.photos.push(c.toDataURL('image/jpeg', 0.8)); a.updated = Date.now();
+    saveNow().then(function(){ toast('사진을 넣었어요.'); render(); });
+  };
+  img.onerror = function(){ URL.revokeObjectURL(url); toast('사진을 읽지 못했어요.'); };
+  img.src = url;
+}
+function removePhoto(i){
+  if(!current || !confirm('이 사진을 지울까요?')) return;
+  var a = answerFor(current.q.id);
+  a.photos.splice(i, 1);
+  saveNow().then(render);
+}
+
+// ─────────────── 책 보기 ───────────────
+function paragraphs(text){
+  return String(text || '').trim().split(/\n\s*\n/).map(function(p){
+    return '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>'; }).join('');
+}
+function viewBook(){
+  var p = state.profile || {};
+  var meta = [p.birthYear ? p.birthYear + '년 생' : '', p.hometown ? p.hometown + ' 출신' : ''].filter(Boolean).join(' · ');
+  var toc = '', body = '';
+  CHAPTERS.forEach(function(ch){
+    var parts = questionsOf(ch).filter(function(q){ return hasAnswer(q.id); });
+    if(!parts.length) return;
+    toc += '<li>' + ch.emo + ' ' + esc(ch.name) + '</li>';
+    body += '<h2>' + esc(ch.name) + '</h2>';
+    parts.forEach(function(q){
+      var a = state.answers[q.id];
+      body += '<h3>' + esc(q.q) + '</h3>' + paragraphs(a.text);
+      if(a.photos && a.photos.length) body += '<div class="bphotos">' + a.photos.map(function(src){ return '<img src="' + src + '" alt="">'; }).join('') + '</div>';
+    });
+  });
+  return topbar() +
+  '<div class="card stack no-print">' +
+    '<button class="btn btn-line" onclick="go(\'#/\')">‹ 처음으로</button>' +
+    '<div class="row"><button class="btn btn-primary" onclick="window.print()">🖨️ 인쇄 · PDF</button>' +
+    '<button class="btn btn-ghost" onclick="shareText()">💬 글 보내기</button></div>' +
+    '<div class="hint">인쇄 화면에서 "PDF로 저장"을 고르면 파일로 남길 수 있어요.</div>' +
+  '</div>' +
+  '<div class="book">' +
+    '<div class="cover"><h1>' + esc(p.name || '') + '의 이야기</h1>' + (meta ? '<p>' + esc(meta) + '</p>' : '') +
+    '<p>' + new Date().getFullYear() + '년</p></div>' +
+    (body ? '<ul class="toc">' + toc + '</ul>' + body : '<div class="empty">아직 쓰신 이야기가 없어요.<br>질문에 답하시면 여기에 책처럼 모입니다.</div>') +
+  '</div>';
+}
+function bookText(){
+  var p = state.profile || {}, out = [(p.name || '') + '의 이야기', ''];
+  CHAPTERS.forEach(function(ch){
+    var parts = questionsOf(ch).filter(function(q){ return hasAnswer(q.id) && state.answers[q.id].text; });
+    if(!parts.length) return;
+    out.push('【' + ch.name + '】', '');
+    parts.forEach(function(q){ out.push('▸ ' + q.q, state.answers[q.id].text.trim(), ''); });
+  });
+  return out.join('\n');
+}
+function shareText(){
+  var text = bookText();
+  if(navigator.share){
+    navigator.share({ title: (state.profile ? state.profile.name : '') + '의 이야기', text: text }).catch(function(){});
+  }else if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){ toast('글을 복사했어요. 카카오톡 등에 붙여넣으세요.'); },
+      function(){ toast('복사하지 못했어요.'); });
+  }else toast('이 기기에서는 보낼 수 없어요. 인쇄 · PDF를 이용해주세요.');
+}
+
+// ─────────────── 설정 ───────────────
+function viewSettings(msg){
+  var p = state.profile || {}, sc = state.settings.scale || 1;
+  function segBtn(v, label){ return '<button class="' + (sc === v ? 'on' : '') + '" onclick="setScale(' + v + ')">' + label + '</button>'; }
+  return topbar() +
+  '<div class="card stack">' +
+    '<button class="btn btn-line" onclick="go(\'#/\')">‹ 처음으로</button>' +
+    (msg || '') +
+    '<div class="title">글자 크기</div>' +
+    '<div class="seg">' + segBtn(1, '보통') + segBtn(1.15, '크게') + segBtn(1.3, '아주 크게') + '</div>' +
+  '</div>' +
+  '<div class="card stack">' +
+    '<div class="title">내 정보</div>' +
+    '<div class="field"><label for="s-name">성함</label><input id="s-name" value="' + esc(p.name) + '"></div>' +
+    '<div class="field"><label for="s-year">태어난 해</label><input id="s-year" inputmode="numeric" maxlength="4" value="' + esc(p.birthYear) + '"></div>' +
+    '<div class="field"><label for="s-home">고향</label><input id="s-home" value="' + esc(p.hometown) + '"></div>' +
+    '<button class="btn btn-primary" onclick="saveProfile()">내 정보 저장</button>' +
+  '</div>' +
+  '<div class="card stack">' +
+    '<div class="title">보관하기</div>' +
+    '<p class="sub">쓰신 이야기는 이 휴대폰 안에만 있어요. 휴대폰을 바꾸거나 잃어버려도 괜찮도록 가끔 보관 파일을 만들어 가족에게 맡겨두세요.</p>' +
+    '<button class="btn btn-ghost" onclick="exportBackup()">💾 보관 파일 만들기</button>' +
+    '<label class="btn btn-line" for="restore-in">📂 보관 파일 불러오기</label>' +
+    '<input type="file" id="restore-in" accept="application/json,.json" hidden onchange="importBackup(this)">' +
+  '</div>' +
+  '<div class="card stack">' +
+    '<button class="btn btn-danger" onclick="wipeAll()">모든 이야기 지우기</button>' +
+  '</div>';
+}
+function setScale(v){ state.settings.scale = v; applyScale(); saveNow(); render(); }
+function saveProfile(){
+  var name = $('s-name').value.trim();
+  if(!name){ toast('성함을 적어주세요.'); return; }
+  state.profile = { name: name, birthYear: $('s-year').value.trim(), hometown: $('s-home').value.trim() };
+  saveNow().then(function(){ $('app').innerHTML = viewSettings('<div class="okbox">저장했어요.</div>'); });
+}
+function exportBackup(){
+  saveNow();
+  var data = JSON.stringify({ app:'jaseojeon', version:1, savedAt:new Date().toISOString(), state: state });
+  var blob = new Blob([data], { type:'application/json' });
+  var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '자서전-' + ((state.profile && state.profile.name) || '보관') + '-' + stamp + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+}
+function importBackup(input){
+  var file = input.files && input.files[0]; if(!file) return;
+  var r = new FileReader();
+  r.onload = function(){
+    var data;
+    try{ data = JSON.parse(r.result); }catch(e){ data = null; }
+    if(!data || data.app !== 'jaseojeon' || !data.state){ toast('자서전 보관 파일이 아니에요.'); return; }
+    if(!confirm('지금 휴대폰에 있는 이야기를 보관 파일 내용으로 바꿀까요?')) return;
+    var s = data.state;
+    state.profile = s.profile || null; state.answers = s.answers || {}; state.custom = s.custom || {};
+    state.settings = Object.assign({ scale:1 }, s.settings || {});
+    try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+    applyScale();
+    saveNow().then(function(){ toast('불러왔어요.'); go('#/'); render(); });
+  };
+  r.readAsText(file);
+}
+function wipeAll(){
+  if(!confirm('쓰신 이야기와 사진이 모두 지워집니다. 정말 지울까요?')) return;
+  if(!confirm('한 번 더 확인합니다. 지우면 되돌릴 수 없어요. 지울까요?')) return;
+  state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 } };
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  applyScale();
+  saveNow().then(function(){ go('#/'); render(); });
+}
+
+// ─────────────── 화면 전환 (주소 뒤 #으로 — 뒤로가기 단추가 그대로 동작) ───────────────
+function render(){
+  if(recOn) stopRec();
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  current = null;
+  var parts = (location.hash.replace(/^#\/?/, '') || '').split('/');
+  var html;
+  if(!state.profile) html = viewWelcome();
+  else if(parts[0] === 'ch') html = viewChapter(parts[1]);
+  else if(parts[0] === 'q') html = viewQuestion(parts[1], parseInt(parts[2], 10) || 0);
+  else if(parts[0] === 'book') html = viewBook();
+  else if(parts[0] === 'settings') html = viewSettings();
+  else html = viewHome();
+  $('app').innerHTML = html;
+  bindQuestion();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', function(){ saveNow(); render(); });
+window.addEventListener('pagehide', function(){ saveNow(); });
+document.addEventListener('visibilitychange', function(){ if(document.hidden) saveNow(); });
+
+loadState().then(function(){ applyScale(); render(); });
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
