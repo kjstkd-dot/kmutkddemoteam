@@ -232,7 +232,7 @@ var DB_NAME = 'jaseojeon', DB_STORE = 'kv', DB_KEY = 'state', LS_KEY = 'jaseojeo
 // 글을 쓰자마자 앱을 닫으면 마지막 몇 글자가 빠질 수 있기 때문.
 var DRAFT_KEY = 'jaseojeon-draft';
 
-var state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 } };
+var state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 }, sync:null };
 
 // ─────────────── 저장 (IndexedDB, 안 되면 localStorage) ───────────────
 function openDB(){
@@ -272,6 +272,7 @@ function loadState(){
       state.answers = saved.answers || {};
       state.custom = saved.custom || {};
       state.settings = Object.assign({ scale:1 }, saved.settings || {});
+      state.sync = saved.sync || null;
     }
     var d = readDraft();
     if(d && d.qid){
@@ -436,13 +437,14 @@ function startProfile(){
   var name = $('f-name').value.trim();
   if(!name){ $('f-err').innerHTML = '<div class="errbox">성함을 적어주세요.</div>'; $('f-name').focus(); return; }
   state.profile = { name: name, birthYear: $('f-year').value.trim(), hometown: $('f-home').value.trim() };
+  markProfile();
   saveNow().then(function(){ go('#/'); render(); });
 }
 
 function viewHome(){
   var t = totals(), pct = t.all ? Math.round(t.done / t.all * 100) : 0;
   var next = nextUnanswered();
-  var html = topbar() + installCard() + backupReminder(t.done) +
+  var html = topbar() + viewModeCard() + installCard() + backupReminder(t.done) + syncLine() +
   '<div class="card stack">' +
     '<div class="eyebrow">지금까지</div>' +
     '<div class="title">' + (t.done ? t.done + '개의 이야기를 남기셨어요' : '첫 이야기를 들려주세요') + '</div>' +
@@ -535,6 +537,7 @@ function setAnswerText(text){
   var a = answerFor(current.q.id);
   a.text = text; a.updated = Date.now();
   writeDraft(current.q.id, text, a.updated);
+  markDirty(current.q.id);
   var s = $('savestate'); if(s) s.textContent = '저장하는 중…';
   saveSoon(function(){ var s2 = $('savestate'); if(s2) s2.textContent = '저장됨 ✓'; });
 }
@@ -550,6 +553,7 @@ function removeCustom(){
   var chId = current.ch.id;
   state.custom[chId] = (state.custom[chId] || []).filter(function(c){ return c.id !== current.q.id; });
   delete state.answers[current.q.id];
+  markDirty(current.q.id);
   saveNow().then(function(){ go('#/ch/' + chId); });
 }
 
@@ -622,6 +626,7 @@ function addPhoto(input){
     var a = answerFor(qid);
     a.photos = a.photos || [];
     a.photos.push(c.toDataURL('image/jpeg', 0.8)); a.updated = Date.now();
+    markDirty(qid);
     saveNow().then(function(){ toast('사진을 넣었어요.'); render(); });
   };
   img.onerror = function(){ URL.revokeObjectURL(url); toast('사진을 읽지 못했어요.'); };
@@ -630,7 +635,8 @@ function addPhoto(input){
 function removePhoto(i){
   if(!current || !confirm('이 사진을 지울까요?')) return;
   var a = answerFor(current.q.id);
-  a.photos.splice(i, 1);
+  a.photos.splice(i, 1); a.updated = Date.now();
+  markDirty(current.q.id);
   saveNow().then(render);
 }
 
@@ -705,6 +711,7 @@ function viewSettings(msg){
     '<div class="field"><label for="s-home">고향</label><input id="s-home" value="' + esc(p.hometown) + '"></div>' +
     '<button class="btn btn-primary" onclick="saveProfile()">내 정보 저장</button>' +
   '</div>' +
+  syncSettingsCard() +
   '<div class="card stack">' +
     '<div class="title">보관하기</div>' +
     '<p class="sub">쓰신 이야기는 이 휴대폰 안에만 있어요. 휴대폰을 바꾸거나 잃어버려도 괜찮도록 가끔 보관 파일을 카카오톡으로 가족에게 보내두세요. 받은 가족은 같은 링크를 열고 "보관 파일 불러오기"로 책을 볼 수 있어요.</p>' +
@@ -721,12 +728,13 @@ function saveProfile(){
   var name = $('s-name').value.trim();
   if(!name){ toast('성함을 적어주세요.'); return; }
   state.profile = { name: name, birthYear: $('s-year').value.trim(), hometown: $('s-home').value.trim() };
+  markProfile();
   saveNow().then(function(){ $('app').innerHTML = viewSettings('<div class="okbox">저장했어요.</div>'); });
 }
 // 휴대폰에만 있는 이야기를 가족에게 맡겨두라고 첫 화면에서 가끔 알려준다.
 var BACKUP_EVERY_DAYS = 7;
 function backupReminder(done){
-  if(!done) return '';
+  if(!done || syncHealthy()) return '';
   var last = state.settings.lastBackupAt || 0;
   if(Date.now() - last < BACKUP_EVERY_DAYS * 864e5) return '';
   return '<div class="card stack no-print">' +
@@ -740,7 +748,9 @@ function backupReminder(done){
 // 막아서 .txt 로 만든다 — 속은 JSON 이고 불러오기에서 그대로 읽힌다.
 function exportBackup(){
   saveNow();
-  var data = JSON.stringify({ app:'jaseojeon', version:1, savedAt:new Date().toISOString(), state: state });
+  // 보관 파일에는 자동 저장 열쇠(sync)를 넣지 않는다 — 파일을 받은 쪽 휴대폰이 시트에 쓰지 않도록.
+  var copy = Object.assign({}, state); delete copy.sync;
+  var data = JSON.stringify({ app:'jaseojeon', version:1, savedAt:new Date().toISOString(), state: copy });
   var d = new Date(), stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
   // 파일 이름에 한글을 넣으면 일부 브라우저가 이름을 "download" 로 바꿔버려서 영문으로 둔다.
   var name = 'jaseojeon-backup-' + stamp + '.txt';
@@ -771,6 +781,7 @@ function importBackup(input){
     state.profile = s.profile || null; state.answers = s.answers || {}; state.custom = s.custom || {};
     state.settings = Object.assign({ scale:1 }, s.settings || {});
     try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+    markAllDirty();
     applyScale();
     saveNow().then(function(){ toast('불러왔어요.'); go('#/'); render(); });
   };
@@ -779,11 +790,193 @@ function importBackup(input){
 function wipeAll(){
   if(!confirm('쓰신 이야기와 사진이 모두 지워집니다. 정말 지울까요?')) return;
   if(!confirm('한 번 더 확인합니다. 지우면 되돌릴 수 없어요. 지울까요?')) return;
-  state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 } };
+  // 자동 저장 연결은 남겨둔다. 시트에 이미 저장된 이야기는 지우지 않는다.
+  var sync = state.sync;
+  if(sync){ sync.dirty = {}; sync.profileDirty = false; }
+  state = { profile:null, answers:{}, custom:{}, settings:{ scale:1 }, sync: sync };
   try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
   applyScale();
   saveNow().then(function(){ go('#/'); render(); });
 }
+
+// ─────────────── 구글 시트 자동 저장 ───────────────
+// 링크의 ?s=(Apps Script 배포 id)&k=(열쇠) 를 받아두고, 고친 이야기를 시트로 보낸다.
+// 서버 주소와 열쇠는 공개 저장소에 두지 않고 링크로만 전한다(autobiography/apps-script.gs).
+// ?view=1 이 붙으면 "보기 전용": 시트의 이야기를 받아와 보여주기만 하고 보내지 않는다.
+var SYNC_RETRY_MS = 60 * 1000;
+function syncEnabled(){ return !!(state.sync && state.sync.s && state.sync.k); }
+function isViewer(){ return syncEnabled() && !!state.sync.view; }
+function syncUrl(){ return 'https://script.google.com/macros/s/' + encodeURIComponent(state.sync.s) + '/exec'; }
+function syncHealthy(){
+  return syncEnabled() && !isViewer() && state.sync.lastOkAt && Date.now() - state.sync.lastOkAt < BACKUP_EVERY_DAYS * 864e5;
+}
+function markDirty(qid){
+  if(!syncEnabled() || isViewer()) return;
+  state.sync.dirty = state.sync.dirty || {};
+  state.sync.dirty[qid] = Date.now();
+  syncSoon();
+}
+function markProfile(){ if(syncEnabled() && !isViewer()){ state.sync.profileDirty = Date.now(); syncSoon(); } }
+function markAllDirty(){
+  if(!syncEnabled() || isViewer()) return;
+  Object.keys(state.answers).forEach(function(qid){ state.sync.dirty = state.sync.dirty || {}; state.sync.dirty[qid] = Date.now(); });
+  state.sync.profileDirty = Date.now();
+  syncSoon();
+}
+function hasPending(){ return syncEnabled() && (Object.keys(state.sync.dirty || {}).length > 0 || !!state.sync.profileDirty); }
+
+// 사진 번호: 사진 내용으로 만든 짧은 지문(FNV-1a). 같은 사진은 두 번 올리지 않는다.
+function photoId(dataUrl){
+  var h = 0x811c9dc5;
+  for(var i = 0; i < dataUrl.length; i += 7){ h ^= dataUrl.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return 'p' + h.toString(36) + dataUrl.length.toString(36);
+}
+function qidInfo(qid){
+  for(var i = 0; i < CHAPTERS.length; i++){
+    var qs = questionsOf(CHAPTERS[i]);
+    for(var j = 0; j < qs.length; j++) if(qs[j].id === qid) return { ch: CHAPTERS[i], q: qs[j], order: (i + 1) * 100 + j + 1 };
+  }
+  return null;
+}
+function api(body){
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 60000) : null;
+  return fetch(syncUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 미리요청(preflight) 없이 보내기 위함
+    body: JSON.stringify(Object.assign({ k: state.sync.k }, body)),
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function(res){
+    if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+    return res.json();
+  }).then(function(out){
+    if(out && out.error) throw new Error(out.error);
+    return out;
+  }).finally(function(){ if(timer) clearTimeout(timer); });
+}
+
+var syncTimer = null, syncRunning = false;
+function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(runSync, 3000); }
+function runSync(){
+  if(!syncEnabled() || isViewer() || syncRunning || !hasPending()) return Promise.resolve();
+  if(navigator.onLine === false){ syncSoon(); return Promise.resolve(); }
+  syncRunning = true;
+  var sync = state.sync, snap = Object.assign({}, sync.dirty || {}), profileAt = sync.profileDirty;
+  sync.sent = sync.sent || {};
+  var answers = [], removed = [], uploads = [];
+  Object.keys(snap).forEach(function(qid){
+    var info = qidInfo(qid);
+    if(!info || !hasAnswer(qid)){ removed.push(qid); return; }
+    var a = state.answers[qid], ids = [];
+    (a.photos || []).forEach(function(src){
+      var id = photoId(src); ids.push(id);
+      if(!sync.sent[id]) uploads.push({ id: id, qid: qid, data: src.slice(src.indexOf(',') + 1) });
+    });
+    answers.push({ qid: qid, order: info.order, chapter: info.ch.name, question: info.q.q, text: a.text || '', photos: ids, updated: a.updated || Date.now() });
+  });
+  // 사진부터 한 장씩 올리고, 그다음 글을 한 번에 보낸다.
+  var chain = Promise.resolve();
+  uploads.forEach(function(u){
+    chain = chain.then(function(){ return api({ action:'photo', id:u.id, qid:u.qid, data:u.data }); })
+                 .then(function(){ sync.sent[u.id] = 1; });
+  });
+  return chain.then(function(){
+    return api({ action:'save', answers: answers, removed: removed, profile: profileAt ? state.profile : null });
+  }).then(function(){
+    // 보내는 사이에 또 고친 것은 남겨둔다.
+    Object.keys(snap).forEach(function(qid){ if(sync.dirty[qid] === snap[qid]) delete sync.dirty[qid]; });
+    if(sync.profileDirty === profileAt) sync.profileDirty = false;
+    sync.lastOkAt = Date.now(); sync.lastError = '';
+  }, function(err){
+    sync.lastError = (err && err.message) || '연결 안 됨';
+  }).then(function(){
+    syncRunning = false;
+    saveNow();
+    refreshSyncUi();
+    if(hasPending()) setTimeout(runSync, sync.lastError ? SYNC_RETRY_MS : 500);
+  });
+}
+
+// 시트에 있는 이야기를 받아와 이 휴대폰 내용을 바꾼다 (보기 전용, 또는 휴대폰을 바꿨을 때).
+function pullFromServer(ask){
+  if(!syncEnabled()) return Promise.resolve(false);
+  if(ask && !confirm('시트에 저장된 이야기로 이 휴대폰 내용을 바꿀까요?')) return Promise.resolve(false);
+  var s = $('sync-line'); if(s) s.textContent = '☁️ 이야기를 받아오는 중…';
+  return api({ action:'load' }).then(function(out){
+    var answers = {}, custom = {};
+    (out.answers || []).forEach(function(r){
+      var m = /^([a-z]+):c\d+$/.exec(r.qid);
+      if(m){ (custom[m[1]] = custom[m[1]] || []).push({ id: r.qid, q: r.question }); }
+      answers[r.qid] = { text: r.text || '', photos: (r.photos || []).map(function(id){ return out.photos[id] ? 'data:image/jpeg;base64,' + out.photos[id] : null; }).filter(Boolean), updated: Date.now() };
+    });
+    if(!out.answers.length && !out.profile.name) return false;
+    state.answers = answers; state.custom = custom;
+    if(out.profile && out.profile.name) state.profile = out.profile;
+    state.sync.sent = {};
+    Object.keys(out.photos || {}).forEach(function(id){ state.sync.sent[id] = 1; });
+    state.sync.dirty = {}; state.sync.profileDirty = false;
+    state.sync.lastOkAt = Date.now(); state.sync.lastError = '';
+    try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+    return saveNow().then(function(){ render(); if(ask || isViewer()) toast('최신 이야기를 받아왔어요.'); return true; });
+  }, function(err){
+    state.sync.lastError = (err && err.message) || '연결 안 됨';
+    refreshSyncUi();
+    if(ask || isViewer()) toast('받아오지 못했어요: ' + state.sync.lastError);
+    return false;
+  });
+}
+
+// 링크에서 자동 저장 설정을 받아두고, 열쇠가 주소창에 남지 않게 지운다.
+function attachFromLink(){
+  var sid = linkParam('s'), key = linkParam('k');
+  if(!sid || !key || !/^[\w-]+$/.test(sid)) return Promise.resolve();
+  var view = linkParam('view') === '1', from = linkParam('from');
+  var same = state.sync && state.sync.s === sid && state.sync.k === key && !!state.sync.view === view;
+  try{
+    var u = new URL(location.href);
+    ['s', 'k', 'view'].forEach(function(p){ u.searchParams.delete(p); });
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }catch(e){}
+  if(same) return Promise.resolve();
+  state.sync = { s: sid, k: key, view: view, to: from, dirty: {}, sent: {}, profileDirty: false, lastOkAt: 0, lastError: '' };
+  if(view) return saveNow();
+  // 이 휴대폰에 쓴 게 없으면(새 휴대폰) 시트에 있던 이야기를 먼저 받아온다.
+  var p = totals().done ? Promise.resolve(false) : pullFromServer(false);
+  return p.then(function(pulled){ if(!pulled){ markAllDirty(); if(state.profile) markProfile(); } return saveNow(); });
+}
+
+function syncStatusText(){
+  if(!syncEnabled()) return '';
+  var who = state.sync.to ? esc(state.sync.to) + '에게' : '가족에게';
+  if(isViewer()) return state.sync.lastOkAt ? '👀 ' + new Date(state.sync.lastOkAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit' }) + '에 받아온 이야기예요.' : '';
+  if(hasPending()) return state.sync.lastError ? '☁️ 인터넷이 연결되면 ' + who + ' 자동으로 저장돼요.' : '☁️ ' + who + ' 저장하는 중…';
+  return state.sync.lastOkAt ? '☁️ ' + who + ' 자동으로 저장됐어요 ✓' : '';
+}
+function syncLine(){ return syncEnabled() ? '<div class="hint no-print" id="sync-line" style="text-align:center">' + syncStatusText() + '</div>' : ''; }
+function refreshSyncUi(){ var el = $('sync-line'); if(el) el.innerHTML = syncStatusText(); }
+function viewModeCard(){
+  if(!isViewer()) return '';
+  return '<div class="card stack no-print">' +
+    '<div class="title">👀 보기 전용</div>' +
+    '<p class="sub" style="margin:0">시트에 저장된 이야기를 받아와 보여줘요. 여기서 고쳐도 시트와 어머니 휴대폰에는 반영되지 않아요.</p>' +
+    '<button class="btn btn-primary" onclick="pullFromServer(false)">🔄 최신 이야기 받아오기</button>' +
+  '</div>';
+}
+function syncSettingsCard(){
+  if(!syncEnabled()) return '';
+  return '<div class="card stack">' +
+    '<div class="title">☁️ 자동 저장</div>' +
+    (isViewer()
+      ? '<p class="sub" style="margin:0">보기 전용이에요. 시트의 이야기를 받아와 보여주기만 해요.</p>' +
+        '<button class="btn btn-ghost" onclick="pullFromServer(false)">🔄 최신 이야기 받아오기</button>'
+      : '<p class="sub" style="margin:0">쓰시는 이야기와 사진이 ' + (state.sync.to ? esc(state.sync.to) + '의' : '가족의') + ' 구글 시트에 자동으로 저장돼요.</p>' +
+        '<div class="hint">' + (syncStatusText() || '아직 저장한 적이 없어요.') + (state.sync.lastError ? '<br>(' + esc(state.sync.lastError) + ')' : '') + '</div>' +
+        '<button class="btn btn-ghost" onclick="markAllDirty(); runSync().then(function(){ toast(state.sync.lastError ? \'저장하지 못했어요.\' : \'저장했어요.\'); render(); })">☁️ 지금 전부 저장하기</button>' +
+        '<button class="btn btn-line" onclick="pullFromServer(true)">시트에서 이야기 받아오기</button>') +
+  '</div>';
+}
+window.addEventListener('online', function(){ if(hasPending()) runSync(); });
+document.addEventListener('visibilitychange', function(){ if(!document.hidden && isViewer()) pullFromServer(false); else if(document.hidden) runSync(); });
 
 // ─────────────── 화면 전환 (주소 뒤 #으로 — 뒤로가기 단추가 그대로 동작) ───────────────
 function render(){
@@ -806,7 +999,10 @@ window.addEventListener('hashchange', function(){ saveNow(); render(); });
 window.addEventListener('pagehide', function(){ saveNow(); });
 document.addEventListener('visibilitychange', function(){ if(document.hidden) saveNow(); });
 
-loadState().then(function(){ applyScale(); render(); });
+loadState().then(function(){ applyScale(); return attachFromLink(); }).then(function(){
+  render();
+  if(isViewer()) pullFromServer(false); else if(syncEnabled()) runSync();
+});
 if(IN_KAKAO){
   try{ if(!sessionStorage.getItem('jsj-kakao-out')){ sessionStorage.setItem('jsj-kakao-out', '1'); openOutside(); } }
   catch(e){ openOutside(); }
