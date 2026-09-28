@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-23 f';
+var APP_VERSION = '2026-09-28 a';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5662,6 +5662,18 @@ MAJORS['convergence-design'].primaryCatalogs['회화과'] = PRIMCAT_회화과;
 function majorList(){
   return Object.keys(MAJORS).map(function(id){ return { id:id, trackName:MAJORS[id].trackName }; });
 }
+// 학생 등록 화면의 "학과(제1전공)" 목록: 지금 고른 융합전공의 참여학과로만 좁히면,
+// 실제로는 자격이 있는데도(학교 정책상 참여학과 목록이 불완전하거나, 등록 중에
+// 융합전공을 아직 못 고른 상태라서) 본인 학과가 안 보여 등록 자체를 못 하는 학생이
+// 생긴다. 그래서 등록 화면에서는 앱에 등록된 모든 융합전공의 참여학과를 합쳐서
+// 보여주고, 어느 학과든 고를 수 있게 한다.
+function allParticipatingDepts(){
+  var set = {};
+  Object.keys(MAJORS).forEach(function(id){
+    (MAJORS[id].participatingDepts || []).forEach(function(dep){ set[dep] = true; });
+  });
+  return Object.keys(set).sort(function(a,b){ return a.localeCompare(b, 'ko'); });
+}
 // 융합전공을 바꾸면 TRACK_NAME 등 이 네 값을 통째로 다시 채운다. 이 값들을 참조하는
 // 코드는 전부 그대로 두고(수십 곳), 이 값들 자체만 매번 다시 대입하는 방식이라 안전하다.
 function applyMajorBase(majorId){
@@ -6311,12 +6323,15 @@ function screenRegisterStudent(){
       '<p class="screen-sub">학번으로 처음 접속하는 경우 비밀번호를 만들어 주세요.</p>' +
       (state.formError? '<div class="errbox">'+esc(state.formError)+'</div>' : '') +
       '<form id="form-register" class="stack">' +
+        '<div class="field"><label>이수하려는 융합전공</label><select id="regMajorId">' +
+          majorList().map(function(m){ return '<option value="'+esc(m.id)+'" '+(m.id===state.majorId?'selected':'')+'>'+esc(m.trackName)+'</option>'; }).join('') +
+        '</select><div class="hint">본인이 실제로 이수하려는 융합전공이 맞는지 확인해 주세요.</div></div>' +
         '<div class="field"><label>학번</label><input id="regId" required value="'+(d?esc(d.id):'')+'"></div>' +
         '<div class="field"><label>이름</label><input id="regName" required value="'+(d?esc(d.name):'')+'"></div>' +
         '<div class="grid2">' +
           '<div class="field"><label>학과(제1전공)</label><select id="regDept" required>' +
             '<option value="">선택해 주세요</option>' +
-            PARTICIPATING_DEPTS.map(function(dep){ return '<option value="'+esc(dep)+'" '+((d&&d.dept===dep)?'selected':'')+'>'+esc(dep)+'</option>'; }).join('') +
+            allParticipatingDepts().map(function(dep){ return '<option value="'+esc(dep)+'" '+((d&&d.dept===dep)?'selected':'')+'>'+esc(dep)+'</option>'; }).join('') +
           '</select></div>' +
           '<div class="field"><label>입학년도(선택)</label><select id="regYear">'+admissionYearOptions(d?d.year:'')+'</select></div>' +
         '</div>' +
@@ -8201,6 +8216,14 @@ document.addEventListener('input', function(e){
 });
 
 document.addEventListener('change', async function(e){
+  if(e.target.id === 'regMajorId'){
+    var newRegMajorId = e.target.value;
+    if(newRegMajorId === state.majorId) return;
+    captureRegisterDraft(); // 융합전공을 바꾸기 전에 지금까지 입력한 학번·이름 등을 보관
+    await switchMajor(newRegMajorId);
+    render();
+    return;
+  }
   if(e.target.id === 'majorSelectBar'){
     var newMajorId = e.target.value;
     if(newMajorId === state.majorId) return;
