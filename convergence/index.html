@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-29 a';
+var APP_VERSION = '2026-09-29 b';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -5860,6 +5860,12 @@ function extractUnknownMajorCourses(lines, knownMatches, existingNames){
     var gubun = GUBUN_KEYWORDS.filter(function(g){ return line.indexOf(g) >= 0; })[0];
     if(!gubun) return;
     var rest = line.split(gubun).join(' ');
+    // 계명대 교육과정표는 과목명을 "과목명 [영문명]" 형식으로 표기한다. 대괄호 속 영문명을
+    // 지우지 않으면 한글 과목명 뒤에 그대로 붙어 이름 길이가 30자를 훌쩍 넘겨버리고, 그러면
+    // 바로 아래 길이 제한에 걸려 과목 자체가 통째로 후보 목록에서 사라진다(정상적인 과목명인데
+    // "영구이수과목을 다 못 불러온다"는 증상으로 나타남). 토큰으로 나누기 전에 대괄호와 그
+    // 안의 영문명을 통째로 지운다.
+    rest = rest.replace(/\[[^\[\]]*\]/g, ' ');
     // "심리학개론(1)"처럼 과목명 뒤에 계열 번호가 괄호로 붙는 과목은, PDF에서 괄호 안
     // 숫자가 " ( 1 ) "처럼 공백을 사이에 두고 따로 떨어져 나올 때가 있다. 이 상태로 그냥
     // 공백 기준으로 토큰을 나누면 괄호 속 숫자 하나만 뚝 떨어져 나와 뒤에 나올 진짜 학점
