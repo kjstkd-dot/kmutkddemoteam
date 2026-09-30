@@ -349,7 +349,7 @@ function admissionYearOptions(picked){
 var API_URL = 'https://script.google.com/macros/s/AKfycbwLgNFw69wLJfZOc7gqAOAZKzjPfi_g1iPFgRjyZmlmaFe8Qqdd3qQ7QN-pyXUvTo_v-g/exec';
 
 // 화면 아래에 표시되는 판 번호. 고칠 때마다 올린다.
-var APP_VERSION = '2026-09-30 a';
+var APP_VERSION = '2026-09-30 b';
 
 /* ============ 개인정보처리방침에 들어가는 담당자 정보 ============
    실제 이름·연락처로 반드시 바꿔주세요. 개인정보보호법 제31조는 개인정보
@@ -7250,6 +7250,33 @@ async function dedupeStudentCourses(){
   state.formOk = parts.join(', ')+' 정리했어요.';
   render();
 }
+// "과목 정리"는 학생 한 명씩 상세 화면에 들어가서 눌러야 하는데, "1체조"처럼 학년·분반
+// 숫자가 앞에 붙은 과목은 대량 등록 당시(이 고침이 나오기 전) 여러 학생에게 한꺼번에
+// 생겼을 수 있다. 관리자가 학생마다 일일이 들어갈 필요 없이, 지금 보고 있는 융합전공
+// 학생 전체를 한 번에 훑어서 정리한다.
+async function dedupeAllStudentCourses(){
+  var mid = isAllMajorsAdmin() ? state.majorId : ((state.adminSession && state.adminSession.majorId) || DEFAULT_MAJOR_ID);
+  state.formOk = '정리하는 중이에요...'; state.formError=''; render();
+  var all = await storeAll('cvg_students', isAllMajorsAdmin() ? mid : null);
+  var mine = all.filter(function(s){ return (s.majorId||DEFAULT_MAJOR_ID) === mid; });
+  var studentsFixed = 0, removed = 0, renamed = 0, recoded = 0;
+  for (var i = 0; i < mine.length; i++) {
+    var s = mine[i];
+    var result = dedupeCourseList(courses(s), s.dept);
+    if (result.removed || result.renamed || result.recoded) {
+      await storeUpdate('cvg_students', s.id, { courses: result.kept });
+      studentsFixed++; removed += result.removed; renamed += result.renamed; recoded += result.recoded;
+    }
+  }
+  await loadRoster();
+  if (!studentsFixed) { state.formOk = '정리할 과목이 없어요.'; render(); return; }
+  var parts = [];
+  if (removed) parts.push('중복 '+removed+'개');
+  if (renamed) parts.push('과목명 '+renamed+'개');
+  if (recoded) parts.push('융합전공 인정 '+recoded+'개');
+  state.formOk = studentsFixed+'명의 과목을 정리했어요('+parts.join(', ')+').';
+  render();
+}
 // 예전 등록(회원가입) 처리에 서버 쪽 잠금이 없어서, 학생이 등록 버튼을 두 번 누르거나
 // 네트워크가 요청을 중복으로 보내면 같은 학번으로 시트에 행이 두 개 이상 생길 수 있었다
 // (지금은 서버에서 고쳐서 앞으로는 안 생기지만, 이미 생긴 중복은 관리자가 정리해야 한다).
@@ -7580,8 +7607,9 @@ function screenAdminList(){
         '<button class="btn btn-ghost" data-action="goto-profile" style="width:auto; flex:1;">비밀번호 변경</button>' +
         (isViewerAdmin() ? '' : '<button class="btn btn-ghost" data-action="goto-settings" style="width:auto; flex:1;">관리자 설정</button>') +
       '</div>' +
-      (isViewerAdmin() ? '' : '<div class="row" style="margin-top:8px;">' +
+      (isViewerAdmin() ? '' : '<div class="row" style="margin-top:8px; gap:8px;">' +
         '<button class="btn btn-line" data-action="dedupe-students" style="width:auto; flex:1;">중복 학생 정리</button>' +
+        '<button class="btn btn-line" data-action="dedupe-all-courses" style="width:auto; flex:1;">전체 학생 과목 정리</button>' +
       '</div>') +
     '</div>'
   );
@@ -8420,6 +8448,7 @@ document.addEventListener('click', function(e){
   else if(act==='delete-course'){ deleteCourse(el.dataset.id).catch(failWith); return; }
   else if(act==='dedupe-courses'){ dedupeStudentCourses().catch(failWith); return; }
   else if(act==='dedupe-students'){ dedupeStudents().catch(failWith); return; }
+  else if(act==='dedupe-all-courses'){ dedupeAllStudentCourses().catch(failWith); return; }
   else if(act==='toggle-reclassify'){ toggleReclassify(el.dataset.id).catch(failWith); return; }
   else if(act==='edit-microdegree'){ state.editingMicrodegreeId = el.dataset.id; state.view='microdegree-form'; }
   else if(act==='delete-microdegree'){ deleteMicrodegree(el.dataset.id).catch(failWith); return; }
