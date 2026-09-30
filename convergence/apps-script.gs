@@ -202,16 +202,23 @@ function createSession(book, role, id, majorId, viewerOnly, allMajors) {
   lock.waitLock(20000);
   try {
     var last = sh.getLastRow();
-    var targetRow = 0;
+    var targetRow = 0, staleRow = 0;
+    var now = Date.now();
     if (last >= 2) {
       var rows = sh.getRange(2, 1, last - 1, 2).getValues();
       for (var i = 0; i < rows.length; i++) {
         var obj;
         try { obj = JSON.parse(rows[i][1] || '{}'); } catch (e) { obj = null; }
         if (obj && String(obj.role) === String(role) && String(obj.id) === String(id)) { targetRow = i + 2; break; }
+        // 로그인만 하고 다시 안 돌아온 세션은 만료돼도 아무도 조회하지 않아 지워질 일이
+        // 없다(getSession은 그 토큰을 실제로 조회할 때만 지운다). 그런 이미 만료된 행을
+        // 발견해두면, 지금 로그인한 사용자와 같은 행이 없을 때 새로 줄을 늘리는 대신 그
+        // 자리를 재활용한다 — 그래야 아무도 다시 안 쓰는 세션이 시트에 영원히 쌓이지 않는다.
+        if (!staleRow && (!obj || !obj.expiresAt || new Date(obj.expiresAt).getTime() < now)) staleRow = i + 2;
       }
     }
-    if (targetRow) sh.getRange(targetRow, 1, 1, 2).setValues([data]);
+    var reuseRow = targetRow || staleRow;
+    if (reuseRow) sh.getRange(reuseRow, 1, 1, 2).setValues([data]);
     else sh.appendRow(data);
   } finally {
     lock.releaseLock();
@@ -379,18 +386,25 @@ function doLogin(book, req) {
   var row = findRow(sh, req.id);
   if (!row) fail('NOT_REGISTERED');
   var doc = readRow(sh, row);
+  var hadSalt = !!doc.passwordSalt; // 이미 새 방식(PBKDF2) 계정이면 verifyPassword가 doc을 안 건드린다.
   // 비밀번호 검사(PBKDF2, 느리다)는 이 학번/관리자번호 자신의 데이터만 보고 판단하니
   // 잠금 밖에서 해도 다른 사용자와 부딪힐 일이 없다.
   if (!verifyPassword(req.password, doc)) fail('INVALID_CREDENTIALS');
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    // verifyPassword가 예전 방식 계정을 새 방식으로 갱신해뒀을 수 있으니 다시 저장한다.
-    // (그 사이 행 위치가 바뀌었을 수 있으니 다시 찾는다.)
-    var row2 = findRow(sh, req.id);
-    if (row2) writeRow(sh, row2, req.id, doc);
-  } finally {
-    lock.releaseLock();
+  // 예전 방식(salt 없는) 계정이 방금 새 방식으로 막 갱신된 경우에만 다시 저장한다. 이미 새
+  // 방식인 계정(지금은 거의 전부)은 로그인마다 매번 잠금을 잡고 과목 목록까지 포함한 문서
+  // 전체를 똑같이 다시 쓰는 게 완전히 낭비였다. LockService.getScriptLock()은 이 배포
+  // 전체가 공유하는 잠금이라, 수강신청 기간처럼 여러 명이 동시에 로그인하면 이 불필요한
+  // 잠금 경쟁 하나하나가 줄줄이 쌓여 로그인 전체가 느려지는 원인이 된다.
+  if (!hadSalt) {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    try {
+      // (그 사이 행 위치가 바뀌었을 수 있으니 다시 찾는다.)
+      var row2 = findRow(sh, req.id);
+      if (row2) writeRow(sh, row2, req.id, doc);
+    } finally {
+      lock.releaseLock();
+    }
   }
   var majorId = doc.majorId || DEFAULT_MAJOR_ID;
   var token = createSession(book, role, req.id, majorId, doc.viewerOnly, doc.allMajors);
